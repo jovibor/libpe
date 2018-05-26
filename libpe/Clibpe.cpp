@@ -217,7 +217,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 
 				_ulSizeToMap = SIZE_T(PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + m_dwDeltaFileOffsetToMap);
 				//Checking for out of bounds file sizes to map.
-				if (((ULONGLONG)m_dwFileOffsetToMap + (ULONGLONG)_ulSizeToMap) <= (m_stFileSize.QuadPart))
+				if (((LONGLONG)m_dwFileOffsetToMap + (LONGLONG)_ulSizeToMap) <= (m_stFileSize.QuadPart))
 				{
 					if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
 						return FILE_MAP_VIEW_OF_FILE_FAILED;
@@ -1165,6 +1165,7 @@ HRESULT Clibpe::PEGetResourceTable()
 			PIMAGE_RESOURCE_DATA_ENTRY _pRootResDataEntry { };
 			std::vector<std::byte> _vecRootResRawData { };
 
+			//Name of Resource Type (ICON, BITMAP, MENU, etc...)
 			if (_pRootResDirEntry->NameIsString == 1)
 			{//copy not more then MAX_PATH chars into _strResName, avoiding buff overflow
 				_nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pRootResDirEntry->NameOffset))->Length;
@@ -1184,6 +1185,7 @@ HRESULT Clibpe::PEGetResourceTable()
 						PIMAGE_RESOURCE_DATA_ENTRY _pSecondResDataEntry { };
 						std::vector<std::byte> _vecSecondResRawData { };
 
+						//Name of resource itself if not presented by ID ("AFX_MY_SUPER_DIALOG"...)
 						if (_pSecondResDirEntry->NameIsString == 1)
 						{
 							_nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pSecondResDirEntry->NameOffset))->Length;
@@ -1297,7 +1299,8 @@ HRESULT Clibpe::PEGetResourceTable()
 
 HRESULT Clibpe::PEGetExceptionTable()
 {
-	////This structure may have different typedef depending on platform, see winnt.h
+	//IMAGE_RUNTIME_FUNCTION_ENTRY (without leading underscore) 
+	//might have different typedef depending on defined platform, see winnt.h
 	_PIMAGE_RUNTIME_FUNCTION_ENTRY _pRuntimeFuncsEntry = (_PIMAGE_RUNTIME_FUNCTION_ENTRY)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION));
 	if (!_pRuntimeFuncsEntry)
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
@@ -1330,6 +1333,7 @@ HRESULT Clibpe::PEGetSecurityTable()
 
 	ULONGLONG _dwSecurityDirEndVA = _dwSecurityDirStartVA + _dwSecurityDirSize;
 
+	//Checking for crossing file's size bounds.
 	if (_dwSecurityDirStartVA >= m_dwMaxPointerBound || _dwSecurityDirEndVA > m_dwMaxPointerBound)
 		return IMAGE_HAS_NO_SECURITY_DIR;
 
@@ -1343,7 +1347,8 @@ HRESULT Clibpe::PEGetSecurityTable()
 		m_vecSecurity.push_back({ *_pSertificate, std::move(_vecCertBytes) });
 		_vecCertBytes.clear();
 
-		/////Get next 8_rounded Sertificate entry
+		//Get next sertificate entry.
+		//All entries starts at 8 rounded address.
 		_dwSecurityDirStartVA = (_pSertificate->dwLength + _dwSecurityDirStartVA) % 8 + (_pSertificate->dwLength + _dwSecurityDirStartVA);
 		_pSertificate = (LPWIN_CERTIFICATE)_dwSecurityDirStartVA;
 	}

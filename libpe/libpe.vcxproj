@@ -155,7 +155,9 @@
       <Path />
     </BuildLog>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Consoletest\Release"
+      <Command>cd $(TargetDir)
+call "$(TargetDir)BuildNumIncrease.cmd" $(ProjectName).dll
+copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Consoletest\Release"
 copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</Command>
     </PostBuildEvent>
     <Manifest>
@@ -164,6 +166,9 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</C
     <Xdcmake>
       <OutputFile />
     </Xdcmake>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -217,6 +222,10 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</C
     <ClInclude Include="include\Clibpe.h" />
     <ClInclude Include="include\libpe.h" />
     <ClInclude Include="include\stdafx.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="libpe.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
