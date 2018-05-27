@@ -6,8 +6,8 @@ class Clibpe : public Ilibpe
 public:
 	Clibpe() {};
 	virtual ~Clibpe();
-	virtual HRESULT LoadPe(LPCWSTR lpszFile);
-	virtual HRESULT GetFileSummary(DWORD* pFileSummary);
+	virtual HRESULT LoadPe(LPCWSTR lpszFileName);
+	virtual HRESULT GetFileSummary(PCDWORD* pFileSummary);
 	virtual HRESULT GetMSDOSHeader(PLIBPE_DOSHEADER*);
 	virtual HRESULT GetMSDOSRichHeader(PLIBPE_RICH*);
 	virtual HRESULT GetNTHeader(PLIBPE_NTHEADER*);
@@ -26,6 +26,7 @@ public:
 	virtual HRESULT GetLoadConfigTable(PLIBPE_LOADCONFIGTABLE*);
 	virtual HRESULT GetBoundImportTable(PLIBPE_BOUNDIMPORT*);
 	virtual HRESULT GetDelayImportTable(PLIBPE_DELAYIMPORT*);
+	virtual HRESULT GetCOMDescriptorTable(PLIBPE_COM_DESCRIPTOR*);
 	virtual HRESULT Release();
 private:
 	PIMAGE_SECTION_HEADER PEGetSectionHeaderFromRVA(ULONGLONG RVA);
@@ -71,7 +72,7 @@ private:
 	bool m_fMapViewOfFileWhole { };
 	//Flag shows PE load succession.
 	bool m_fLoaded = false;
-	//All file info (Type, Sections it has).
+	//File summary info (type, sections, directories...).
 	DWORD m_dwFileSummary { };
 	HANDLE m_hMapObject { };
 	//Pointer to file mapping beginning, if mapped completely or section by section.
@@ -120,4 +121,6 @@ private:
 	LIBPE_BOUNDIMPORT m_vecBoundImportTable { };
 	//Delay import vector.
 	LIBPE_DELAYIMPORT m_vecDelayImportTable { };
+	//COM Descriptor
+	IMAGE_COR20_HEADER m_stCOR20Header { };
 };

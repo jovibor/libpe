@@ -381,12 +381,12 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetFileSummary(DWORD* pFileSummary)
+HRESULT Clibpe::GetFileSummary(PCDWORD* pFileSummary)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	*pFileSummary = m_dwFileSummary;
+	*pFileSummary = &m_dwFileSummary;
 
 	return S_OK;
 }
@@ -395,6 +395,9 @@ HRESULT Clibpe::GetMSDOSHeader(PLIBPE_DOSHEADER* pp)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
+
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_DOS_HEADER_FLAG))
+		return IMAGE_HAS_NO_DOS_HEADER;
 
 	*pp = &m_stDOSHeader;
 
@@ -406,7 +409,7 @@ HRESULT Clibpe::GetMSDOSRichHeader(PLIBPE_RICH* vecRich)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecRichHeader.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_RICH_HEADER_FLAG))
 		return IMAGE_HAS_NO_RICH_HEADER;
 
 	*vecRich = &m_vecRichHeader;
@@ -419,6 +422,9 @@ HRESULT Clibpe::GetNTHeader(PLIBPE_NTHEADER *pTupleNTHeader)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_NT_HEADER_FLAG))
+		return IMAGE_HAS_NO_NT_HEADER;
+
 	*pTupleNTHeader = &m_tupleNTHeader;
 
 	return S_OK;
@@ -428,6 +434,9 @@ HRESULT Clibpe::GetFileHeader(PLIBPE_FILEHEADER* pp)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
+
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_FILE_HEADER_FLAG))
+		return IMAGE_HAS_NO_FILE_HEADER;
 
 	*pp = &m_stFileHeader;
 
@@ -439,6 +448,9 @@ HRESULT Clibpe::GetOptionalHeader(PLIBPE_OPTHEADER* tupleOptHeader)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_OPTIONAL_HEADER_FLAG))
+		return IMAGE_HAS_NO_OPTIONAL_HEADER;
+
 	*tupleOptHeader = &m_tupleOptionalHeader;
 
 	return S_OK;
@@ -449,7 +461,7 @@ HRESULT Clibpe::GetDataDirectories(PLIBPE_DATADIRS* vecDataDir)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecDataDirectories.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_DATA_DIRECTORIES_FLAG))
 		return IMAGE_HAS_NO_DATA_DIRECTORIES;
 
 	*vecDataDir = &m_vecDataDirectories;
@@ -462,7 +474,7 @@ HRESULT Clibpe::GetSectionHeaders(PLIBPE_SECHEADER* vecSections)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecSectionHeaders.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_SECTION_HEADERS_FLAG))
 		return IMAGE_HAS_NO_SECTIONS;
 
 	*vecSections = &m_vecSectionHeaders;
@@ -475,7 +487,7 @@ HRESULT Clibpe::GetExportTable(PLIBPE_EXPORT* vecExport)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (!std::get<0>(m_tupleExport).AddressOfFunctions)//Export Address Table RVA
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_EXPORT_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
 	*vecExport = &m_tupleExport;
@@ -488,7 +500,7 @@ HRESULT Clibpe::GetImportTable(PLIBPE_IMPORT* vecImport)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecImportTable.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_IMPORT_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_IMPORT_DIR;
 
 	*vecImport = &m_vecImportTable;
@@ -514,7 +526,7 @@ HRESULT Clibpe::GetExceptionTable(PLIBPE_EXCEPTION* vecException)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecExceptionTable.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_EXCEPTION_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
 
 	*vecException = &m_vecExceptionTable;
@@ -528,7 +540,7 @@ HRESULT Clibpe::GetSecurityTable(PLIBPE_SECURITY* vecSecurity)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecSecurity.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_SECURITY_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_SECURITY_DIR;
 
 	*vecSecurity = &m_vecSecurity;
@@ -541,7 +553,7 @@ HRESULT Clibpe::GetRelocationTable(PLIBPE_RELOCATION* vecRelocs)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecRelocationTable.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_BASERELOC_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_BASERELOC_DIR;
 
 	*vecRelocs = &m_vecRelocationTable;
@@ -554,7 +566,7 @@ HRESULT Clibpe::GetDebugTable(PLIBPE_DEBUG* vecDebug)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecDebugTable.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_DEBUG_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_DEBUG_DIR;
 
 	*vecDebug = &m_vecDebugTable;
@@ -593,7 +605,7 @@ HRESULT Clibpe::GetBoundImportTable(PLIBPE_BOUNDIMPORT* vecBoundImp)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecBoundImportTable.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_BOUNDIMPORT_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_BOUNDIMPORT_DIR;
 
 	*vecBoundImp = &m_vecBoundImportTable;
@@ -606,10 +618,23 @@ HRESULT Clibpe::GetDelayImportTable(PLIBPE_DELAYIMPORT* vecDelayImport)
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
 
-	if (m_vecDelayImportTable.empty())
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_DELAYIMPORT_DIRECTORY_FLAG))
 		return 	IMAGE_HAS_NO_DELAY_IMPORT_DIR;
 
 	*vecDelayImport = &m_vecDelayImportTable;
+
+	return S_OK;
+}
+
+HRESULT Clibpe::GetCOMDescriptorTable(PLIBPE_COM_DESCRIPTOR * pCOMDescriptor)
+{
+	if (!m_fLoaded)
+		return CALL_LOADPE_FIRST;
+
+	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_COMDESCRIPTOR_DIRECTORY_FLAG))
+		return IMAGE_HAS_NO_COMDESCRIPTOR_DIR;
+
+	*pCOMDescriptor = &m_stCOR20Header;
 
 	return S_OK;
 }
@@ -1749,11 +1774,13 @@ HRESULT Clibpe::PEGetDelayImportTable()
 
 HRESULT Clibpe::PEGetCOMDescriptorTable()
 {
-	DWORD_PTR _dwCOMDescriptorDirRVA = (DWORD_PTR)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR));
-	if (!_dwCOMDescriptorDirRVA)
+	PIMAGE_COR20_HEADER _pCOMDescriptorHeader = (PIMAGE_COR20_HEADER)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR));
+	if (!_pCOMDescriptorHeader)
 		return IMAGE_HAS_NO_COMDESCRIPTOR_DIR;
+	
+	m_stCOR20Header = *_pCOMDescriptorHeader;
 
 	m_dwFileSummary |= IMAGE_COMDESCRIPTOR_DIRECTORY_FLAG;
 
-	return E_NOTIMPL;
+	return S_OK;
 }
