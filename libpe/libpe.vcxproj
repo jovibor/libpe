@@ -80,6 +80,7 @@
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
     <EmbedManifest>false</EmbedManifest>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -155,8 +156,7 @@
       <Path />
     </BuildLog>
     <PostBuildEvent>
-      <Command>cd $(TargetDir)
-call "$(TargetDir)BuildNumIncrease.cmd" $(ProjectName).dll
+      <Command>powershell.exe $(ProjectDir)set_verinfo.ps1 $(TargetDir)$(ProjectName).dll
 copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Consoletest\Release"
 copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</Command>
     </PostBuildEvent>
@@ -222,10 +222,6 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</C
     <ClInclude Include="include\Clibpe.h" />
     <ClInclude Include="include\libpe.h" />
     <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="resource.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="libpe.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

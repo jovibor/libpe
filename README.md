@@ -1,14 +1,14 @@
-#### **libpe** — win32 library for reading PE file format information. Supports x32 and x64 bin. C++17, STL.
-[Microsoft Visual C++ Redistributable for Visual Studio 2017 needed.](https://aka.ms/vs/15/release/VC_redist.x64.exe)
+#### **libpe** — win32 library for reading PE file format information. Supports x32 (PE32) and x64 (PE32+) binares.  
+MSVS 2017, C++17.  
+[Microsoft Visual C++ Redistributable for Visual Studio 2017 needed.](https://aka.ms/vs/15/release/VC_redist.x86.exe)
 ___________________________________
-**Usage:**<br>
-#import "libpe.lib" <br>
-#include "libpe.h"
+**Usage:**  
+#include "libpe.h"  
   
-Ilibpe* peHandle;<br>
-Getlibpe(&peHandle);<br>
-peHandle->LoadPe(fileName);<br>
-.<br>
-.<br>
-.<br>
-peHandle->Release();<br>
+Ilibpe* pLibpe {};  
+Getlibpe(&pLibpe);  
+pLibpe->LoadPe("fileName");  
+.  
+.  
+.  
+pLibpe->Release();

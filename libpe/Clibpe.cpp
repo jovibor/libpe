@@ -808,7 +808,7 @@ HRESULT Clibpe::PEGetHeaders()
 HRESULT Clibpe::PEGetRichHeader()
 {
 	//"Rich" stub starts at 0x80 offset,
-	//before m_pDosHeader->e_lfanew (PE header start)
+	//before m_pDosHeader->e_lfanew (PE header start offset)
 	//If e_lfanew < 0x80 there is no "Rich"
 	if (m_pDosHeader->e_lfanew <= 0x80)
 		return IMAGE_HAS_NO_RICH_HEADER;
@@ -822,13 +822,14 @@ HRESULT Clibpe::PEGetRichHeader()
 		//to find out if it is "DanS" (ANSI).
 		if ((*_pRichIter == 0x68636952/*"Rich"*/) && ((*_pRichStartVA xor *(_pRichIter + 1)) == 0x536E6144/*"Dans"*/))
 		{
-			DWORD _nRichSize = (DWORD)(((DWORD_PTR)_pRichIter - (DWORD_PTR)m_pDosHeader) - 0x90) / 8;//amount of all "Rich" DOUBLE_DWORD structs 
-			DWORD _RichXORMask = *(_pRichIter + 1);//XOR mask of this "Rich" header
+			DWORD _dwRichSize = (DWORD)(((DWORD_PTR)_pRichIter - (DWORD_PTR)m_pDosHeader) - 0x90) / 8;//amount of all "Rich" DOUBLE_DWORD structs 
+			DWORD _dwRichXORMask = *(_pRichIter + 1);//XOR mask of this "Rich" header
 			_pRichIter = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x90);//VA of "Rich" DOUBLE_DWORD Struct start
 
-			for (unsigned i = 0; i < _nRichSize; i++)
+			for (unsigned i = 0; i < _dwRichSize; i++)
 			{
-				m_vecRichHeader.push_back({ HIWORD(_RichXORMask xor *_pRichIter), LOWORD(_RichXORMask xor *_pRichIter), _RichXORMask xor *(_pRichIter + 1) });
+				//Pushing double DWORD of "Rich" structure.
+				m_vecRichHeader.push_back({ HIWORD(_dwRichXORMask xor *_pRichIter), LOWORD(_dwRichXORMask xor *_pRichIter), _dwRichXORMask xor *(_pRichIter + 1) });
 				_pRichIter += 2;//Jump next DOUBLE_DWORD
 			}
 			m_dwFileSummary |= IMAGE_RICH_HEADER_FLAG;
@@ -952,30 +953,30 @@ HRESULT Clibpe::PEGetExportTable()
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
 	PWORD _pOrdinals = (PWORD)PERVAToPTR(_pExportDir->AddressOfNameOrdinals);
-	LPCSTR* _pNames = (LPCSTR*)PERVAToPTR(_pExportDir->AddressOfNames);
+	LPCSTR* _lpszNames = (LPCSTR*)PERVAToPTR(_pExportDir->AddressOfNames);
 
 	try {
 		for (unsigned i = 0; i < _pExportDir->NumberOfFunctions; i++)
 		{
 			if (_pFuncs[i])//if RVA==0 —> going next entry
 			{
-				LPCSTR _funcName { }, _funcNameForwarder { };
+				LPCSTR _lpszFuncName { }, _lpszFuncNameForwarder { };
 
-				if (_pNames && _pOrdinals)
+				if (_lpszNames && _pOrdinals)
 					for (unsigned j = 0; j < _pExportDir->NumberOfNames; j++)
 						if (_pOrdinals[j] == i)//cycling through Ordinals table to get func name
 						{
-							_funcName = (LPCSTR)PERVAToPTR((DWORD_PTR)_pNames[j]);
+							_lpszFuncName = (LPCSTR)PERVAToPTR((DWORD_PTR)_lpszNames[j]);
 							//checking func name for length correctness
-							if (_funcName && (StringCchLengthA(_funcName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-								_strFuncName = _funcName;
+							if (_lpszFuncName && (StringCchLengthA(_lpszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+								_strFuncName = _lpszFuncName;
 						}
 				if ((_pFuncs[i] >= _dwExportStartRVA) && (_pFuncs[i] <= _dwExportEndRVA))
 				{
-					_funcNameForwarder = (LPCSTR)PERVAToPTR(_pFuncs[i]);
+					_lpszFuncNameForwarder = (LPCSTR)PERVAToPTR(_pFuncs[i]);
 					//checking forwarder name for length correctness
-					if (_funcNameForwarder && (StringCchLengthA(_funcNameForwarder, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						_strFuncNameForwarder = _funcNameForwarder;
+					if (_lpszFuncNameForwarder && (StringCchLengthA(_lpszFuncNameForwarder, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						_strFuncNameForwarder = _lpszFuncNameForwarder;
 				}
 				_vecFuncs.push_back({ _pFuncs[i], i, std::move(_strFuncName), std::move(_strFuncNameForwarder) });
 				_strFuncName.clear();
@@ -983,10 +984,10 @@ HRESULT Clibpe::PEGetExportTable()
 			}
 		}
 
-		LPCSTR _lpExportName = (LPCSTR)PERVAToPTR(_pExportDir->Name);
+		LPCSTR _lpszExportName = (LPCSTR)PERVAToPTR(_pExportDir->Name);
 		//checking Export name for length correctness
-		if (_lpExportName && (StringCchLengthA(_lpExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-			_strExportName = _lpExportName;
+		if (_lpszExportName && (StringCchLengthA(_lpszExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+			_strExportName = _lpszExportName;
 
 		m_tupleExport = { *_pExportDir, std::move(_strExportName) /*Actual IMG name*/, std::move(_vecFuncs) };
 	}
@@ -1533,7 +1534,7 @@ HRESULT Clibpe::PEGetTLSTable()
 
 	PIMAGE_TLS_DIRECTORY32 _pTLSDir32 { };
 	PIMAGE_TLS_DIRECTORY64 _pTLSDir64 { };
-	std::vector<std::byte> _vecRawTLSData { };
+	std::vector<std::byte> _vecTLSRawData { };
 	std::vector<DWORD> _vecTLSCallbacks { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
@@ -1542,7 +1543,7 @@ HRESULT Clibpe::PEGetTLSTable()
 		if (!_pTLSDir32)
 			return IMAGE_HAS_NO_TLS_DIR;
 
-		m_tupleTLS = { *_pTLSDir32, IMAGE_TLS_DIRECTORY64 { 0 }, _vecRawTLSData, _vecTLSCallbacks };
+		m_tupleTLS = { *_pTLSDir32, IMAGE_TLS_DIRECTORY64 { 0 }, _vecTLSRawData, _vecTLSCallbacks };
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
@@ -1550,7 +1551,7 @@ HRESULT Clibpe::PEGetTLSTable()
 		if (!_pTLSDir64)
 			return IMAGE_HAS_NO_TLS_DIR;
 
-		m_tupleTLS = { IMAGE_TLS_DIRECTORY32 { 0 }, *_pTLSDir64, std::move(_vecRawTLSData), std::move(_vecTLSCallbacks) };
+		m_tupleTLS = { IMAGE_TLS_DIRECTORY32 { 0 }, *_pTLSDir64, std::move(_vecTLSRawData), std::move(_vecTLSCallbacks) };
 	}
 	m_dwFileSummary |= IMAGE_TLS_DIRECTORY_FLAG;
 
@@ -1646,7 +1647,7 @@ HRESULT Clibpe::PEGetDelayImportTable()
 	PIMAGE_THUNK_DATA32 _pThunk32IAT { }, _pThunk32Name { }, _pThunk32BoundIAT { }, _pThunk32UnloadInfoIAT { };
 	PIMAGE_THUNK_DATA64 _pThunk64IAT { }, _pThunk64Name { }, _pThunk64BoundIAT { }, _pThunk64UnloadInfoIAT { };
 	std::vector<std::tuple<LONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, LONGLONG/*Thunk table RVA*/,
-		LONGLONG, LONGLONG, LONGLONG>> _vecFunc { };
+		LONGLONG/*IAT->u1.AddressOfData*/, LONGLONG/*BoundIAT->u1.AddressOfData*/, LONGLONG/*UnloadInfoIAT->u1.AddressOfData*/>> _vecFunc { };
 	std::string _strDllName { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
@@ -1670,7 +1671,8 @@ HRESULT Clibpe::PEGetDelayImportTable()
 				while (_pThunk32Name->u1.AddressOfData)
 				{
 					if (_pThunk32Name->u1.Ordinal & IMAGE_ORDINAL_FLAG32)
-						_vecFunc.push_back({ IMAGE_ORDINAL32(_pThunk32Name->u1.Ordinal), "", _pThunk32Name->u1.AddressOfData,
+						_vecFunc.push_back({ IMAGE_ORDINAL32(_pThunk32Name->u1.Ordinal), "",
+							_pThunk32Name->u1.AddressOfData,
 							_pThunk32IAT ? _pThunk32IAT->u1.AddressOfData : 0,
 							_pThunk32BoundIAT ? _pThunk32BoundIAT->u1.AddressOfData : 0,
 							_pThunk32UnloadInfoIAT ? _pThunk32UnloadInfoIAT->u1.AddressOfData : 0 });
@@ -1679,7 +1681,8 @@ HRESULT Clibpe::PEGetDelayImportTable()
 						if (_pName && (StringCchLengthA(_pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 							_strDllName = _pName->Name;
 
-						_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strDllName), _pThunk32Name->u1.AddressOfData,
+						_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strDllName),
+							_pThunk32Name->u1.AddressOfData,
 							_pThunk32IAT ? _pThunk32IAT->u1.AddressOfData : 0,
 							_pThunk32BoundIAT ? _pThunk32BoundIAT->u1.AddressOfData : 0,
 							_pThunk32UnloadInfoIAT ? _pThunk32UnloadInfoIAT->u1.AddressOfData : 0 });
@@ -1729,7 +1732,8 @@ HRESULT Clibpe::PEGetDelayImportTable()
 				while (_pThunk64Name->u1.AddressOfData)
 				{
 					if (_pThunk64Name->u1.Ordinal & IMAGE_ORDINAL_FLAG64)
-						_vecFunc.push_back({ IMAGE_ORDINAL64(_pThunk64Name->u1.Ordinal), "", _pThunk64Name->u1.AddressOfData,
+						_vecFunc.push_back({ IMAGE_ORDINAL64(_pThunk64Name->u1.Ordinal), "", 
+							_pThunk64Name->u1.AddressOfData,
 							_pThunk64IAT ? _pThunk64IAT->u1.AddressOfData : 0,
 							_pThunk64BoundIAT ? _pThunk64BoundIAT->u1.AddressOfData : 0,
 							_pThunk64UnloadInfoIAT ? _pThunk64UnloadInfoIAT->u1.AddressOfData : 0 });
@@ -1738,7 +1742,8 @@ HRESULT Clibpe::PEGetDelayImportTable()
 						if (_pName && (StringCchLengthA(_pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 							_strDllName = _pName->Name;
 
-						_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strDllName), _pThunk64Name->u1.AddressOfData,
+						_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strDllName), 
+							_pThunk64Name->u1.AddressOfData,
 							_pThunk64IAT ? _pThunk64IAT->u1.AddressOfData : 0,
 							_pThunk64BoundIAT ? _pThunk64BoundIAT->u1.AddressOfData : 0,
 							_pThunk64UnloadInfoIAT ? _pThunk64UnloadInfoIAT->u1.AddressOfData : 0 });
