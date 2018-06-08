@@ -1,9 +1,9 @@
-/************************************************************
-* Copyright 2018 Jovibor, https://github.com/jovibor/
-* PE viewer library for x86 and x64 pe files.
+/*********************************************************************
+* Copyright 2018 Jovibor: https://github.com/jovibor/
+* PE viewer library for x86 (PE32) and x64 (PE32+) binares.
 * Include this header into your project along with libpe.lib
 * Additional info can be found at github.com/jovibor/libpe
-************************************************************/
+*********************************************************************/
 #pragma once
 static_assert(_MSC_VER >= 1914, "MSVS 15.7 (C+17) or higher needed.");
 
@@ -12,7 +12,7 @@ static_assert(_MSC_VER >= 1914, "MSVS 15.7 (C+17) or higher needed.");
 typedef const DWORD* PCDWORD;
 typedef const IMAGE_DOS_HEADER *PLIBPE_DOSHEADER;
 
-//Vector of undocumented double DWORD's "Rich" structure
+//Vector of undocumented DOUBLE DWORDs of "Rich" structure.
 typedef std::vector<std::tuple<WORD, WORD, DWORD>> LIBPE_RICH;
 typedef const LIBPE_RICH *PLIBPE_RICH;
 
@@ -70,7 +70,8 @@ typedef std::vector<std::tuple<IMAGE_RESOURCE_DIRECTORY_ENTRY, std::wstring/*Res
 typedef const LIBPE_RESOURCE_VEC_ROOT *PLIBPE_RESOURCE_VEC_LVL1;
 typedef std::tuple<IMAGE_RESOURCE_DIRECTORY, LIBPE_RESOURCE_VEC_ROOT> LIBPE_RESOURCE_ROOT;
 typedef const LIBPE_RESOURCE_ROOT *PLIBPE_RESOURCE_ROOT;
-/***************************************************************************************/
+/***************************************************************************************
+***************************************************************************************/
 
 //Vector of Exception table
 typedef std::vector<_IMAGE_RUNTIME_FUNCTION_ENTRY> LIBPE_EXCEPTION;
@@ -82,10 +83,11 @@ typedef std::vector<std::tuple<WIN_CERTIFICATE, std::vector<std::byte>>> LIBPE_S
 typedef const LIBPE_SECURITY *PLIBPE_SECURITY;
 
 //Vector of relocations:
-//IMAGE_BASE_RELOCATION, vector of Reloc type and Offset
+//IMAGE_BASE_RELOCATION, vector of: Reloc type and Offset
 typedef std::vector<std::tuple<IMAGE_BASE_RELOCATION, std::vector<std::tuple<WORD, WORD>>>> LIBPE_RELOCATION;
 typedef const LIBPE_RELOCATION *PLIBPE_RELOCATION;
 
+//Vector of Debug entries
 typedef std::vector<IMAGE_DEBUG_DIRECTORY> LIBPE_DEBUG;
 typedef LIBPE_DEBUG *PLIBPE_DEBUG;
 
@@ -99,7 +101,7 @@ typedef std::tuple<IMAGE_LOAD_CONFIG_DIRECTORY32, IMAGE_LOAD_CONFIG_DIRECTORY64>
 typedef const LIBPE_LOADCONFIGTABLE *PLIBPE_LOADCONFIGTABLE;
 
 //Vector of: IMAGE_BOUND_IMPORT_DESCRIPTOR, import module name, 
-//vector of IMAGE_BOUND_FORWARDER_REF, forwarder module name
+//vector of: IMAGE_BOUND_FORWARDER_REF, forwarder module name
 typedef std::vector<std::tuple<IMAGE_BOUND_IMPORT_DESCRIPTOR, std::string,
 	std::vector<std::tuple<IMAGE_BOUND_FORWARDER_REF, std::string>>>> LIBPE_BOUNDIMPORT;
 typedef const LIBPE_BOUNDIMPORT *PLIBPE_BOUNDIMPORT;

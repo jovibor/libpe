@@ -135,6 +135,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>true</OmitFramePointers>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
