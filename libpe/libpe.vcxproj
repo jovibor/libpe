@@ -210,7 +210,7 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</C
     </BuildLog>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Clibpe.cpp" />
+    <ClCompile Include="clibpe.cpp" />
     <ClCompile Include="libpe.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -220,7 +220,7 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</C
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Clibpe.h" />
+    <ClInclude Include="include\clibpe.h" />
     <ClInclude Include="include\libpe.h" />
     <ClInclude Include="include\stdafx.h" />
   </ItemGroup>

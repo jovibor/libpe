@@ -4,7 +4,7 @@
 
 Clibpe::~Clibpe()
 {
-	delete [] m_lpszEmergencyMemory;
+	delete [] m_szEmergencyMemory;
 }
 
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
@@ -12,21 +12,21 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 	if (m_lpBase)//if it's not the first LoadPe call from the Ilibpe pointer
 		PEResetAll();//sets all members to zero and clear() vectors
 
-	HANDLE _hFile = CreateFileW(lpszFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (_hFile == INVALID_HANDLE_VALUE)
+	HANDLE hFile = CreateFileW(lpszFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE)
 		return FILE_OPEN_FAILED;
 
-	::GetFileSizeEx(_hFile, &m_stFileSize);
+	::GetFileSizeEx(hFile, &m_stFileSize);
 	if (m_stFileSize.QuadPart < sizeof(IMAGE_DOS_HEADER))
 	{
-		CloseHandle(_hFile);
+		CloseHandle(hFile);
 		return FILE_SIZE_TOO_SMALL;
 	}
 
-	m_hMapObject = CreateFileMappingW(_hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+	m_hMapObject = CreateFileMappingW(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (!m_hMapObject)
 	{
-		CloseHandle(_hFile);
+		CloseHandle(hFile);
 		return FILE_CREATE_FILE_MAPPING_FAILED;
 	}
 
@@ -41,7 +41,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 			if (!(m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, 0xFFFF)))
 			{
 				CloseHandle(m_hMapObject);
-				CloseHandle(_hFile);
+				CloseHandle(hFile);
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 			}
 			m_fMapViewOfFileWhole = false;
@@ -50,7 +50,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 		else
 		{
 			CloseHandle(m_hMapObject);
-			CloseHandle(_hFile);
+			CloseHandle(hFile);
 			return FILE_MAP_VIEW_OF_FILE_FAILED;
 		}
 	}
@@ -68,7 +68,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 
 		UnmapViewOfFile(m_lpBase);
 		CloseHandle(m_hMapObject);
-		CloseHandle(_hFile);
+		CloseHandle(hFile);
 
 		return hr;
 	}
@@ -96,279 +96,279 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 	}
 	else
 	{
-		SYSTEM_INFO _SysInfo { };
-		::GetSystemInfo(&_SysInfo);
-		DWORD _dwAlignedAddressToMap { };
-		SIZE_T _ulSizeToMap { };
-		PIMAGE_SECTION_HEADER _pSec { };
+		SYSTEM_INFO SysInfo { };
+		::GetSystemInfo(&SysInfo);
+		DWORD dwAlignedAddressToMap { };
+		SIZE_T ulSizeToMap { };
+		PIMAGE_SECTION_HEADER pSec { };
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetExportTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return GetLastError();
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetImportTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetResourceTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetExceptionTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY))
+		if (PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY))
 		{/////////////////////This is actual file RAW offset
-			m_dwFileOffsetToMap = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
+			m_dwFileOffsetToMap = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
 
 			//Checking for exceeding file size bound
 			if (m_dwFileOffsetToMap < m_stFileSize.QuadPart)
 			{
-				if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+				if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 				{
-					_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-						(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+					dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+						(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 				}
 				else
-					_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+					dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-				m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
+				m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
 
-				_ulSizeToMap = SIZE_T(PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + m_dwDeltaFileOffsetToMap);
+				ulSizeToMap = SIZE_T(PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + m_dwDeltaFileOffsetToMap);
 				//Checking for out of bounds file sizes to map.
-				if (((LONGLONG)m_dwFileOffsetToMap + (LONGLONG)_ulSizeToMap) <= (m_stFileSize.QuadPart))
+				if (((LONGLONG)m_dwFileOffsetToMap + (LONGLONG)ulSizeToMap) <= (m_stFileSize.QuadPart))
 				{
-					if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+					if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 						return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-					m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+					m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 					PEGetSecurityTable();
 					UnmapViewOfFile(m_lpSectionBase);
 				}
 			}
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetRelocationTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetDebugTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetTLSTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetLoadConfigTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetBoundImportTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
 
-		if (_pSec = PEGetSectionHeaderFromRVA(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT)))
+		if (pSec = PEGetSecHeaderFromRVA(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT)))
 		{
-			m_dwFileOffsetToMap = _pSec->PointerToRawData;
+			m_dwFileOffsetToMap = pSec->PointerToRawData;
 
-			if (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity > 0)
+			if (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity > 0)
 			{
-				_dwAlignedAddressToMap = (m_dwFileOffsetToMap < _SysInfo.dwAllocationGranularity) ? 0 :
-					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % _SysInfo.dwAllocationGranularity));
+				dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
+					(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
 			}
 			else
-				_dwAlignedAddressToMap = m_dwFileOffsetToMap;
+				dwAlignedAddressToMap = m_dwFileOffsetToMap;
 
-			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - _dwAlignedAddressToMap;
-			_ulSizeToMap = (_pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
-				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(_pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+			m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
+			ulSizeToMap = (pSec->Misc.VirtualSize + m_dwFileOffsetToMap) > m_stFileSize.QuadPart ?
+				SIZE_T(m_stFileSize.QuadPart - m_dwFileOffsetToMap) : SIZE_T(pSec->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
 
-			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, _dwAlignedAddressToMap, _ulSizeToMap)))
+			if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, ulSizeToMap)))
 				return FILE_MAP_VIEW_OF_FILE_FAILED;
 
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + _ulSizeToMap;
+			m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + ulSizeToMap;
 			PEGetDelayImportTable();
 			UnmapViewOfFile(m_lpSectionBase);
 		}
@@ -376,7 +376,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 
 	UnmapViewOfFile(m_lpBase);
 	CloseHandle(m_hMapObject);
-	CloseHandle(_hFile);
+	CloseHandle(hFile);
 
 	return S_OK;
 }
@@ -404,7 +404,7 @@ HRESULT Clibpe::GetMSDOSHeader(PLIBPE_DOSHEADER* pp)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetMSDOSRichHeader(PLIBPE_RICH* vecRich)
+HRESULT Clibpe::GetMSDOSRichHeader(PLIBPE_RICH_VEC* vecRich)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -425,7 +425,7 @@ HRESULT Clibpe::GetNTHeader(PLIBPE_NTHEADER *pTupleNTHeader)
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_NT_HEADER_FLAG))
 		return IMAGE_HAS_NO_NT_HEADER;
 
-	*pTupleNTHeader = &m_tupleNTHeader;
+	*pTupleNTHeader = &m_tupNTHeader;
 
 	return S_OK;
 }
@@ -451,12 +451,12 @@ HRESULT Clibpe::GetOptionalHeader(PLIBPE_OPTHEADER* tupleOptHeader)
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_OPTIONAL_HEADER_FLAG))
 		return IMAGE_HAS_NO_OPTIONAL_HEADER;
 
-	*tupleOptHeader = &m_tupleOptionalHeader;
+	*tupleOptHeader = &m_tupOptionalHeader;
 
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDataDirectories(PLIBPE_DATADIRS* vecDataDir)
+HRESULT Clibpe::GetDataDirectories(PLIBPE_DATADIRS_VEC* vecDataDir)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -469,7 +469,7 @@ HRESULT Clibpe::GetDataDirectories(PLIBPE_DATADIRS* vecDataDir)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSectionHeaders(PLIBPE_SECHEADER* vecSections)
+HRESULT Clibpe::GetSectionHeaders(PLIBPE_SECHEADER_VEC* vecSections)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -490,12 +490,12 @@ HRESULT Clibpe::GetExportTable(PLIBPE_EXPORT* vecExport)
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_EXPORT_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
-	*vecExport = &m_tupleExport;
+	*vecExport = &m_tupExport;
 
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImportTable(PLIBPE_IMPORT* vecImport)
+HRESULT Clibpe::GetImportTable(PLIBPE_IMPORT_VEC* vecImport)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -516,12 +516,12 @@ HRESULT Clibpe::GetResourceTable(PLIBPE_RESOURCE_ROOT* tupleRes)
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_RESOURCE_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_RESOURCE_DIR;
 
-	*tupleRes = &m_tupleResourceTable;
+	*tupleRes = &m_tupResourceTable;
 
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExceptionTable(PLIBPE_EXCEPTION* vecException)
+HRESULT Clibpe::GetExceptionTable(PLIBPE_EXCEPTION_VEC* vecException)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -535,7 +535,7 @@ HRESULT Clibpe::GetExceptionTable(PLIBPE_EXCEPTION* vecException)
 
 }
 
-HRESULT Clibpe::GetSecurityTable(PLIBPE_SECURITY* vecSecurity)
+HRESULT Clibpe::GetSecurityTable(PLIBPE_SECURITY_VEC* vecSecurity)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -548,7 +548,7 @@ HRESULT Clibpe::GetSecurityTable(PLIBPE_SECURITY* vecSecurity)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRelocationTable(PLIBPE_RELOCATION* vecRelocs)
+HRESULT Clibpe::GetRelocationTable(PLIBPE_RELOCATION_VEC* vecRelocs)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -561,7 +561,7 @@ HRESULT Clibpe::GetRelocationTable(PLIBPE_RELOCATION* vecRelocs)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDebugTable(PLIBPE_DEBUG* vecDebug)
+HRESULT Clibpe::GetDebugTable(PLIBPE_DEBUG_VEC* vecDebug)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -582,7 +582,7 @@ HRESULT Clibpe::GetTLSTable(PLIBPE_TLS* tupleTLS)
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_TLS_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_TLS_DIR;
 
-	*tupleTLS = &m_tupleTLS;
+	*tupleTLS = &m_tupTLS;
 
 	return S_OK;
 }
@@ -595,12 +595,12 @@ HRESULT Clibpe::GetLoadConfigTable(PLIBPE_LOADCONFIGTABLE* tupleLCD)
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_LOADCONFIG_DIRECTORY_FLAG))
 		return IMAGE_HAS_NO_LOADCONFIG_DIR;
 
-	*tupleLCD = &m_tupleLoadConfigDir;
+	*tupleLCD = &m_tupLoadConfigDir;
 
 	return S_OK;
 }
 
-HRESULT Clibpe::GetBoundImportTable(PLIBPE_BOUNDIMPORT* vecBoundImp)
+HRESULT Clibpe::GetBoundImportTable(PLIBPE_BOUNDIMPORT_VEC* vecBoundImp)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -613,7 +613,7 @@ HRESULT Clibpe::GetBoundImportTable(PLIBPE_BOUNDIMPORT* vecBoundImp)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDelayImportTable(PLIBPE_DELAYIMPORT* vecDelayImport)
+HRESULT Clibpe::GetDelayImportTable(PLIBPE_DELAYIMPORT_VEC* vecDelayImport)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -647,63 +647,63 @@ HRESULT Clibpe::Release()
 }
 
 
-PIMAGE_SECTION_HEADER Clibpe::PEGetSectionHeaderFromRVA(ULONGLONG RVA)
+PIMAGE_SECTION_HEADER Clibpe::PEGetSecHeaderFromRVA(ULONGLONG RVA)
 {
-	PIMAGE_SECTION_HEADER _pSection { };
+	PIMAGE_SECTION_HEADER pSection { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		_pSection = IMAGE_FIRST_SECTION(m_pNTHeader32);
-		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, _pSection++)
+		pSection = IMAGE_FIRST_SECTION(m_pNTHeader32);
+		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSection++)
 		{
-			if ((DWORD_PTR)_pSection >= m_dwMaxPointerBound)
+			if ((DWORD_PTR)pSection >= m_dwMaxPointerBound)
 				return nullptr;
 			// is RVA within this section?
-			if ((RVA >= _pSection->VirtualAddress) && (RVA < (_pSection->VirtualAddress + _pSection->Misc.VirtualSize)))
-				return _pSection;
+			if ((RVA >= pSection->VirtualAddress) && (RVA < (pSection->VirtualAddress + pSection->Misc.VirtualSize)))
+				return pSection;
 		}
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		_pSection = IMAGE_FIRST_SECTION(m_pNTHeader64);
-		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, _pSection++)
+		pSection = IMAGE_FIRST_SECTION(m_pNTHeader64);
+		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSection++)
 		{
-			if ((DWORD_PTR)_pSection >= m_dwMaxPointerBound)
+			if ((DWORD_PTR)pSection >= m_dwMaxPointerBound)
 				return nullptr;
-			if ((RVA >= _pSection->VirtualAddress) && (RVA < (_pSection->VirtualAddress + _pSection->Misc.VirtualSize)))
-				return _pSection;
+			if ((RVA >= pSection->VirtualAddress) && (RVA < (pSection->VirtualAddress + pSection->Misc.VirtualSize)))
+				return pSection;
 		}
 	}
 
 	return nullptr;
 }
 
-PIMAGE_SECTION_HEADER Clibpe::PEGetSectionHeaderFromName(LPCSTR pName)
+PIMAGE_SECTION_HEADER Clibpe::PEGetSecHeaderFromName(LPCSTR pName)
 {
-	PIMAGE_SECTION_HEADER _pSection;
+	PIMAGE_SECTION_HEADER pSection;
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		_pSection = IMAGE_FIRST_SECTION(m_pNTHeader32);
+		pSection = IMAGE_FIRST_SECTION(m_pNTHeader32);
 
-		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, _pSection++)
+		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSection++)
 		{
-			if ((DWORD_PTR)_pSection >= m_dwMaxPointerBound)
+			if ((DWORD_PTR)pSection >= m_dwMaxPointerBound)
 				break;
-			if (strncmp((char*)_pSection->Name, pName, IMAGE_SIZEOF_SHORT_NAME) == 0)
-				return _pSection;
+			if (strncmp((char*)pSection->Name, pName, IMAGE_SIZEOF_SHORT_NAME) == 0)
+				return pSection;
 		}
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		_pSection = IMAGE_FIRST_SECTION(m_pNTHeader64);
+		pSection = IMAGE_FIRST_SECTION(m_pNTHeader64);
 
-		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, _pSection++)
+		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSection++)
 		{
-			if ((DWORD_PTR)_pSection >= m_dwMaxPointerBound)
+			if ((DWORD_PTR)pSection >= m_dwMaxPointerBound)
 				break;
-			if (strncmp((char*)_pSection->Name, pName, IMAGE_SIZEOF_SHORT_NAME) == 0)
-				return _pSection;
+			if (strncmp((char*)pSection->Name, pName, IMAGE_SIZEOF_SHORT_NAME) == 0)
+				return pSection;
 		}
 	}
 
@@ -712,18 +712,18 @@ PIMAGE_SECTION_HEADER Clibpe::PEGetSectionHeaderFromName(LPCSTR pName)
 
 LPVOID Clibpe::PERVAToPTR(ULONGLONG RVA)
 {
-	PIMAGE_SECTION_HEADER _pSection = PEGetSectionHeaderFromRVA(RVA);
-	if (!_pSection)
+	PIMAGE_SECTION_HEADER pSection = PEGetSecHeaderFromRVA(RVA);
+	if (!pSection)
 		return nullptr;
 
 	if (!m_fMapViewOfFileWhole)
 		return (LPVOID)((DWORD_PTR)m_lpSectionBase + (SIZE_T)m_dwDeltaFileOffsetToMap +
-		(RVA - (DWORD_PTR)(_pSection->VirtualAddress - _pSection->PointerToRawData) - m_dwFileOffsetToMap));
+		(RVA - (DWORD_PTR)(pSection->VirtualAddress - pSection->PointerToRawData) - m_dwFileOffsetToMap));
 	else
-		return (LPVOID)((DWORD_PTR)m_lpBase + RVA - (DWORD_PTR)(_pSection->VirtualAddress - _pSection->PointerToRawData));
+		return (LPVOID)((DWORD_PTR)m_lpBase + RVA - (DWORD_PTR)(pSection->VirtualAddress - pSection->PointerToRawData));
 }
 
-DWORD Clibpe::PEGetDirectoryEntryRVA(UINT dirEntry)
+DWORD Clibpe::PEGetDirEntryRVA(UINT dirEntry)
 {
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 		return m_pNTHeader32->OptionalHeader.DataDirectory[dirEntry].VirtualAddress;
@@ -733,7 +733,7 @@ DWORD Clibpe::PEGetDirectoryEntryRVA(UINT dirEntry)
 	return 0;
 }
 
-DWORD Clibpe::PEGetDirectoryEntrySize(UINT dirEntry)
+DWORD Clibpe::PEGetDirEntrySize(UINT dirEntry)
 {
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 		return m_pNTHeader32->OptionalHeader.DataDirectory[dirEntry].Size;
@@ -757,7 +757,7 @@ void Clibpe::PEResetAll()
 	m_vecExceptionTable.clear();
 	m_vecRelocationTable.clear();
 	m_vecDebugTable.clear();
-	std::get<2>(m_tupleExport).clear();
+	std::get<2>(m_tupExport).clear();
 	m_vecBoundImportTable.clear();
 	m_vecDelayImportTable.clear();
 }
@@ -783,16 +783,16 @@ HRESULT Clibpe::PEGetHeaders()
 	case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
 		m_dwFileSummary |= IMAGE_PE32_FLAG;
 		m_pNTHeader32 = (PIMAGE_NT_HEADERS32)((DWORD_PTR)m_pDosHeader + m_pDosHeader->e_lfanew);
-		m_tupleNTHeader = { *m_pNTHeader32, IMAGE_NT_HEADERS64 { 0 } };
+		m_tupNTHeader = { *m_pNTHeader32, IMAGE_NT_HEADERS64 { 0 } };
 		m_stFileHeader = m_pNTHeader32->FileHeader;
-		m_tupleOptionalHeader = { m_pNTHeader32->OptionalHeader, IMAGE_OPTIONAL_HEADER64 { 0 } };
+		m_tupOptionalHeader = { m_pNTHeader32->OptionalHeader, IMAGE_OPTIONAL_HEADER64 { 0 } };
 		break;
 	case  IMAGE_NT_OPTIONAL_HDR64_MAGIC:
 		m_dwFileSummary |= IMAGE_PE64_FLAG;
 		m_pNTHeader64 = (PIMAGE_NT_HEADERS64)((DWORD_PTR)m_pDosHeader + m_pDosHeader->e_lfanew);
-		m_tupleNTHeader = { IMAGE_NT_HEADERS32 { 0 }, *m_pNTHeader64 };
+		m_tupNTHeader = { IMAGE_NT_HEADERS32 { 0 }, *m_pNTHeader64 };
 		m_stFileHeader = m_pNTHeader64->FileHeader;
-		m_tupleOptionalHeader = { IMAGE_OPTIONAL_HEADER32 { 0 }, m_pNTHeader64->OptionalHeader };
+		m_tupOptionalHeader = { IMAGE_OPTIONAL_HEADER32 { 0 }, m_pNTHeader64->OptionalHeader };
 		break;
 	case  IMAGE_ROM_OPTIONAL_HDR_MAGIC:
 		break;
@@ -813,31 +813,31 @@ HRESULT Clibpe::PEGetRichHeader()
 	if (m_pDosHeader->e_lfanew <= 0x80)
 		return IMAGE_HAS_NO_RICH_HEADER;
 
-	PDWORD _pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
-	PDWORD _pRichIter = _pRichStartVA;
+	PDWORD pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
+	PDWORD pRichIter = pRichStartVA;
 
 	for (int i = 0; i < ((m_pDosHeader->e_lfanew - 0x80) / 4); i++)
 	{
-		//Check "Rich" (ANSI) sign then XOR _pRichStartVA DWORD with the DWORD following "Rich" sign
+		//Check "Rich" (ANSI) sign then XOR pRichStartVA DWORD with the DWORD following "Rich" sign
 		//to find out if it is "DanS" (ANSI).
-		if ((*_pRichIter == 0x68636952/*"Rich"*/) && ((*_pRichStartVA xor *(_pRichIter + 1)) == 0x536E6144/*"Dans"*/))
+		if ((*pRichIter == 0x68636952/*"Rich"*/) && ((*pRichStartVA xor *(pRichIter + 1)) == 0x536E6144/*"Dans"*/))
 		{
-			DWORD _dwRichSize = (DWORD)(((DWORD_PTR)_pRichIter - (DWORD_PTR)m_pDosHeader) - 0x90) / 8;//amount of all "Rich" DOUBLE_DWORD structs 
-			DWORD _dwRichXORMask = *(_pRichIter + 1);//XOR mask of this "Rich" header
-			_pRichIter = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x90);//VA of "Rich" DOUBLE_DWORD Struct start
+			DWORD dwRichSize = (DWORD)(((DWORD_PTR)pRichIter - (DWORD_PTR)m_pDosHeader) - 0x90) / 8;//amount of all "Rich" DOUBLE_DWORD structs 
+			DWORD dwRichXORMask = *(pRichIter + 1);//XOR mask of this "Rich" header
+			pRichIter = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x90);//VA of "Rich" DOUBLE_DWORD Struct start
 
-			for (unsigned i = 0; i < _dwRichSize; i++)
+			for (unsigned i = 0; i < dwRichSize; i++)
 			{
 				//Pushing double DWORD of "Rich" structure.
-				m_vecRichHeader.push_back({ HIWORD(_dwRichXORMask xor *_pRichIter), LOWORD(_dwRichXORMask xor *_pRichIter), _dwRichXORMask xor *(_pRichIter + 1) });
-				_pRichIter += 2;//Jump next DOUBLE_DWORD
+				m_vecRichHeader.push_back({ HIWORD(dwRichXORMask xor *pRichIter), LOWORD(dwRichXORMask xor *pRichIter), dwRichXORMask xor *(pRichIter + 1) });
+				pRichIter += 2;//Jump next DOUBLE_DWORD
 			}
 			m_dwFileSummary |= IMAGE_RICH_HEADER_FLAG;
 
 			return S_OK;
 		}
 		else
-			_pRichIter++;
+			pRichIter++;
 	}
 
 	return IMAGE_HAS_NO_RICH_HEADER;
@@ -845,45 +845,45 @@ HRESULT Clibpe::PEGetRichHeader()
 
 HRESULT Clibpe::PEGetDataDirs()
 {
-	PIMAGE_DATA_DIRECTORY _pDataDir { };
-	PIMAGE_SECTION_HEADER _pSectionHeader { };
-	std::string _strSecName { };
+	PIMAGE_DATA_DIRECTORY pDataDir { };
+	PIMAGE_SECTION_HEADER pSectionHeader { };
+	std::string strSecName { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		_pDataDir = (PIMAGE_DATA_DIRECTORY)m_pNTHeader32->OptionalHeader.DataDirectory;
+		pDataDir = (PIMAGE_DATA_DIRECTORY)m_pNTHeader32->OptionalHeader.DataDirectory;
 
 		//Filling DataDirectories vector
 		for (unsigned i = 0; i < (m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes > 15 ?
 			15 : m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes); i++)
 		{
-			_pSectionHeader = PEGetSectionHeaderFromRVA(_pDataDir->VirtualAddress);
+			pSectionHeader = PEGetSecHeaderFromRVA(pDataDir->VirtualAddress);
 			//RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is file RAW offset
-			if (_pSectionHeader && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
-				_strSecName.assign((char * const)_pSectionHeader->Name, 8);
+			if (pSectionHeader && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
+				strSecName.assign((char * const)pSectionHeader->Name, 8);
 
-			m_vecDataDirectories.push_back({ *_pDataDir, std::move(_strSecName) });
+			m_vecDataDirectories.push_back({ *pDataDir, std::move(strSecName) });
 
-			_pDataDir++;
-			_strSecName.clear();
+			pDataDir++;
+			strSecName.clear();
 		}
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		_pDataDir = (PIMAGE_DATA_DIRECTORY)m_pNTHeader64->OptionalHeader.DataDirectory;
+		pDataDir = (PIMAGE_DATA_DIRECTORY)m_pNTHeader64->OptionalHeader.DataDirectory;
 
 		//Filling DataDirectories vector
 		for (unsigned i = 0; i < m_pNTHeader64->OptionalHeader.NumberOfRvaAndSizes; i++)
 		{
-			_pSectionHeader = PEGetSectionHeaderFromRVA(_pDataDir->VirtualAddress);
+			pSectionHeader = PEGetSecHeaderFromRVA(pDataDir->VirtualAddress);
 			//RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is file RAW offset
-			if (_pSectionHeader && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
-				_strSecName.assign((char * const)_pSectionHeader->Name, 8);
+			if (pSectionHeader && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
+				strSecName.assign((char * const)pSectionHeader->Name, 8);
 
-			m_vecDataDirectories.push_back({ *_pDataDir, std::move(_strSecName) });
+			m_vecDataDirectories.push_back({ *pDataDir, std::move(strSecName) });
 
-			_pDataDir++;
-			_strSecName.clear();
+			pDataDir++;
+			strSecName.clear();
 		}
 	}
 	if (m_vecDataDirectories.empty())
@@ -896,28 +896,28 @@ HRESULT Clibpe::PEGetDataDirs()
 
 HRESULT Clibpe::PEGetSectionHeaders()
 {
-	PIMAGE_SECTION_HEADER _pSectionHeader { };
+	PIMAGE_SECTION_HEADER pSectionHeader { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		_pSectionHeader = IMAGE_FIRST_SECTION(m_pNTHeader32);
+		pSectionHeader = IMAGE_FIRST_SECTION(m_pNTHeader32);
 
-		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, _pSectionHeader++)
+		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSectionHeader++)
 		{
-			if ((DWORD_PTR)_pSectionHeader >= m_dwMaxPointerBound)
+			if ((DWORD_PTR)pSectionHeader >= m_dwMaxPointerBound)
 				break;
-			m_vecSectionHeaders.push_back(*_pSectionHeader);
+			m_vecSectionHeaders.push_back(*pSectionHeader);
 		}
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		_pSectionHeader = IMAGE_FIRST_SECTION(m_pNTHeader64);
+		pSectionHeader = IMAGE_FIRST_SECTION(m_pNTHeader64);
 
-		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, _pSectionHeader++)
+		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSectionHeader++)
 		{
-			if ((DWORD_PTR)_pSectionHeader >= m_dwMaxPointerBound)
+			if ((DWORD_PTR)pSectionHeader >= m_dwMaxPointerBound)
 				break;
-			m_vecSectionHeaders.push_back(*_pSectionHeader);
+			m_vecSectionHeaders.push_back(*pSectionHeader);
 		}
 	}
 
@@ -932,72 +932,72 @@ HRESULT Clibpe::PEGetSectionHeaders()
 
 HRESULT Clibpe::PEGetExportTable()
 {
-	DWORD _dwExportStartRVA = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT);
-	DWORD _dwExportEndRVA = _dwExportStartRVA + PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_EXPORT);
-	PIMAGE_SECTION_HEADER _pExportSecHeader = PEGetSectionHeaderFromRVA(_dwExportStartRVA);
+	DWORD dwExportStartRVA = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT);
+	DWORD dwExportEndRVA = dwExportStartRVA + PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXPORT);
+	PIMAGE_SECTION_HEADER pExportSecHeader = PEGetSecHeaderFromRVA(dwExportStartRVA);
 
 	std::vector<std::tuple<DWORD/*Exported func RVA/Forwarder RVA*/, DWORD/*func Ordinal*/, std::string /*Func Name*/,
-		std::string/*Forwarder func name*/>> _vecFuncs { };
-	std::string _strFuncName { }, _strFuncNameForwarder { }, _strExportName { };
+		std::string/*Forwarder func name*/>> vecFuncs { };
+	std::string strFuncName { }, strFuncNameForwarder { }, strExportName { };
 
-	if (!_pExportSecHeader)
+	if (!pExportSecHeader)
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
-	PIMAGE_EXPORT_DIRECTORY _pExportDir = (PIMAGE_EXPORT_DIRECTORY)PERVAToPTR(_dwExportStartRVA);
+	PIMAGE_EXPORT_DIRECTORY pExportDir = (PIMAGE_EXPORT_DIRECTORY)PERVAToPTR(dwExportStartRVA);
 
-	if (!_pExportDir)
+	if (!pExportDir)
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
-	PDWORD _pFuncs = (PDWORD)PERVAToPTR(_pExportDir->AddressOfFunctions);
-	if (!_pFuncs)
+	PDWORD pFuncs = (PDWORD)PERVAToPTR(pExportDir->AddressOfFunctions);
+	if (!pFuncs)
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
-	PWORD _pOrdinals = (PWORD)PERVAToPTR(_pExportDir->AddressOfNameOrdinals);
-	LPCSTR* _lpszNames = (LPCSTR*)PERVAToPTR(_pExportDir->AddressOfNames);
+	PWORD pOrdinals = (PWORD)PERVAToPTR(pExportDir->AddressOfNameOrdinals);
+	LPCSTR* szNames = (LPCSTR*)PERVAToPTR(pExportDir->AddressOfNames);
 
 	try {
-		for (unsigned i = 0; i < _pExportDir->NumberOfFunctions; i++)
+		for (unsigned i = 0; i < pExportDir->NumberOfFunctions; i++)
 		{
-			if (_pFuncs[i])//if RVA==0 —> going next entry
+			if (pFuncs[i])//if RVA==0 —> going next entry
 			{
-				LPCSTR _lpszFuncName { }, _lpszFuncNameForwarder { };
+				LPCSTR szFuncName { }, szFuncNameForwarder { };
 
-				if (_lpszNames && _pOrdinals)
-					for (unsigned j = 0; j < _pExportDir->NumberOfNames; j++)
-						if (_pOrdinals[j] == i)//cycling through Ordinals table to get func name
+				if (szNames && pOrdinals)
+					for (unsigned j = 0; j < pExportDir->NumberOfNames; j++)
+						if (pOrdinals[j] == i)//cycling through Ordinals table to get func name
 						{
-							_lpszFuncName = (LPCSTR)PERVAToPTR((DWORD_PTR)_lpszNames[j]);
+							szFuncName = (LPCSTR)PERVAToPTR((DWORD_PTR)szNames[j]);
 							//checking func name for length correctness
-							if (_lpszFuncName && (StringCchLengthA(_lpszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-								_strFuncName = _lpszFuncName;
+							if (szFuncName && (StringCchLengthA(szFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+								strFuncName = szFuncName;
 						}
-				if ((_pFuncs[i] >= _dwExportStartRVA) && (_pFuncs[i] <= _dwExportEndRVA))
+				if ((pFuncs[i] >= dwExportStartRVA) && (pFuncs[i] <= dwExportEndRVA))
 				{
-					_lpszFuncNameForwarder = (LPCSTR)PERVAToPTR(_pFuncs[i]);
+					szFuncNameForwarder = (LPCSTR)PERVAToPTR(pFuncs[i]);
 					//checking forwarder name for length correctness
-					if (_lpszFuncNameForwarder && (StringCchLengthA(_lpszFuncNameForwarder, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						_strFuncNameForwarder = _lpszFuncNameForwarder;
+					if (szFuncNameForwarder && (StringCchLengthA(szFuncNameForwarder, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						strFuncNameForwarder = szFuncNameForwarder;
 				}
-				_vecFuncs.push_back({ _pFuncs[i], i, std::move(_strFuncName), std::move(_strFuncNameForwarder) });
-				_strFuncName.clear();
-				_strFuncNameForwarder.clear();
+				vecFuncs.push_back({ pFuncs[i], i, std::move(strFuncName), std::move(strFuncNameForwarder) });
+				strFuncName.clear();
+				strFuncNameForwarder.clear();
 			}
 		}
 
-		LPCSTR _lpszExportName = (LPCSTR)PERVAToPTR(_pExportDir->Name);
+		LPCSTR szExportName = (LPCSTR)PERVAToPTR(pExportDir->Name);
 		//checking Export name for length correctness
-		if (_lpszExportName && (StringCchLengthA(_lpszExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-			_strExportName = _lpszExportName;
+		if (szExportName && (StringCchLengthA(szExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+			strExportName = szExportName;
 
-		m_tupleExport = { *_pExportDir, std::move(_strExportName) /*Actual IMG name*/, std::move(_vecFuncs) };
+		m_tupExport = { *pExportDir, std::move(strExportName) /*Actual IMG name*/, std::move(vecFuncs) };
 	}
 	catch (const std::bad_alloc&)
 	{
-		delete [] m_lpszEmergencyMemory;
+		delete [] m_szEmergencyMemory;
 		MessageBox(0, TEXT("E_OUTOFMEMORY error while trying to get Export Table."), TEXT("Error"), MB_ICONERROR);
 
-		_vecFuncs.clear();
-		m_lpszEmergencyMemory = new char[16384];
+		vecFuncs.clear();
+		m_szEmergencyMemory = new char[16384];
 	}
 	m_dwFileSummary |= IMAGE_EXPORT_DIRECTORY_FLAG;
 
@@ -1006,162 +1006,162 @@ HRESULT Clibpe::PEGetExportTable()
 
 HRESULT Clibpe::PEGetImportTable()
 {
-	PIMAGE_IMPORT_DESCRIPTOR _pImportDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT));
+	PIMAGE_IMPORT_DESCRIPTOR pImportDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT));
 
-	if (!_pImportDescriptor)
+	if (!pImportDescriptor)
 		return IMAGE_HAS_NO_IMPORT_DIR;
 
-	DWORD _dwTLSDirRVA = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
-	PIMAGE_TLS_DIRECTORY32 _pTLSDir32 { };
-	PIMAGE_TLS_DIRECTORY64 _pTLSDir64 { };
-	PIMAGE_THUNK_DATA32 _pThunk32 { };
-	PIMAGE_THUNK_DATA64 _pThunk64 { };
-	std::vector<std::tuple<LONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, LONGLONG/*Thunk table RVA*/>> _vecFunc { };
-	std::string _strDllName { }, _strFuncName { };
+	DWORD dwTLSDirRVA = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
+	PIMAGE_TLS_DIRECTORY32 pTLSDir32 { };
+	PIMAGE_TLS_DIRECTORY64 pTLSDir64 { };
+	PIMAGE_THUNK_DATA32 pThunk32 { };
+	PIMAGE_THUNK_DATA64 pThunk64 { };
+	std::vector<std::tuple<LONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, LONGLONG/*Thunk table RVA*/>> vecFunc { };
+	std::string strDllName { }, strFuncName { };
 
 	try {
 		if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 		{
-			_pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)PERVAToPTR(_dwTLSDirRVA);
+			pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)PERVAToPTR(dwTLSDirRVA);
 
-			while (_pImportDescriptor->Name)
+			while (pImportDescriptor->Name)
 			{
 				//Checking for TLS Index patching trick, to fade Fake Imports
-				if (_pTLSDir32 && _pTLSDir32->AddressOfIndex && (((DWORD_PTR)_pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)PERVAToPTR(_pTLSDir32->AddressOfIndex - m_pNTHeader32->OptionalHeader.ImageBase) ||
-					((DWORD_PTR)_pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)PERVAToPTR(_pTLSDir32->AddressOfIndex - m_pNTHeader32->OptionalHeader.ImageBase)))
+				if (pTLSDir32 && pTLSDir32->AddressOfIndex && (((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
+					(DWORD_PTR)PERVAToPTR(pTLSDir32->AddressOfIndex - m_pNTHeader32->OptionalHeader.ImageBase) ||
+					((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
+					(DWORD_PTR)PERVAToPTR(pTLSDir32->AddressOfIndex - m_pNTHeader32->OptionalHeader.ImageBase)))
 				{
-					LPCSTR _lpszName = (LPCSTR)PERVAToPTR(_pImportDescriptor->Name);
-					if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						_strDllName = _lpszName;
+					LPCSTR szName = (LPCSTR)PERVAToPTR(pImportDescriptor->Name);
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						strDllName = szName;
 
-					_strDllName += " (--> stripped by TLS::AddressOfIndex trick)";
+					strDllName += " (--> stripped by TLS::AddressOfIndex trick)";
 
-					m_vecImportTable.push_back({ *_pImportDescriptor, std::move(_strDllName), std::move(_vecFunc) });
+					m_vecImportTable.push_back({ *pImportDescriptor, std::move(strDllName), std::move(vecFunc) });
 					break;
 				}
 
-				_pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)_pImportDescriptor->OriginalFirstThunk;
-				if (!_pThunk32)
-					_pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)_pImportDescriptor->FirstThunk;
+				pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImportDescriptor->OriginalFirstThunk;
+				if (!pThunk32)
+					pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImportDescriptor->FirstThunk;
 
-				if (_pThunk32)
+				if (pThunk32)
 				{
-					_pThunk32 = (PIMAGE_THUNK_DATA32)PERVAToPTR((DWORD_PTR)_pThunk32);
-					if (!_pThunk32)
+					pThunk32 = (PIMAGE_THUNK_DATA32)PERVAToPTR((DWORD_PTR)pThunk32);
+					if (!pThunk32)
 						return IMAGE_HAS_NO_IMPORT_DIR;
 
-					while (_pThunk32->u1.AddressOfData)
+					while (pThunk32->u1.AddressOfData)
 					{
-						if (_pThunk32->u1.Ordinal & IMAGE_ORDINAL_FLAG32)
+						if (pThunk32->u1.Ordinal & IMAGE_ORDINAL_FLAG32)
 							//If funcs are imported only by ordinals then filling only ordinal leaving Name as ""
-							_vecFunc.push_back({ IMAGE_ORDINAL32(_pThunk32->u1.Ordinal), std::move(_strFuncName), _pThunk32->u1.AddressOfData });
+							vecFunc.push_back({ IMAGE_ORDINAL32(pThunk32->u1.Ordinal), std::move(strFuncName), pThunk32->u1.AddressOfData });
 						else
 						{	//filling Hint, Name and Thunk RVA
-							PIMAGE_IMPORT_BY_NAME _pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(_pThunk32->u1.AddressOfData);
-							if (_pName && (StringCchLengthA(_pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-								_strFuncName = _pName->Name;
+							PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(pThunk32->u1.AddressOfData);
+							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+								strFuncName = pName->Name;
 
-							_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strFuncName), _pThunk32->u1.AddressOfData });
-							_strFuncName.clear();
+							vecFunc.push_back({ pName ? pName->Hint : 0, std::move(strFuncName), pThunk32->u1.AddressOfData });
+							strFuncName.clear();
 						}
-						_pThunk32++;
+						pThunk32++;
 					}
 
-					LPCSTR _lpszName = (LPCSTR)PERVAToPTR(_pImportDescriptor->Name);
-					if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						_strDllName = _lpszName;
+					LPCSTR szName = (LPCSTR)PERVAToPTR(pImportDescriptor->Name);
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						strDllName = szName;
 
-					m_vecImportTable.push_back({ *_pImportDescriptor, std::move(_strDllName), std::move(_vecFunc) });
-					_vecFunc.clear();
-					_strDllName.clear();
+					m_vecImportTable.push_back({ *pImportDescriptor, std::move(strDllName), std::move(vecFunc) });
+					vecFunc.clear();
+					strDllName.clear();
 
-					_pImportDescriptor++;
+					pImportDescriptor++;
 				}
 				else// No IMPORT pointers for that DLL?...
-					_pImportDescriptor++;  //going to the next dll
+					pImportDescriptor++;  //going to the next dll
 			}
 		}
 		else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 		{
-			_pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)PERVAToPTR(_dwTLSDirRVA);
+			pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)PERVAToPTR(dwTLSDirRVA);
 
-			while (_pImportDescriptor->Name)
+			while (pImportDescriptor->Name)
 			{
-				if (_pTLSDir64 && _pTLSDir64->AddressOfIndex && (((DWORD_PTR)_pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)PERVAToPTR(_pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase) ||
-					((DWORD_PTR)_pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)PERVAToPTR(_pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase)))
+				if (pTLSDir64 && pTLSDir64->AddressOfIndex && (((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
+					(DWORD_PTR)PERVAToPTR(pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase) ||
+					((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
+					(DWORD_PTR)PERVAToPTR(pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase)))
 				{
-					LPCSTR _lpszName = (LPCSTR)PERVAToPTR(_pImportDescriptor->Name);
-					if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						_strDllName = _lpszName;
+					LPCSTR szName = (LPCSTR)PERVAToPTR(pImportDescriptor->Name);
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						strDllName = szName;
 
-					_strDllName += " (--> stripped by TLS::AddressOfIndex trick)";
+					strDllName += " (--> stripped by TLS::AddressOfIndex trick)";
 
-					m_vecImportTable.push_back({ *_pImportDescriptor, std::move(_strDllName), std::move(_vecFunc) });
+					m_vecImportTable.push_back({ *pImportDescriptor, std::move(strDllName), std::move(vecFunc) });
 					break;
 				}
 
-				_pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)_pImportDescriptor->OriginalFirstThunk;
-				if (!_pThunk64)
-					_pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)_pImportDescriptor->FirstThunk;
+				pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImportDescriptor->OriginalFirstThunk;
+				if (!pThunk64)
+					pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImportDescriptor->FirstThunk;
 
-				if (_pThunk64)
+				if (pThunk64)
 				{
-					if (_pTLSDir64 && ((DWORD_PTR)_pThunk64 >= (_pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase)))
+					if (pTLSDir64 && ((DWORD_PTR)pThunk64 >= (pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase)))
 					{
-						m_vecImportTable.push_back({ *_pImportDescriptor, "(fake import stripped)", std::move(_vecFunc) });
+						m_vecImportTable.push_back({ *pImportDescriptor, "(fake import stripped)", std::move(vecFunc) });
 						break;
 					}
 
-					_pThunk64 = (PIMAGE_THUNK_DATA64)PERVAToPTR((DWORD_PTR)_pThunk64);
-					if (!_pThunk64)
+					pThunk64 = (PIMAGE_THUNK_DATA64)PERVAToPTR((DWORD_PTR)pThunk64);
+					if (!pThunk64)
 						return IMAGE_HAS_NO_IMPORT_DIR;
 
-					while (_pThunk64->u1.AddressOfData)
+					while (pThunk64->u1.AddressOfData)
 					{
-						if (_pThunk64->u1.Ordinal & IMAGE_ORDINAL_FLAG64)
+						if (pThunk64->u1.Ordinal & IMAGE_ORDINAL_FLAG64)
 							//if funcs are imported only by ordinals 
 							//then filling only ordinal leaving Name as ""
-							_vecFunc.push_back({ IMAGE_ORDINAL64(_pThunk64->u1.Ordinal), std::move(_strFuncName), _pThunk64->u1.AddressOfData });
+							vecFunc.push_back({ IMAGE_ORDINAL64(pThunk64->u1.Ordinal), std::move(strFuncName), pThunk64->u1.AddressOfData });
 						else
 						{	//filling Hint, Name and Thunk RVA
-							PIMAGE_IMPORT_BY_NAME _pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(_pThunk64->u1.AddressOfData);
-							if (_pName && (StringCchLengthA(_pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-								_strFuncName = _pName->Name;
+							PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(pThunk64->u1.AddressOfData);
+							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+								strFuncName = pName->Name;
 
-							_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strFuncName), _pThunk64->u1.AddressOfData });
-							_strFuncName.clear();
+							vecFunc.push_back({ pName ? pName->Hint : 0, std::move(strFuncName), pThunk64->u1.AddressOfData });
+							strFuncName.clear();
 						}
-						_pThunk64++;
+						pThunk64++;
 					}
 
-					LPCSTR _lpszName = (LPCSTR)PERVAToPTR(_pImportDescriptor->Name);
-					if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						_strDllName = _lpszName;
+					LPCSTR szName = (LPCSTR)PERVAToPTR(pImportDescriptor->Name);
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						strDllName = szName;
 
-					m_vecImportTable.push_back({ *_pImportDescriptor, std::move(_strDllName), std::move(_vecFunc) });
-					_vecFunc.clear();
-					_strDllName.clear();
+					m_vecImportTable.push_back({ *pImportDescriptor, std::move(strDllName), std::move(vecFunc) });
+					vecFunc.clear();
+					strDllName.clear();
 
-					_pImportDescriptor++;
+					pImportDescriptor++;
 				}
 				else
-					_pImportDescriptor++;
+					pImportDescriptor++;
 			}
 		}
 	}
 	catch (const std::bad_alloc&)
 	{
-		delete [] m_lpszEmergencyMemory;
+		delete [] m_szEmergencyMemory;
 		MessageBox(0, L"E_OUTOFMEMORY error while trying to get Import Table.\r\n"
 			L"Seems like too many Imports.", L"Error", MB_ICONERROR);
 
-		_vecFunc.clear();
+		vecFunc.clear();
 		m_vecImportTable.clear();
-		m_lpszEmergencyMemory = new char[16384];
+		m_szEmergencyMemory = new char[16384];
 	}
 	m_dwFileSummary |= IMAGE_IMPORT_DIRECTORY_FLAG;
 
@@ -1170,153 +1170,153 @@ HRESULT Clibpe::PEGetImportTable()
 
 HRESULT Clibpe::PEGetResourceTable()
 {
-	PIMAGE_RESOURCE_DIRECTORY _pRootResDir = (PIMAGE_RESOURCE_DIRECTORY)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE));
+	PIMAGE_RESOURCE_DIRECTORY pRootResDir = (PIMAGE_RESOURCE_DIRECTORY)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE));
 
-	if (!_pRootResDir)
+	if (!pRootResDir)
 		return IMAGE_HAS_NO_RESOURCE_DIR;
 
-	PIMAGE_RESOURCE_DIRECTORY_ENTRY _pRootResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(_pRootResDir + 1);
-	size_t _nResNameLength { };
-	std::wstring _strRootResName { }, _strSecondResName { }, _strThirdResName { };
+	PIMAGE_RESOURCE_DIRECTORY_ENTRY pRootResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pRootResDir + 1);
+	size_t nResNameLength { };
+	std::wstring strRootResName { }, strSecondResName { }, strThirdResName { };
 
-	LIBPE_RESOURCE_VEC_ROOT _vecResLvLRoot { };
-	LIBPE_RESOURCE_LVL2 _tupleResLvL2 { };
-	LIBPE_RESOURCE_VEC_LVL2 _vecResLvL2 { };
-	LIBPE_RESOURCE_LVL3 _tupleResLvL3 { };
-	LIBPE_RESOURCE_VEC_LVL3 _vecResLvL3 { };
+	LIBPE_RESOURCE_ROOT_VEC vecResLvLRoot { };
+	LIBPE_RESOURCE_LVL2 tupleResLvL2 { };
+	LIBPE_RESOURCE_LVL2_VEC vecResLvL2 { };
+	LIBPE_RESOURCE_LVL3 tupleResLvL3 { };
+	LIBPE_RESOURCE_LVL3_VEC vecResLvL3 { };
 
 	try {
-		for (int iLvL1 = 0; iLvL1 < _pRootResDir->NumberOfNamedEntries + _pRootResDir->NumberOfIdEntries; iLvL1++)
+		for (int iLvL1 = 0; iLvL1 < pRootResDir->NumberOfNamedEntries + pRootResDir->NumberOfIdEntries; iLvL1++)
 		{
-			PIMAGE_RESOURCE_DATA_ENTRY _pRootResDataEntry { };
-			std::vector<std::byte> _vecRootResRawData { };
+			PIMAGE_RESOURCE_DATA_ENTRY pRootResDataEntry { };
+			std::vector<std::byte> vecRootResRawData { };
 
 			//Name of Resource Type (ICON, BITMAP, MENU, etc...)
-			if (_pRootResDirEntry->NameIsString == 1)
-			{//copy not more then MAX_PATH chars into _strResName, avoiding buff overflow
-				_nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pRootResDirEntry->NameOffset))->Length;
-				_strRootResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pRootResDirEntry->NameOffset))->NameString,
-					_nResNameLength < MAX_PATH ? _nResNameLength : MAX_PATH);
+			if (pRootResDirEntry->NameIsString == 1)
+			{//copy not more then MAX_PATH chars into strResName, avoiding buff overflow
+				nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pRootResDirEntry->NameOffset))->Length;
+				strRootResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pRootResDirEntry->NameOffset))->NameString,
+					nResNameLength < MAX_PATH ? nResNameLength : MAX_PATH);
 			}
-			if (_pRootResDirEntry->DataIsDirectory == 1)
+			if (pRootResDirEntry->DataIsDirectory == 1)
 			{
-				PIMAGE_RESOURCE_DIRECTORY _pSecondResDir = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)_pRootResDir + _pRootResDirEntry->OffsetToDirectory);
-				if (_pSecondResDir == _pRootResDir)//Resource loop hack
-					_tupleResLvL2 = { *_pSecondResDir, _vecResLvL2 };
+				PIMAGE_RESOURCE_DIRECTORY pSecondResDir = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pRootResDir + pRootResDirEntry->OffsetToDirectory);
+				if (pSecondResDir == pRootResDir)//Resource loop hack
+					tupleResLvL2 = { *pSecondResDir, vecResLvL2 };
 				else
 				{
-					PIMAGE_RESOURCE_DIRECTORY_ENTRY _pSecondResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(_pSecondResDir + 1);
-					for (int iLvL2 = 0; iLvL2 < _pSecondResDir->NumberOfNamedEntries + _pSecondResDir->NumberOfIdEntries; iLvL2++)
+					PIMAGE_RESOURCE_DIRECTORY_ENTRY pSecondResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pSecondResDir + 1);
+					for (int iLvL2 = 0; iLvL2 < pSecondResDir->NumberOfNamedEntries + pSecondResDir->NumberOfIdEntries; iLvL2++)
 					{
-						PIMAGE_RESOURCE_DATA_ENTRY _pSecondResDataEntry { };
-						std::vector<std::byte> _vecSecondResRawData { };
+						PIMAGE_RESOURCE_DATA_ENTRY pSecondResDataEntry { };
+						std::vector<std::byte> vecSecondResRawData { };
 
 						//Name of resource itself if not presented by ID ("AFX_MY_SUPER_DIALOG"...)
-						if (_pSecondResDirEntry->NameIsString == 1)
+						if (pSecondResDirEntry->NameIsString == 1)
 						{
-							_nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pSecondResDirEntry->NameOffset))->Length;
-							_strSecondResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pSecondResDirEntry->NameOffset))->NameString,
-								_nResNameLength < MAX_PATH ? _nResNameLength : MAX_PATH);
+							nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pSecondResDirEntry->NameOffset))->Length;
+							strSecondResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pSecondResDirEntry->NameOffset))->NameString,
+								nResNameLength < MAX_PATH ? nResNameLength : MAX_PATH);
 						}
 
-						if (_pSecondResDirEntry->DataIsDirectory == 1)
+						if (pSecondResDirEntry->DataIsDirectory == 1)
 						{
-							PIMAGE_RESOURCE_DIRECTORY _pThirdResDir = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)_pRootResDir + _pSecondResDirEntry->OffsetToDirectory);
-							if (_pThirdResDir == _pSecondResDir || _pThirdResDir == _pRootResDir)//Resource loop hack
-								_tupleResLvL3 = { *_pThirdResDir, _vecResLvL3 };
+							PIMAGE_RESOURCE_DIRECTORY pThirdResDir = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pRootResDir + pSecondResDirEntry->OffsetToDirectory);
+							if (pThirdResDir == pSecondResDir || pThirdResDir == pRootResDir)//Resource loop hack
+								tupleResLvL3 = { *pThirdResDir, vecResLvL3 };
 							else
 							{
-								PIMAGE_RESOURCE_DIRECTORY_ENTRY _pThirdResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(_pThirdResDir + 1);
+								PIMAGE_RESOURCE_DIRECTORY_ENTRY pThirdResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pThirdResDir + 1);
 
-								for (int iLvL3 = 0; iLvL3 < _pThirdResDir->NumberOfNamedEntries + _pThirdResDir->NumberOfIdEntries; iLvL3++)
+								for (int iLvL3 = 0; iLvL3 < pThirdResDir->NumberOfNamedEntries + pThirdResDir->NumberOfIdEntries; iLvL3++)
 								{
-									PIMAGE_RESOURCE_DATA_ENTRY _pThirdResDataEntry { };
-									std::vector<std::byte> _vecThirdResRawData { };
+									PIMAGE_RESOURCE_DATA_ENTRY pThirdResDataEntry { };
+									std::vector<std::byte> vecThirdResRawData { };
 
-									if (_pThirdResDirEntry->NameIsString == 1)
+									if (pThirdResDirEntry->NameIsString == 1)
 									{
-										_nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pThirdResDirEntry->NameOffset))->Length;
-										_strThirdResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)_pRootResDir + _pThirdResDirEntry->NameOffset))->NameString,
-											_nResNameLength < MAX_PATH ? _nResNameLength : MAX_PATH);
+										nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pThirdResDirEntry->NameOffset))->Length;
+										strThirdResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pThirdResDirEntry->NameOffset))->NameString,
+											nResNameLength < MAX_PATH ? nResNameLength : MAX_PATH);
 									}
 
-									_pThirdResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)_pRootResDir + _pThirdResDirEntry->OffsetToData);
-									if (_pThirdResDataEntry)
+									pThirdResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + pThirdResDirEntry->OffsetToData);
+									if (pThirdResDataEntry)
 									{	//Resource LvL 3 RAW Data.
 										//IMAGE_RESOURCE_DATA_ENTRY::OffsetToData is actually a general RVA,
 										//not an offset form root IMAGE_RESOURCE_DIRECTORY, 
 										//as IMAGE_RESOURCE_DIRECTORY_ENTRY::OffsetToData is.
 										//MS doesn't tend to make things simpler.
-										PBYTE _pResRawData = (PBYTE)PERVAToPTR(_pThirdResDataEntry->OffsetToData);
-										if (_pResRawData)
-											for (unsigned i = 0; i < _pThirdResDataEntry->Size; i++)
-												_vecThirdResRawData.push_back(std::byte(*(_pResRawData + i)));
+										PBYTE pResRawData = (PBYTE)PERVAToPTR(pThirdResDataEntry->OffsetToData);
+										if (pResRawData)
+											for (unsigned i = 0; i < pThirdResDataEntry->Size; i++)
+												vecThirdResRawData.push_back(std::byte(*(pResRawData + i)));
 									}
 
-									_vecResLvL3.push_back({ *_pThirdResDirEntry, std::move(_strThirdResName),
-										_pThirdResDataEntry ? *_pThirdResDataEntry : IMAGE_RESOURCE_DATA_ENTRY { 0 }, std::move(_vecThirdResRawData) });
-									_vecThirdResRawData.clear();
-									_strThirdResName.clear();
+									vecResLvL3.push_back({ *pThirdResDirEntry, std::move(strThirdResName),
+										pThirdResDataEntry ? *pThirdResDataEntry : IMAGE_RESOURCE_DATA_ENTRY { 0 }, std::move(vecThirdResRawData) });
+									vecThirdResRawData.clear();
+									strThirdResName.clear();
 
-									_pThirdResDirEntry++;
+									pThirdResDirEntry++;
 								}
-								_tupleResLvL3 = { *_pThirdResDir, std::move(_vecResLvL3) };
-								_vecResLvL3.clear();
+								tupleResLvL3 = { *pThirdResDir, std::move(vecResLvL3) };
+								vecResLvL3.clear();
 							}
 						}
 						else
 						{//////Resource LvL2 RAW Data
-							_pSecondResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)_pRootResDir + _pSecondResDirEntry->OffsetToData);
-							if (_pSecondResDataEntry)
+							pSecondResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + pSecondResDirEntry->OffsetToData);
+							if (pSecondResDataEntry)
 							{
-								PBYTE _pResRawData = (PBYTE)PERVAToPTR(_pSecondResDataEntry->OffsetToData);
-								if (_pResRawData)
-									for (unsigned i = 0; i < _pSecondResDataEntry->Size; i++)
-										_vecSecondResRawData.push_back(std::byte(*(_pResRawData + i)));
+								PBYTE pResRawData = (PBYTE)PERVAToPTR(pSecondResDataEntry->OffsetToData);
+								if (pResRawData)
+									for (unsigned i = 0; i < pSecondResDataEntry->Size; i++)
+										vecSecondResRawData.push_back(std::byte(*(pResRawData + i)));
 							}
 						}
-						_vecResLvL2.push_back({ *_pSecondResDirEntry, std::move(_strSecondResName),
-							_pSecondResDataEntry ? *_pSecondResDataEntry : IMAGE_RESOURCE_DATA_ENTRY { 0 },
-							std::move(_vecSecondResRawData), _tupleResLvL3 });
-						_vecSecondResRawData.clear();
-						_strSecondResName.clear();
+						vecResLvL2.push_back({ *pSecondResDirEntry, std::move(strSecondResName),
+							pSecondResDataEntry ? *pSecondResDataEntry : IMAGE_RESOURCE_DATA_ENTRY { 0 },
+							std::move(vecSecondResRawData), tupleResLvL3 });
+						vecSecondResRawData.clear();
+						strSecondResName.clear();
 
-						_pSecondResDirEntry++;
+						pSecondResDirEntry++;
 					}
-					_tupleResLvL2 = { *_pSecondResDir, std::move(_vecResLvL2) };
-					_vecResLvL2.clear();
+					tupleResLvL2 = { *pSecondResDir, std::move(vecResLvL2) };
+					vecResLvL2.clear();
 				}
 			}
 			else
 			{	//////Resource LvL Root RAW Data
-				_pRootResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)_pRootResDir + _pRootResDirEntry->OffsetToData);
-				if (_pRootResDataEntry)
+				pRootResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + pRootResDirEntry->OffsetToData);
+				if (pRootResDataEntry)
 				{
-					PBYTE _pResRawData = (PBYTE)PERVAToPTR(_pRootResDataEntry->OffsetToData);
-					if (_pResRawData)
-						for (unsigned i = 0; i < _pRootResDataEntry->Size; i++)
-							_vecRootResRawData.push_back(std::byte(*(_pResRawData + i)));
+					PBYTE pResRawData = (PBYTE)PERVAToPTR(pRootResDataEntry->OffsetToData);
+					if (pResRawData)
+						for (unsigned i = 0; i < pRootResDataEntry->Size; i++)
+							vecRootResRawData.push_back(std::byte(*(pResRawData + i)));
 				}
 			}
-			_vecResLvLRoot.push_back({ *_pRootResDirEntry, std::move(_strRootResName),
-				_pRootResDataEntry ? *_pRootResDataEntry : IMAGE_RESOURCE_DATA_ENTRY { 0 }, std::move(_vecRootResRawData), _tupleResLvL2 });
-			_vecRootResRawData.clear();
-			_strRootResName.clear();
+			vecResLvLRoot.push_back({ *pRootResDirEntry, std::move(strRootResName),
+				pRootResDataEntry ? *pRootResDataEntry : IMAGE_RESOURCE_DATA_ENTRY { 0 }, std::move(vecRootResRawData), tupleResLvL2 });
+			vecRootResRawData.clear();
+			strRootResName.clear();
 
-			_pRootResDirEntry++;
+			pRootResDirEntry++;
 		}
-		m_tupleResourceTable = { *_pRootResDir, std::move(_vecResLvLRoot) };
-		_vecResLvLRoot.clear();
+		m_tupResourceTable = { *pRootResDir, std::move(vecResLvLRoot) };
+		vecResLvLRoot.clear();
 	}
 	catch (const std::bad_alloc&)
 	{
-		delete [] m_lpszEmergencyMemory;
+		delete [] m_szEmergencyMemory;
 		MessageBox(0, TEXT("E_OUTOFMEMORY error while trying to get Resource Table."), TEXT("Error"), MB_ICONERROR);
 
-		_vecResLvLRoot.clear();
-		_vecResLvL2.clear();
-		_vecResLvL3.clear();
-		m_lpszEmergencyMemory = new char[16384];
+		vecResLvLRoot.clear();
+		vecResLvL2.clear();
+		vecResLvL3.clear();
+		m_szEmergencyMemory = new char[16384];
 	}
 	m_dwFileSummary |= IMAGE_RESOURCE_DIRECTORY_FLAG;
 
@@ -1327,16 +1327,16 @@ HRESULT Clibpe::PEGetExceptionTable()
 {
 	//IMAGE_RUNTIME_FUNCTION_ENTRY (without leading underscore) 
 	//might have different typedef depending on defined platform, see winnt.h
-	_PIMAGE_RUNTIME_FUNCTION_ENTRY _pRuntimeFuncsEntry = (_PIMAGE_RUNTIME_FUNCTION_ENTRY)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION));
-	if (!_pRuntimeFuncsEntry)
+	_PIMAGE_RUNTIME_FUNCTION_ENTRY pRuntimeFuncsEntry = (_PIMAGE_RUNTIME_FUNCTION_ENTRY)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION));
+	if (!pRuntimeFuncsEntry)
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
 
-	DWORD _nEntries = PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_EXCEPTION) / (DWORD)sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY);
-	if (!_nEntries)
+	DWORD nEntries = PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXCEPTION) / (DWORD)sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY);
+	if (!nEntries)
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
 
-	for (unsigned i = 0; i < _nEntries; i++, _pRuntimeFuncsEntry++)
-		m_vecExceptionTable.push_back(*_pRuntimeFuncsEntry);
+	for (unsigned i = 0; i < nEntries; i++, pRuntimeFuncsEntry++)
+		m_vecExceptionTable.push_back(*pRuntimeFuncsEntry);
 
 	m_dwFileSummary |= IMAGE_EXCEPTION_DIRECTORY_FLAG;
 
@@ -1345,38 +1345,38 @@ HRESULT Clibpe::PEGetExceptionTable()
 
 HRESULT Clibpe::PEGetSecurityTable()
 {
-	DWORD _dwSecurityDirOffset = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
-	DWORD _dwSecurityDirSize = PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
+	DWORD dwSecurityDirOffset = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
+	DWORD dwSecurityDirSize = PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
 
-	if (_dwSecurityDirOffset == 0 || _dwSecurityDirSize == 0)
+	if (dwSecurityDirOffset == 0 || dwSecurityDirSize == 0)
 		return IMAGE_HAS_NO_SECURITY_DIR;
 
-	ULONGLONG _dwSecurityDirStartVA { };
+	ULONGLONG dwSecurityDirStartVA { };
 	if (m_fMapViewOfFileWhole)
-		_dwSecurityDirStartVA = (DWORD_PTR)m_lpBase + _dwSecurityDirOffset;
+		dwSecurityDirStartVA = (DWORD_PTR)m_lpBase + dwSecurityDirOffset;
 	else
-		_dwSecurityDirStartVA = (DWORD_PTR)m_lpSectionBase + m_dwDeltaFileOffsetToMap;
+		dwSecurityDirStartVA = (DWORD_PTR)m_lpSectionBase + m_dwDeltaFileOffsetToMap;
 
-	ULONGLONG _dwSecurityDirEndVA = _dwSecurityDirStartVA + _dwSecurityDirSize;
+	ULONGLONG dwSecurityDirEndVA = dwSecurityDirStartVA + dwSecurityDirSize;
 
 	//Checking for crossing file's size bounds.
-	if (_dwSecurityDirStartVA >= m_dwMaxPointerBound || _dwSecurityDirEndVA > m_dwMaxPointerBound)
+	if (dwSecurityDirStartVA >= m_dwMaxPointerBound || dwSecurityDirEndVA > m_dwMaxPointerBound)
 		return IMAGE_HAS_NO_SECURITY_DIR;
 
-	LPWIN_CERTIFICATE _pSertificate = (LPWIN_CERTIFICATE)_dwSecurityDirStartVA;
-	std::vector<std::byte> _vecCertBytes { };
-	while (_dwSecurityDirStartVA < _dwSecurityDirEndVA)
+	LPWIN_CERTIFICATE pSertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
+	std::vector<std::byte> vecCertBytes { };
+	while (dwSecurityDirStartVA < dwSecurityDirEndVA)
 	{
-		for (unsigned i = 0; i < _pSertificate->dwLength - offsetof(WIN_CERTIFICATE, bCertificate); i++)
-			_vecCertBytes.push_back((std::byte)_pSertificate->bCertificate[i]);
+		for (unsigned i = 0; i < pSertificate->dwLength - offsetof(WIN_CERTIFICATE, bCertificate); i++)
+			vecCertBytes.push_back((std::byte)pSertificate->bCertificate[i]);
 
-		m_vecSecurity.push_back({ *_pSertificate, std::move(_vecCertBytes) });
-		_vecCertBytes.clear();
+		m_vecSecurity.push_back({ *pSertificate, std::move(vecCertBytes) });
+		vecCertBytes.clear();
 
 		//Get next sertificate entry.
 		//All entries starts at 8 rounded address.
-		_dwSecurityDirStartVA = (_pSertificate->dwLength + _dwSecurityDirStartVA) % 8 + (_pSertificate->dwLength + _dwSecurityDirStartVA);
-		_pSertificate = (LPWIN_CERTIFICATE)_dwSecurityDirStartVA;
+		dwSecurityDirStartVA = (pSertificate->dwLength + dwSecurityDirStartVA) % 8 + (pSertificate->dwLength + dwSecurityDirStartVA);
+		pSertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
 	}
 	m_dwFileSummary |= IMAGE_SECURITY_DIRECTORY_FLAG;
 
@@ -1385,67 +1385,67 @@ HRESULT Clibpe::PEGetSecurityTable()
 
 HRESULT Clibpe::PEGetRelocationTable()
 {
-	PIMAGE_BASE_RELOCATION _pBaseRelocDescriptor = (PIMAGE_BASE_RELOCATION)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC));
+	PIMAGE_BASE_RELOCATION pBaseRelocDescriptor = (PIMAGE_BASE_RELOCATION)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC));
 
-	if (!_pBaseRelocDescriptor)
+	if (!pBaseRelocDescriptor)
 		return IMAGE_HAS_NO_BASERELOC_DIR;
 
-	std::vector<std::tuple<WORD/*type*/, WORD/*offset*/>> _vecRelocs { };
+	std::vector<std::tuple<WORD/*type*/, WORD/*offset*/>> vecRelocs { };
 
 	try
 	{
-		while ((_pBaseRelocDescriptor->SizeOfBlock) && (_pBaseRelocDescriptor->VirtualAddress))
+		while ((pBaseRelocDescriptor->SizeOfBlock) && (pBaseRelocDescriptor->VirtualAddress))
 		{
-			if (_pBaseRelocDescriptor->SizeOfBlock < sizeof(IMAGE_BASE_RELOCATION))
+			if (pBaseRelocDescriptor->SizeOfBlock < sizeof(IMAGE_BASE_RELOCATION))
 				return -1;
 
 			//Amount of Reloc entries
-			DWORD _iRelocEntries = (_pBaseRelocDescriptor->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
-			PWORD _pRelocEntry = PWORD((DWORD_PTR)_pBaseRelocDescriptor + sizeof(IMAGE_BASE_RELOCATION));
-			WORD _relocType { };
+			DWORD iRelocEntries = (pBaseRelocDescriptor->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
+			PWORD pRelocEntry = PWORD((DWORD_PTR)pBaseRelocDescriptor + sizeof(IMAGE_BASE_RELOCATION));
+			WORD relocType { };
 
-			for (DWORD i = 0; i < _iRelocEntries; i++)
+			for (DWORD i = 0; i < iRelocEntries; i++)
 			{
-				if ((DWORD_PTR)_pRelocEntry >= m_dwMaxPointerBound)
+				if ((DWORD_PTR)pRelocEntry >= m_dwMaxPointerBound)
 					break;
 				// Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
-				_relocType = (*_pRelocEntry & 0xF000) >> 12;
-				_vecRelocs.push_back({ _relocType, ((*_pRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/ });
+				relocType = (*pRelocEntry & 0xF000) >> 12;
+				vecRelocs.push_back({ relocType, ((*pRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/ });
 
-				if (_relocType == IMAGE_REL_BASED_HIGHADJ)
+				if (relocType == IMAGE_REL_BASED_HIGHADJ)
 				{   //The base relocation adds the high 16 bits of the difference to the 16-bit field at offset.
 					//The 16-bit field represents the high value of a 32-bit word. 
 					//The low 16 bits of the 32-bit value are stored in the 16-bit word that follows this base relocation.
 					//This means that this base relocation occupies two slots. (MSDN)
-					_pRelocEntry++;
-					_vecRelocs.push_back({ _relocType, *_pRelocEntry/*The low 16-bit field*/ });
-					_iRelocEntries--; //to compensate _pRelocEntry++
+					pRelocEntry++;
+					vecRelocs.push_back({ relocType, *pRelocEntry/*The low 16-bit field*/ });
+					iRelocEntries--; //to compensate pRelocEntry++
 				}
-				_pRelocEntry++;
+				pRelocEntry++;
 			}
-			m_vecRelocationTable.push_back({ *_pBaseRelocDescriptor, std::move(_vecRelocs) });
-			_vecRelocs.clear(); //clear temp vector to fill with next entries
+			m_vecRelocationTable.push_back({ *pBaseRelocDescriptor, std::move(vecRelocs) });
+			vecRelocs.clear(); //clear temp vector to fill with next entries
 
 			//Too big (bogus) SizeOfBlock may cause DWORD_PTR overflow
 #if INTPTR_MAX == INT32_MAX
-			if ((DWORD_PTR)_pBaseRelocDescriptor > (UINT_MAX - _pBaseRelocDescriptor->SizeOfBlock))
+			if ((DWORD_PTR)pBaseRelocDescriptor > (UINT_MAX - pBaseRelocDescriptor->SizeOfBlock))
 				break;
 #elif INTPTR_MAX == INT64_MAX
-			if ((DWORD_PTR)_pBaseRelocDescriptor > (MAXDWORD64 - _pBaseRelocDescriptor->SizeOfBlock))
+			if ((DWORD_PTR)pBaseRelocDescriptor > (MAXDWORD64 - pBaseRelocDescriptor->SizeOfBlock))
 				break;
 #endif
-			_pBaseRelocDescriptor = PIMAGE_BASE_RELOCATION((DWORD_PTR)_pBaseRelocDescriptor + (DWORD_PTR)_pBaseRelocDescriptor->SizeOfBlock);
-			if ((DWORD_PTR)_pBaseRelocDescriptor >= m_dwMaxPointerBound)
+			pBaseRelocDescriptor = PIMAGE_BASE_RELOCATION((DWORD_PTR)pBaseRelocDescriptor + (DWORD_PTR)pBaseRelocDescriptor->SizeOfBlock);
+			if ((DWORD_PTR)pBaseRelocDescriptor >= m_dwMaxPointerBound)
 				break;
 		}
 	}
 	catch (const std::bad_alloc&)
 	{
-		delete [] m_lpszEmergencyMemory;
+		delete [] m_szEmergencyMemory;
 		MessageBox(0, L"E_OUTOFMEMORY error while trying to get Relocation Table.", L"Error", MB_ICONERROR);
 
-		_vecRelocs.clear();
-		m_lpszEmergencyMemory = new char[16384];
+		vecRelocs.clear();
+		m_szEmergencyMemory = new char[16384];
 	}
 
 	m_dwFileSummary |= IMAGE_BASERELOC_DIRECTORY_FLAG;
@@ -1455,45 +1455,45 @@ HRESULT Clibpe::PEGetRelocationTable()
 
 HRESULT Clibpe::PEGetDebugTable()
 {
-	DWORD _dwDebugDirRVA = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG);
+	DWORD dwDebugDirRVA = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG);
 
-	if (!_dwDebugDirRVA)
+	if (!dwDebugDirRVA)
 		return IMAGE_HAS_NO_DEBUG_DIR;
 
-	PIMAGE_DEBUG_DIRECTORY _pDebugDir { };
-	DWORD _dwDebugDirSize { };
-	PIMAGE_SECTION_HEADER _pDebugSecHeader = PEGetSectionHeaderFromName(".debug");
+	PIMAGE_DEBUG_DIRECTORY pDebugDir { };
+	DWORD dwDebugDirSize { };
+	PIMAGE_SECTION_HEADER pDebugSecHeader = PEGetSecHeaderFromName(".debug");
 
-	if (_pDebugSecHeader && (_pDebugSecHeader->VirtualAddress == _dwDebugDirRVA))
+	if (pDebugSecHeader && (pDebugSecHeader->VirtualAddress == dwDebugDirRVA))
 	{
 		if (m_fMapViewOfFileWhole)
-			_pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)_pDebugSecHeader->PointerToRawData + (DWORD_PTR)m_lpBase);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)pDebugSecHeader->PointerToRawData + (DWORD_PTR)m_lpBase);
 		else
-			_pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetToMap);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetToMap);
 
-		_dwDebugDirSize = PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
+		dwDebugDirSize = PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
 	}
 	else // Looking for the debug directory
 	{
-		_pDebugSecHeader = PEGetSectionHeaderFromRVA(_dwDebugDirRVA);
-		if (!_pDebugSecHeader)
+		pDebugSecHeader = PEGetSecHeaderFromRVA(dwDebugDirRVA);
+		if (!pDebugSecHeader)
 			return IMAGE_HAS_NO_DEBUG_DIR;
 
-		if (!(_pDebugDir = (PIMAGE_DEBUG_DIRECTORY)PERVAToPTR(_dwDebugDirRVA)))
+		if (!(pDebugDir = (PIMAGE_DEBUG_DIRECTORY)PERVAToPTR(dwDebugDirRVA)))
 			return IMAGE_HAS_NO_DEBUG_DIR;
 
-		_dwDebugDirSize = PEGetDirectoryEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG);
+		dwDebugDirSize = PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG);
 	}
 
-	DWORD _nDebugEntries = _dwDebugDirSize / (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
+	DWORD nDebugEntries = dwDebugDirSize / (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
 
-	if (!_nDebugEntries)
+	if (!nDebugEntries)
 		return -1;
 
-	for (unsigned i = 0; i < _nDebugEntries; i++)
+	for (unsigned i = 0; i < nDebugEntries; i++)
 	{
-		m_vecDebugTable.push_back(*_pDebugDir);
-		_pDebugDir++;
+		m_vecDebugTable.push_back(*pDebugDir);
+		pDebugDir++;
 	}
 	m_dwFileSummary |= IMAGE_DEBUG_DIRECTORY_FLAG;
 
@@ -1502,12 +1502,12 @@ HRESULT Clibpe::PEGetDebugTable()
 
 HRESULT Clibpe::PEGetArchitectureTable()
 {
-	DWORD _dwArchDirRVA = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_ARCHITECTURE);
-	if (!_dwArchDirRVA)
+	DWORD dwArchDirRVA = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_ARCHITECTURE);
+	if (!dwArchDirRVA)
 		return IMAGE_HAS_NO_ARCHITECTURE_DIR;
 
-	PIMAGE_ARCHITECTURE_ENTRY _pArchEntry = (PIMAGE_ARCHITECTURE_ENTRY)PERVAToPTR(_dwArchDirRVA);
-	if (!_pArchEntry)
+	PIMAGE_ARCHITECTURE_ENTRY pArchEntry = (PIMAGE_ARCHITECTURE_ENTRY)PERVAToPTR(dwArchDirRVA);
+	if (!pArchEntry)
 		return IMAGE_HAS_NO_ARCHITECTURE_DIR;
 
 	m_dwFileSummary |= IMAGE_ARCHITECTURE_DIRECTORY_FLAG;
@@ -1517,8 +1517,8 @@ HRESULT Clibpe::PEGetArchitectureTable()
 
 HRESULT Clibpe::PEGetGlobalPTRTable()
 {
-	DWORD_PTR _dwGlobalPTRDirRVA = (DWORD_PTR)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_GLOBALPTR));
-	if (!_dwGlobalPTRDirRVA)
+	DWORD_PTR dwGlobalPTRDirRVA = (DWORD_PTR)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_GLOBALPTR));
+	if (!dwGlobalPTRDirRVA)
 		return IMAGE_HAS_NO_GLOBALPTR_DIR;
 
 	m_dwFileSummary |= IMAGE_GLOBALPTR_DIRECTORY_FLAG;
@@ -1528,30 +1528,30 @@ HRESULT Clibpe::PEGetGlobalPTRTable()
 
 HRESULT Clibpe::PEGetTLSTable()
 {
-	DWORD _dwTLSDirRVA = PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
-	if (!_dwTLSDirRVA)
+	DWORD dwTLSDirRVA = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
+	if (!dwTLSDirRVA)
 		return IMAGE_HAS_NO_TLS_DIR;
 
-	PIMAGE_TLS_DIRECTORY32 _pTLSDir32 { };
-	PIMAGE_TLS_DIRECTORY64 _pTLSDir64 { };
-	std::vector<std::byte> _vecTLSRawData { };
-	std::vector<DWORD> _vecTLSCallbacks { };
+	PIMAGE_TLS_DIRECTORY32 pTLSDir32 { };
+	PIMAGE_TLS_DIRECTORY64 pTLSDir64 { };
+	std::vector<std::byte> vecTLSRawData { };
+	std::vector<DWORD> vecTLSCallbacks { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		_pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)PERVAToPTR(_dwTLSDirRVA);
-		if (!_pTLSDir32)
+		pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)PERVAToPTR(dwTLSDirRVA);
+		if (!pTLSDir32)
 			return IMAGE_HAS_NO_TLS_DIR;
 
-		m_tupleTLS = { *_pTLSDir32, IMAGE_TLS_DIRECTORY64 { 0 }, _vecTLSRawData, _vecTLSCallbacks };
+		m_tupTLS = { *pTLSDir32, IMAGE_TLS_DIRECTORY64 { 0 }, vecTLSRawData, vecTLSCallbacks };
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		_pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)PERVAToPTR(_dwTLSDirRVA);
-		if (!_pTLSDir64)
+		pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)PERVAToPTR(dwTLSDirRVA);
+		if (!pTLSDir64)
 			return IMAGE_HAS_NO_TLS_DIR;
 
-		m_tupleTLS = { IMAGE_TLS_DIRECTORY32 { 0 }, *_pTLSDir64, std::move(_vecTLSRawData), std::move(_vecTLSCallbacks) };
+		m_tupTLS = { IMAGE_TLS_DIRECTORY32 { 0 }, *pTLSDir64, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
 	}
 	m_dwFileSummary |= IMAGE_TLS_DIRECTORY_FLAG;
 
@@ -1560,24 +1560,24 @@ HRESULT Clibpe::PEGetTLSTable()
 
 HRESULT Clibpe::PEGetLoadConfigTable()
 {
-	PIMAGE_LOAD_CONFIG_DIRECTORY32 _pLoadConfigDir32 { };
-	PIMAGE_LOAD_CONFIG_DIRECTORY64 _pLoadConfigDir64 { };
+	PIMAGE_LOAD_CONFIG_DIRECTORY32 pLoadConfigDir32 { };
+	PIMAGE_LOAD_CONFIG_DIRECTORY64 pLoadConfigDir64 { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		_pLoadConfigDir32 = (PIMAGE_LOAD_CONFIG_DIRECTORY32)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
-		if (!_pLoadConfigDir32)
+		pLoadConfigDir32 = (PIMAGE_LOAD_CONFIG_DIRECTORY32)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
+		if (!pLoadConfigDir32)
 			return IMAGE_HAS_NO_LOADCONFIG_DIR;
 
-		m_tupleLoadConfigDir = { *_pLoadConfigDir32, IMAGE_LOAD_CONFIG_DIRECTORY64 { 0 } };
+		m_tupLoadConfigDir = { *pLoadConfigDir32, IMAGE_LOAD_CONFIG_DIRECTORY64 { 0 } };
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		_pLoadConfigDir64 = (PIMAGE_LOAD_CONFIG_DIRECTORY64)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
-		if (!_pLoadConfigDir64)
+		pLoadConfigDir64 = (PIMAGE_LOAD_CONFIG_DIRECTORY64)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
+		if (!pLoadConfigDir64)
 			return IMAGE_HAS_NO_LOADCONFIG_DIR;
 
-		m_tupleLoadConfigDir = { IMAGE_LOAD_CONFIG_DIRECTORY32 { 0 }, *_pLoadConfigDir64 };
+		m_tupLoadConfigDir = { IMAGE_LOAD_CONFIG_DIRECTORY32 { 0 }, *pLoadConfigDir64 };
 	}
 	m_dwFileSummary |= IMAGE_LOADCONFIG_DIRECTORY_FLAG;
 
@@ -1586,41 +1586,41 @@ HRESULT Clibpe::PEGetLoadConfigTable()
 
 HRESULT Clibpe::PEGetBoundImportTable()
 {
-	PIMAGE_BOUND_IMPORT_DESCRIPTOR _pBoundImpDesc =
-		(PIMAGE_BOUND_IMPORT_DESCRIPTOR)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT));
+	PIMAGE_BOUND_IMPORT_DESCRIPTOR pBoundImpDesc =
+		(PIMAGE_BOUND_IMPORT_DESCRIPTOR)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT));
 
-	if (!_pBoundImpDesc)
+	if (!pBoundImpDesc)
 		return IMAGE_HAS_NO_BOUNDIMPORT_DIR;
 
-	std::vector<std::tuple<IMAGE_BOUND_FORWARDER_REF, std::string>> _vecBoundForwarders { };
-	std::string _strModuleName { };
+	std::vector<std::tuple<IMAGE_BOUND_FORWARDER_REF, std::string>> vecBoundForwarders { };
+	std::string strModuleName { };
 
-	while (_pBoundImpDesc->TimeDateStamp)
+	while (pBoundImpDesc->TimeDateStamp)
 	{
-		PIMAGE_BOUND_FORWARDER_REF _pBoundImpForwarder = (PIMAGE_BOUND_FORWARDER_REF)(_pBoundImpDesc + 1);
+		PIMAGE_BOUND_FORWARDER_REF pBoundImpForwarder = (PIMAGE_BOUND_FORWARDER_REF)(pBoundImpDesc + 1);
 
-		for (unsigned i = 0; i < _pBoundImpDesc->NumberOfModuleForwarderRefs; i++)
+		for (unsigned i = 0; i < pBoundImpDesc->NumberOfModuleForwarderRefs; i++)
 		{
-			LPCSTR _lpszName = (LPCSTR)((DWORD_PTR)_pBoundImpDesc + _pBoundImpForwarder->OffsetModuleName);
-			if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-				_strModuleName = _lpszName;
+			LPCSTR szName = (LPCSTR)((DWORD_PTR)pBoundImpDesc + pBoundImpForwarder->OffsetModuleName);
+			if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+				strModuleName = szName;
 
-			_vecBoundForwarders.push_back({ *_pBoundImpForwarder, std::move(_strModuleName) });
-			_strModuleName.clear();
+			vecBoundForwarders.push_back({ *pBoundImpForwarder, std::move(strModuleName) });
+			strModuleName.clear();
 
-			_pBoundImpForwarder++;
-			_pBoundImpDesc = (PIMAGE_BOUND_IMPORT_DESCRIPTOR)((DWORD_PTR)_pBoundImpDesc + sizeof(IMAGE_BOUND_FORWARDER_REF));
+			pBoundImpForwarder++;
+			pBoundImpDesc = (PIMAGE_BOUND_IMPORT_DESCRIPTOR)((DWORD_PTR)pBoundImpDesc + sizeof(IMAGE_BOUND_FORWARDER_REF));
 		}
 
-		LPCSTR _lpszName = (LPCSTR)((DWORD_PTR)_pBoundImpDesc + _pBoundImpDesc->OffsetModuleName);
-		if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-			_strModuleName = _lpszName;
+		LPCSTR szName = (LPCSTR)((DWORD_PTR)pBoundImpDesc + pBoundImpDesc->OffsetModuleName);
+		if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+			strModuleName = szName;
 
-		m_vecBoundImportTable.push_back({ *_pBoundImpDesc, std::move(_strModuleName), std::move(_vecBoundForwarders) });
-		_vecBoundForwarders.clear();
-		_strModuleName.clear();
+		m_vecBoundImportTable.push_back({ *pBoundImpDesc, std::move(strModuleName), std::move(vecBoundForwarders) });
+		vecBoundForwarders.clear();
+		strModuleName.clear();
 
-		_pBoundImpDesc++;
+		pBoundImpDesc++;
 	}
 	m_dwFileSummary |= IMAGE_BOUNDIMPORT_DIRECTORY_FLAG;
 
@@ -1629,8 +1629,8 @@ HRESULT Clibpe::PEGetBoundImportTable()
 
 HRESULT Clibpe::PEGetIATTable()
 {
-	DWORD_PTR _dwIATDirRVA = (DWORD_PTR)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_IAT));
-	if (!_dwIATDirRVA)
+	DWORD_PTR dwIATDirRVA = (DWORD_PTR)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IAT));
+	if (!dwIATDirRVA)
 		return IMAGE_HAS_NO_IAT_DIR;
 
 	m_dwFileSummary |= IMAGE_IAT_DIRECTORY_FLAG;
@@ -1640,135 +1640,135 @@ HRESULT Clibpe::PEGetIATTable()
 
 HRESULT Clibpe::PEGetDelayImportTable()
 {
-	PIMAGE_DELAYLOAD_DESCRIPTOR _pDelayImpDescriptor = (PIMAGE_DELAYLOAD_DESCRIPTOR)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT));
-	if (!_pDelayImpDescriptor)
+	PIMAGE_DELAYLOAD_DESCRIPTOR pDelayImpDescriptor = (PIMAGE_DELAYLOAD_DESCRIPTOR)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT));
+	if (!pDelayImpDescriptor)
 		return IMAGE_HAS_NO_DELAY_IMPORT_DIR;
 
-	PIMAGE_THUNK_DATA32 _pThunk32IAT { }, _pThunk32Name { }, _pThunk32BoundIAT { }, _pThunk32UnloadInfoIAT { };
-	PIMAGE_THUNK_DATA64 _pThunk64IAT { }, _pThunk64Name { }, _pThunk64BoundIAT { }, _pThunk64UnloadInfoIAT { };
+	PIMAGE_THUNK_DATA32 pThunk32IAT { }, pThunk32Name { }, pThunk32BoundIAT { }, pThunk32UnloadInfoIAT { };
+	PIMAGE_THUNK_DATA64 pThunk64IAT { }, pThunk64Name { }, pThunk64BoundIAT { }, pThunk64UnloadInfoIAT { };
 	std::vector<std::tuple<LONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, LONGLONG/*Thunk table RVA*/,
-		LONGLONG/*IAT->u1.AddressOfData*/, LONGLONG/*BoundIAT->u1.AddressOfData*/, LONGLONG/*UnloadInfoIAT->u1.AddressOfData*/>> _vecFunc { };
-	std::string _strDllName { };
+		LONGLONG/*IAT->u1.AddressOfData*/, LONGLONG/*BoundIAT->u1.AddressOfData*/, LONGLONG/*UnloadInfoIAT->u1.AddressOfData*/>> vecFunc { };
+	std::string strDllName { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
-		while (_pDelayImpDescriptor->DllNameRVA)
+		while (pDelayImpDescriptor->DllNameRVA)
 		{
-			_pThunk32Name = (PIMAGE_THUNK_DATA32)(DWORD_PTR)_pDelayImpDescriptor->ImportNameTableRVA;
+			pThunk32Name = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pDelayImpDescriptor->ImportNameTableRVA;
 
-			if (!_pThunk32Name)
-				_pDelayImpDescriptor++;
+			if (!pThunk32Name)
+				pDelayImpDescriptor++;
 			else
 			{
-				_pThunk32Name = (PIMAGE_THUNK_DATA32)PERVAToPTR((DWORD_PTR)_pThunk32Name);
-				_pThunk32IAT = (PIMAGE_THUNK_DATA32)PERVAToPTR(_pDelayImpDescriptor->ImportAddressTableRVA);
-				_pThunk32BoundIAT = (PIMAGE_THUNK_DATA32)PERVAToPTR(_pDelayImpDescriptor->BoundImportAddressTableRVA);
-				_pThunk32UnloadInfoIAT = (PIMAGE_THUNK_DATA32)PERVAToPTR(_pDelayImpDescriptor->UnloadInformationTableRVA);
+				pThunk32Name = (PIMAGE_THUNK_DATA32)PERVAToPTR((DWORD_PTR)pThunk32Name);
+				pThunk32IAT = (PIMAGE_THUNK_DATA32)PERVAToPTR(pDelayImpDescriptor->ImportAddressTableRVA);
+				pThunk32BoundIAT = (PIMAGE_THUNK_DATA32)PERVAToPTR(pDelayImpDescriptor->BoundImportAddressTableRVA);
+				pThunk32UnloadInfoIAT = (PIMAGE_THUNK_DATA32)PERVAToPTR(pDelayImpDescriptor->UnloadInformationTableRVA);
 
-				if (!_pThunk32Name)
+				if (!pThunk32Name)
 					return IMAGE_HAS_NO_DELAY_IMPORT_DIR;
 
-				while (_pThunk32Name->u1.AddressOfData)
+				while (pThunk32Name->u1.AddressOfData)
 				{
-					if (_pThunk32Name->u1.Ordinal & IMAGE_ORDINAL_FLAG32)
-						_vecFunc.push_back({ IMAGE_ORDINAL32(_pThunk32Name->u1.Ordinal), "",
-							_pThunk32Name->u1.AddressOfData,
-							_pThunk32IAT ? _pThunk32IAT->u1.AddressOfData : 0,
-							_pThunk32BoundIAT ? _pThunk32BoundIAT->u1.AddressOfData : 0,
-							_pThunk32UnloadInfoIAT ? _pThunk32UnloadInfoIAT->u1.AddressOfData : 0 });
+					if (pThunk32Name->u1.Ordinal & IMAGE_ORDINAL_FLAG32)
+						vecFunc.push_back({ IMAGE_ORDINAL32(pThunk32Name->u1.Ordinal), "",
+							pThunk32Name->u1.AddressOfData,
+							pThunk32IAT ? pThunk32IAT->u1.AddressOfData : 0,
+							pThunk32BoundIAT ? pThunk32BoundIAT->u1.AddressOfData : 0,
+							pThunk32UnloadInfoIAT ? pThunk32UnloadInfoIAT->u1.AddressOfData : 0 });
 					else {//filling Hint, Name and Thunk RVA
-						PIMAGE_IMPORT_BY_NAME _pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(_pThunk32Name->u1.AddressOfData);
-						if (_pName && (StringCchLengthA(_pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-							_strDllName = _pName->Name;
+						PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(pThunk32Name->u1.AddressOfData);
+						if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+							strDllName = pName->Name;
 
-						_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strDllName),
-							_pThunk32Name->u1.AddressOfData,
-							_pThunk32IAT ? _pThunk32IAT->u1.AddressOfData : 0,
-							_pThunk32BoundIAT ? _pThunk32BoundIAT->u1.AddressOfData : 0,
-							_pThunk32UnloadInfoIAT ? _pThunk32UnloadInfoIAT->u1.AddressOfData : 0 });
+						vecFunc.push_back({ pName ? pName->Hint : 0, std::move(strDllName),
+							pThunk32Name->u1.AddressOfData,
+							pThunk32IAT ? pThunk32IAT->u1.AddressOfData : 0,
+							pThunk32BoundIAT ? pThunk32BoundIAT->u1.AddressOfData : 0,
+							pThunk32UnloadInfoIAT ? pThunk32UnloadInfoIAT->u1.AddressOfData : 0 });
 					}
 
-					_pThunk32Name++;
-					if (_pThunk32IAT)
-						_pThunk32IAT++;
-					if (_pThunk32BoundIAT)
-						_pThunk32BoundIAT++;
-					if (_pThunk32UnloadInfoIAT)
-						_pThunk32UnloadInfoIAT++;
+					pThunk32Name++;
+					if (pThunk32IAT)
+						pThunk32IAT++;
+					if (pThunk32BoundIAT)
+						pThunk32BoundIAT++;
+					if (pThunk32UnloadInfoIAT)
+						pThunk32UnloadInfoIAT++;
 
-					_strDllName.clear();
+					strDllName.clear();
 				}
 
-				LPCSTR _lpszName = (LPCSTR)PERVAToPTR(_pDelayImpDescriptor->DllNameRVA);
-				if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-					_strDllName = _lpszName;
+				LPCSTR szName = (LPCSTR)PERVAToPTR(pDelayImpDescriptor->DllNameRVA);
+				if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+					strDllName = szName;
 
-				m_vecDelayImportTable.push_back({ *_pDelayImpDescriptor, std::move(_strDllName), std::move(_vecFunc) });
-				_vecFunc.clear();
-				_strDllName.clear();
+				m_vecDelayImportTable.push_back({ *pDelayImpDescriptor, std::move(strDllName), std::move(vecFunc) });
+				vecFunc.clear();
+				strDllName.clear();
 
-				_pDelayImpDescriptor++;
+				pDelayImpDescriptor++;
 			}
 		}
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
-		while (_pDelayImpDescriptor->DllNameRVA)
+		while (pDelayImpDescriptor->DllNameRVA)
 		{
-			_pThunk64Name = (PIMAGE_THUNK_DATA64)(DWORD_PTR)_pDelayImpDescriptor->ImportNameTableRVA;
+			pThunk64Name = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pDelayImpDescriptor->ImportNameTableRVA;
 
-			if (!_pThunk64Name)
-				_pDelayImpDescriptor++;
+			if (!pThunk64Name)
+				pDelayImpDescriptor++;
 			else
 			{
-				_pThunk64Name = (PIMAGE_THUNK_DATA64)PERVAToPTR((DWORD_PTR)_pThunk64Name);
-				_pThunk64IAT = (PIMAGE_THUNK_DATA64)PERVAToPTR(_pDelayImpDescriptor->ImportAddressTableRVA);
-				_pThunk64BoundIAT = (PIMAGE_THUNK_DATA64)PERVAToPTR(_pDelayImpDescriptor->BoundImportAddressTableRVA);
-				_pThunk64UnloadInfoIAT = (PIMAGE_THUNK_DATA64)PERVAToPTR(_pDelayImpDescriptor->UnloadInformationTableRVA);
+				pThunk64Name = (PIMAGE_THUNK_DATA64)PERVAToPTR((DWORD_PTR)pThunk64Name);
+				pThunk64IAT = (PIMAGE_THUNK_DATA64)PERVAToPTR(pDelayImpDescriptor->ImportAddressTableRVA);
+				pThunk64BoundIAT = (PIMAGE_THUNK_DATA64)PERVAToPTR(pDelayImpDescriptor->BoundImportAddressTableRVA);
+				pThunk64UnloadInfoIAT = (PIMAGE_THUNK_DATA64)PERVAToPTR(pDelayImpDescriptor->UnloadInformationTableRVA);
 
-				if (!_pThunk64Name)
+				if (!pThunk64Name)
 					return IMAGE_HAS_NO_DELAY_IMPORT_DIR;
 
-				while (_pThunk64Name->u1.AddressOfData)
+				while (pThunk64Name->u1.AddressOfData)
 				{
-					if (_pThunk64Name->u1.Ordinal & IMAGE_ORDINAL_FLAG64)
-						_vecFunc.push_back({ IMAGE_ORDINAL64(_pThunk64Name->u1.Ordinal), "", 
-							_pThunk64Name->u1.AddressOfData,
-							_pThunk64IAT ? _pThunk64IAT->u1.AddressOfData : 0,
-							_pThunk64BoundIAT ? _pThunk64BoundIAT->u1.AddressOfData : 0,
-							_pThunk64UnloadInfoIAT ? _pThunk64UnloadInfoIAT->u1.AddressOfData : 0 });
+					if (pThunk64Name->u1.Ordinal & IMAGE_ORDINAL_FLAG64)
+						vecFunc.push_back({ IMAGE_ORDINAL64(pThunk64Name->u1.Ordinal), "",
+							pThunk64Name->u1.AddressOfData,
+							pThunk64IAT ? pThunk64IAT->u1.AddressOfData : 0,
+							pThunk64BoundIAT ? pThunk64BoundIAT->u1.AddressOfData : 0,
+							pThunk64UnloadInfoIAT ? pThunk64UnloadInfoIAT->u1.AddressOfData : 0 });
 					else {//filling Hint, Name and Thunk RVA
-						PIMAGE_IMPORT_BY_NAME _pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(_pThunk64Name->u1.AddressOfData);
-						if (_pName && (StringCchLengthA(_pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-							_strDllName = _pName->Name;
+						PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)PERVAToPTR(pThunk64Name->u1.AddressOfData);
+						if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+							strDllName = pName->Name;
 
-						_vecFunc.push_back({ _pName ? _pName->Hint : 0, std::move(_strDllName), 
-							_pThunk64Name->u1.AddressOfData,
-							_pThunk64IAT ? _pThunk64IAT->u1.AddressOfData : 0,
-							_pThunk64BoundIAT ? _pThunk64BoundIAT->u1.AddressOfData : 0,
-							_pThunk64UnloadInfoIAT ? _pThunk64UnloadInfoIAT->u1.AddressOfData : 0 });
+						vecFunc.push_back({ pName ? pName->Hint : 0, std::move(strDllName),
+							pThunk64Name->u1.AddressOfData,
+							pThunk64IAT ? pThunk64IAT->u1.AddressOfData : 0,
+							pThunk64BoundIAT ? pThunk64BoundIAT->u1.AddressOfData : 0,
+							pThunk64UnloadInfoIAT ? pThunk64UnloadInfoIAT->u1.AddressOfData : 0 });
 					}
 
-					_pThunk64Name++;
-					if (_pThunk64IAT)
-						_pThunk64IAT++;
-					if (_pThunk64BoundIAT)
-						_pThunk64BoundIAT++;
-					if (_pThunk64UnloadInfoIAT)
-						_pThunk64UnloadInfoIAT++;
+					pThunk64Name++;
+					if (pThunk64IAT)
+						pThunk64IAT++;
+					if (pThunk64BoundIAT)
+						pThunk64BoundIAT++;
+					if (pThunk64UnloadInfoIAT)
+						pThunk64UnloadInfoIAT++;
 
-					_strDllName.clear();
+					strDllName.clear();
 				}
 
-				LPCSTR _lpszName = (LPCSTR)PERVAToPTR(_pDelayImpDescriptor->DllNameRVA);
-				if (_lpszName && (StringCchLengthA(_lpszName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-					_strDllName = _lpszName;
+				LPCSTR szName = (LPCSTR)PERVAToPTR(pDelayImpDescriptor->DllNameRVA);
+				if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+					strDllName = szName;
 
-				m_vecDelayImportTable.push_back({ *_pDelayImpDescriptor, std::move(_strDllName), std::move(_vecFunc) });
-				_vecFunc.clear();
-				_strDllName.clear();
+				m_vecDelayImportTable.push_back({ *pDelayImpDescriptor, std::move(strDllName), std::move(vecFunc) });
+				vecFunc.clear();
+				strDllName.clear();
 
-				_pDelayImpDescriptor++;
+				pDelayImpDescriptor++;
 			}
 		}
 	}
@@ -1779,11 +1779,11 @@ HRESULT Clibpe::PEGetDelayImportTable()
 
 HRESULT Clibpe::PEGetCOMDescriptorTable()
 {
-	PIMAGE_COR20_HEADER _pCOMDescriptorHeader = (PIMAGE_COR20_HEADER)PERVAToPTR(PEGetDirectoryEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR));
-	if (!_pCOMDescriptorHeader)
+	PIMAGE_COR20_HEADER pCOMDescriptorHeader = (PIMAGE_COR20_HEADER)PERVAToPTR(PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR));
+	if (!pCOMDescriptorHeader)
 		return IMAGE_HAS_NO_COMDESCRIPTOR_DIR;
-	
-	m_stCOR20Header = *_pCOMDescriptorHeader;
+
+	m_stCOR20Header = *pCOMDescriptorHeader;
 
 	m_dwFileSummary |= IMAGE_COMDESCRIPTOR_DIRECTORY_FLAG;
 
