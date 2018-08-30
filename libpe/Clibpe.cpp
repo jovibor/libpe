@@ -31,13 +31,13 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 	}
 
 	m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, 0);
-	if (!m_lpBase)//Not enough memmory?(File is too big?)...
+	if (!m_lpBase) //Not enough memmory? File is too big?
 	{
 		if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY)
 		{
 			//If file is too big to fit process VirtualSize limit
 			//we try to allocate at least some memory to map file's beginning, where PE HEADER resides.
-			//Then going to MapViewOfFile/Unmap every section separately. 
+			//Then going to MapViewOfFile/Unmap every section individually. 
 			if (!(m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, 0xFFFF)))
 			{
 				CloseHandle(m_hMapObject);
@@ -54,15 +54,16 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFile)
 			return FILE_MAP_VIEW_OF_FILE_FAILED;
 		}
 	}
-	else {
+	else
+	{
 		m_fMapViewOfFileWhole = true;
 		m_dwMaxPointerBound = (DWORD_PTR)m_lpBase + m_stFileSize.QuadPart;
 	}
 
 	HRESULT hr = PEGetHeaders();
 	if (hr != S_OK)
-	{//If at least IMAGE_DOS_SIGNATURE found then returning S_OK.
-	 //Some PE files may consist of only DOS stub.
+	{	//If at least IMAGE_DOS_SIGNATURE found then returning S_OK.
+		//Some PE files may consist of only DOS stub.
 		if (hr != IMAGE_DOS_SIGNATURE_MISMATCH)
 			hr = S_OK;
 
@@ -800,7 +801,8 @@ HRESULT Clibpe::PEGetHeaders()
 	default:
 		return IMAGE_TYPE_UNSUPPORTED;
 	}
-	m_dwFileSummary |= IMAGE_FILE_HEADER_FLAG | IMAGE_OPTIONAL_HEADER_FLAG;
+
+	m_dwFileSummary |= IMAGE_NT_HEADER_FLAG | IMAGE_FILE_HEADER_FLAG | IMAGE_OPTIONAL_HEADER_FLAG;
 
 	return S_OK;
 }
@@ -832,6 +834,7 @@ HRESULT Clibpe::PEGetRichHeader()
 				m_vecRichHeader.push_back({ HIWORD(dwRichXORMask xor *pRichIter), LOWORD(dwRichXORMask xor *pRichIter), dwRichXORMask xor *(pRichIter + 1) });
 				pRichIter += 2;//Jump next DOUBLE_DWORD
 			}
+
 			m_dwFileSummary |= IMAGE_RICH_HEADER_FLAG;
 
 			return S_OK;
@@ -958,7 +961,7 @@ HRESULT Clibpe::PEGetExportTable()
 	try {
 		for (unsigned i = 0; i < pExportDir->NumberOfFunctions; i++)
 		{
-			if (pFuncs[i])//if RVA==0 —> going next entry
+			if (pFuncs[i])//if RVA==0 â€”> going next entry
 			{
 				LPCSTR szFuncName { }, szFuncNameForwarder { };
 
@@ -1408,9 +1411,9 @@ HRESULT Clibpe::PEGetRelocationTable()
 			{
 				if ((DWORD_PTR)pRelocEntry >= m_dwMaxPointerBound)
 					break;
-				// Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
+				// Getting HIGH 4 bits of reloc's entry WORD â€”> reloc type.
 				relocType = (*pRelocEntry & 0xF000) >> 12;
-				vecRelocs.push_back({ relocType, ((*pRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/ });
+				vecRelocs.push_back({ relocType, ((*pRelocEntry) & 0x0fff)/*Low 12 bits â€”> Offset*/ });
 
 				if (relocType == IMAGE_REL_BASED_HIGHADJ)
 				{   //The base relocation adds the high 16 bits of the difference to the 16-bit field at offset.
