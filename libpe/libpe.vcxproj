@@ -157,9 +157,7 @@
       <Path />
     </BuildLog>
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)set_verinfo.ps1 $(TargetDir)$(ProjectName).dll
-copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Consoletest\Release"
-copy /Y "$(TargetDir)$(ProjectName).dll" "Z:\SOFTWARE\SOURCES\Pepper\Release"</Command>
+      <Command>powershell.exe $(ProjectDir)set_verinfo.ps1 $(TargetDir)$(ProjectName).dll</Command>
     </PostBuildEvent>
     <Manifest>
       <OutputManifestFile />
