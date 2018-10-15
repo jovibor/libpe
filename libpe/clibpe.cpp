@@ -16,8 +16,8 @@ Clibpe::~Clibpe()
 
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 {
-	if (m_lpBase)//if it's not the first LoadPe call from the Ilibpe pointer
-		PEResetAll();//sets all members to zero and clear() vectors
+	if (m_fLoaded) //If some file was already previously loaded.
+		PEResetAll();
 
 	HANDLE hFile = CreateFileW(lpszFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
@@ -753,11 +753,12 @@ DWORD Clibpe::PEGetDirEntrySize(UINT uiDirEntry)
 
 void Clibpe::PEResetAll()
 {	//Clean all vectors, 
-	//and nullify all sensitive pointers.
-	m_dwFileSummary = 0;
+	//and nullify all sensitive data.
+	m_lpBase = nullptr;
+	m_hMapObject = nullptr;
 	m_pNTHeader32 = nullptr;
 	m_pNTHeader64 = nullptr;
-	m_lpBase = nullptr;
+	m_dwFileSummary = 0;
 	m_fLoaded = false;
 
 	m_vecRichHeader.clear();
@@ -912,6 +913,7 @@ HRESULT Clibpe::PEGetDataDirs()
 HRESULT Clibpe::PEGetSectionHeaders()
 {
 	PIMAGE_SECTION_HEADER pSectionHeader { };
+	std::string strSecName { };
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
@@ -921,7 +923,30 @@ HRESULT Clibpe::PEGetSectionHeaders()
 		{
 			if ((DWORD_PTR)pSectionHeader >= m_dwMaxPointerBound)
 				break;
-			m_vecSectionHeaders.push_back(*pSectionHeader);
+
+			if (pSectionHeader->Name[0] == '/')
+			{	//Deprecated, but still used "feature" of section name.
+				//https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_section_header#members
+				//«An 8-byte, null-padded UTF-8 string. There is no terminating null character 
+				//if the string is exactly eight characters long.
+				//For longer names, this member contains a forward slash (/) followed by an ASCII representation 
+				//of a decimal number that is an offset into the string table.»
+				//String Table dwells right after the end of Symbol Table.
+				//Each symbol in Symbol Table occupies exactly 18 bytes.
+				//So String Table's begining can be calculated like this:
+				//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
+				long lOffset = strtol((const char*)&pSectionHeader->Name[1], nullptr, 10);
+				if (lOffset != LONG_MAX && lOffset != LONG_MIN && lOffset != 0)
+				{
+					const char* pSecRealName = (const char*)((DWORD_PTR)m_lpBase + m_pNTHeader32->FileHeader.PointerToSymbolTable +
+						m_pNTHeader32->FileHeader.NumberOfSymbols * 18 + lOffset);
+					if ((DWORD_PTR)pSecRealName < m_dwMaxPointerBound)
+						strSecName = pSecRealName;
+				}
+			}
+
+			m_vecSectionHeaders.push_back({ *pSectionHeader, std::move(strSecName) });
+			strSecName.clear();
 		}
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
@@ -932,7 +957,21 @@ HRESULT Clibpe::PEGetSectionHeaders()
 		{
 			if ((DWORD_PTR)pSectionHeader >= m_dwMaxPointerBound)
 				break;
-			m_vecSectionHeaders.push_back(*pSectionHeader);
+
+			if (pSectionHeader->Name[0] == '/')
+			{
+				long lOffset = strtol((const char*)&pSectionHeader->Name[1], nullptr, 10);
+				if (lOffset != LONG_MAX && lOffset != LONG_MIN && lOffset != 0)
+				{
+					const char* pSecRealName = (const char*)((DWORD_PTR)m_lpBase + m_pNTHeader64->FileHeader.PointerToSymbolTable +
+						m_pNTHeader64->FileHeader.NumberOfSymbols * 18 + lOffset);
+					if ((DWORD_PTR)pSecRealName < m_dwMaxPointerBound)
+						strSecName = pSecRealName;
+				}
+			}
+
+			m_vecSectionHeaders.push_back({ *pSectionHeader, std::move(strSecName) });
+			strSecName.clear();
 		}
 	}
 
@@ -950,10 +989,10 @@ HRESULT Clibpe::PEGetExportTable()
 	DWORD dwExportStartRVA = PEGetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT);
 	DWORD dwExportEndRVA = dwExportStartRVA + PEGetDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXPORT);
 	PIMAGE_SECTION_HEADER pExportSecHeader = PEGetSecHeaderFromRVA(dwExportStartRVA);
-	
+
 	if (!pExportSecHeader)
 		return IMAGE_HAS_NO_EXPORT_DIR;
-	
+
 	PIMAGE_EXPORT_DIRECTORY pExportDir = (PIMAGE_EXPORT_DIRECTORY)PERVAToPTR(dwExportStartRVA);
 
 	if (!pExportDir)
@@ -1208,7 +1247,7 @@ HRESULT Clibpe::PEGetResourceTable()
 
 			//Name of Resource Type (ICON, BITMAP, MENU, etc...)
 			if (pRootResDirEntry->NameIsString == 1)
-			{//copy not more then MAX_PATH chars into strResName, avoiding buff overflow
+			{	//copy not more then MAX_PATH chars into strResName, avoiding buff overflow
 				nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pRootResDirEntry->NameOffset))->Length;
 				strRootResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + pRootResDirEntry->NameOffset))->NameString,
 					nResNameLength < MAX_PATH ? nResNameLength : MAX_PATH);
@@ -1216,7 +1255,7 @@ HRESULT Clibpe::PEGetResourceTable()
 			if (pRootResDirEntry->DataIsDirectory == 1)
 			{
 				PIMAGE_RESOURCE_DIRECTORY pSecondResDir = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pRootResDir + pRootResDirEntry->OffsetToDirectory);
-				if (pSecondResDir == pRootResDir)//Resource loop hack
+				if (pSecondResDir == pRootResDir) //Resource loop hack
 					tupleResLvL2 = { *pSecondResDir, vecResLvL2 };
 				else
 				{
@@ -1237,7 +1276,7 @@ HRESULT Clibpe::PEGetResourceTable()
 						if (pSecondResDirEntry->DataIsDirectory == 1)
 						{
 							PIMAGE_RESOURCE_DIRECTORY pThirdResDir = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pRootResDir + pSecondResDirEntry->OffsetToDirectory);
-							if (pThirdResDir == pSecondResDir || pThirdResDir == pRootResDir)//Resource loop hack
+							if (pThirdResDir == pSecondResDir || pThirdResDir == pRootResDir) //Resource loop hack
 								tupleResLvL3 = { *pThirdResDir, vecResLvL3 };
 							else
 							{
@@ -1259,13 +1298,15 @@ HRESULT Clibpe::PEGetResourceTable()
 									if (pThirdResDataEntry)
 									{	//Resource LvL 3 RAW Data.
 										//IMAGE_RESOURCE_DATA_ENTRY::OffsetToData is actually a general RVA,
-										//not an offset form root IMAGE_RESOURCE_DIRECTORY, 
-										//as IMAGE_RESOURCE_DIRECTORY_ENTRY::OffsetToData is.
+										//not an offset from root IMAGE_RESOURCE_DIRECTORY,
+										//like IMAGE_RESOURCE_DIRECTORY_ENTRY::OffsetToData.
 										//MS doesn't tend to make things simpler.
-										PBYTE pResRawData = (PBYTE)PERVAToPTR(pThirdResDataEntry->OffsetToData);
-										if (pResRawData)
+										PBYTE pResRawDataBegin = (PBYTE)PERVAToPTR(pThirdResDataEntry->OffsetToData);
+
+										//Checking RAW Resource data pointer out of bounds.
+										if (pResRawDataBegin && ULONGLONG(pResRawDataBegin + pThirdResDataEntry->Size) <= m_dwMaxPointerBound)
 											for (unsigned i = 0; i < pThirdResDataEntry->Size; i++)
-												vecThirdResRawData.push_back(std::byte(*(pResRawData + i)));
+												vecThirdResRawData.push_back(std::byte(*(pResRawDataBegin + i)));
 									}
 
 									vecResLvL3.push_back({ *pThirdResDirEntry, std::move(strThirdResName),
@@ -1280,14 +1321,16 @@ HRESULT Clibpe::PEGetResourceTable()
 							}
 						}
 						else
-						{//////Resource LvL2 RAW Data
+						{	//////Resource LvL2 RAW Data
 							pSecondResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + pSecondResDirEntry->OffsetToData);
 							if (pSecondResDataEntry)
 							{
-								PBYTE pResRawData = (PBYTE)PERVAToPTR(pSecondResDataEntry->OffsetToData);
-								if (pResRawData)
+								PBYTE pResRawDataBegin = (PBYTE)PERVAToPTR(pSecondResDataEntry->OffsetToData);
+
+								//Checking RAW Resource data pointer out of bounds.
+								if (pResRawDataBegin && ULONGLONG(pResRawDataBegin + pSecondResDataEntry->Size) <= m_dwMaxPointerBound)
 									for (unsigned i = 0; i < pSecondResDataEntry->Size; i++)
-										vecSecondResRawData.push_back(std::byte(*(pResRawData + i)));
+										vecSecondResRawData.push_back(std::byte(*(pResRawDataBegin + i)));
 							}
 						}
 						vecResLvL2.push_back({ *pSecondResDirEntry, std::move(strSecondResName),
@@ -1307,10 +1350,12 @@ HRESULT Clibpe::PEGetResourceTable()
 				pRootResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + pRootResDirEntry->OffsetToData);
 				if (pRootResDataEntry)
 				{
-					PBYTE pResRawData = (PBYTE)PERVAToPTR(pRootResDataEntry->OffsetToData);
-					if (pResRawData)
+					PBYTE pResRawDataBegin = (PBYTE)PERVAToPTR(pRootResDataEntry->OffsetToData);
+
+					//Checking RAW Resource data pointer out of bounds.
+					if (pResRawDataBegin && ULONGLONG(pResRawDataBegin + pRootResDataEntry->Size) <= m_dwMaxPointerBound)
 						for (unsigned i = 0; i < pRootResDataEntry->Size; i++)
-							vecRootResRawData.push_back(std::byte(*(pResRawData + i)));
+							vecRootResRawData.push_back(std::byte(*(pResRawDataBegin + i)));
 				}
 			}
 			vecResLvLRoot.push_back({ *pRootResDirEntry, std::move(strRootResName),
