@@ -7,6 +7,8 @@
 *********************************************************************/
 #pragma once
 
+using namespace libpe;
+
 //Implementation of pure virtual class Ilibpe.
 class Clibpe : public Ilibpe
 {
@@ -33,7 +35,7 @@ public:
 	virtual HRESULT GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_TUP*);
 	virtual HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC*);
 	virtual HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC*);
-	virtual HRESULT GetCOMDescriptorTable(PCLIBPE_COM_DESCRIPTOR*);
+	virtual HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR*);
 	virtual HRESULT Release();
 private:
 	PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
@@ -61,7 +63,7 @@ private:
 	HRESULT getIATTable();
 	HRESULT getDelayImportTable();
 	HRESULT getCOMDescriptorTable();
-	
+
 	/************************************
 	* Internal variables.				*
 	*************************************/
@@ -117,7 +119,7 @@ private:
 	/*****************************************************
 	* Next go vars of all of the loaded file structures: *
 	* headers, sections, tables, etc..., that's gonna be *
-	* given outside - to client code.
+	* given outside - to client code.					 *
 	*****************************************************/
 	//DOS Header.
 	IMAGE_DOS_HEADER m_stDOSHeader { };

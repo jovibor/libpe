@@ -9,6 +9,13 @@
 #include "libpe.h"
 #include "Clibpe.h"
 
+extern "C" HRESULT ILIBPEAPI Getlibpe(libpe::Ilibpe** pIlibpe)
+{
+	*pIlibpe = new Clibpe;
+
+	return S_OK;
+}
+
 Clibpe::~Clibpe()
 {
 	delete [] m_lpszEmergencyMemory;
@@ -549,7 +556,7 @@ HRESULT Clibpe::GetSecurityTable(PCLIBPE_SECURITY_VEC* pVecSecurity)
 		return CALL_LOADPE_FIRST;
 
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_SECURITY_DIRECTORY_FLAG))
-		return IMAGE_HAS_NO_SECURITY_DIR;
+		return IMAGE_HAS_NO_ARCHITECTURE_DIR;
 
 	*pVecSecurity = &m_vecSecurity;
 
@@ -562,7 +569,7 @@ HRESULT Clibpe::GetRelocationTable(PCLIBPE_RELOCATION_VEC* pVecRelocs)
 		return CALL_LOADPE_FIRST;
 
 	if (!IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_BASERELOC_DIRECTORY_FLAG))
-		return IMAGE_HAS_NO_BASERELOC_DIR;
+		return IMAGE_HAS_NO_GLOBALPTR_DIR;
 
 	*pVecRelocs = &m_vecRelocationTable;
 
@@ -634,7 +641,7 @@ HRESULT Clibpe::GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC* pVecDelayImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetCOMDescriptorTable(PCLIBPE_COM_DESCRIPTOR* pTupleCOMDescriptor)
+HRESULT Clibpe::GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR* pTupleCOMDescriptor)
 {
 	if (!m_fLoaded)
 		return CALL_LOADPE_FIRST;
@@ -1247,9 +1254,9 @@ HRESULT Clibpe::getResourceTable()
 			PIMAGE_RESOURCE_DATA_ENTRY pRootResDataEntry { };
 			std::vector<std::byte> vecRootResRawData { };
 
-			//Name of Resource Type (ICON, BITMAP, MENU, etc...)
+			//Name of Resource Type (ICON, BITMAP, MENU, etc...).
 			if (pRootResDirEntry->NameIsString)
-			{	//copy not more then MAX_PATH chars into strResName, avoiding buff overflow
+			{	//Copy not more then MAX_PATH chars into strResName, avoiding buff overflow.
 				nResNameLength = ((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + (DWORD_PTR)pRootResDirEntry->NameOffset))->Length;
 				strRootResName.assign(((PIMAGE_RESOURCE_DIR_STRING_U)((DWORD_PTR)pRootResDir + (DWORD_PTR)pRootResDirEntry->NameOffset))->NameString,
 					nResNameLength < MAX_PATH ? nResNameLength : MAX_PATH);
@@ -1307,8 +1314,8 @@ HRESULT Clibpe::getResourceTable()
 										PBYTE pThirdResRawDataBegin = (PBYTE)rVAToPtr(pThirdResDataEntry->OffsetToData);
 										//Checking RAW Resource data pointer out of bounds.
 										if (pThirdResRawDataBegin && (DWORD_PTR)pThirdResRawDataBegin + (DWORD_PTR)pThirdResDataEntry->Size <= m_dwMaxPointerBound)
-											for (unsigned i = 0; i < pThirdResDataEntry->Size; i++)
-												vecThirdResRawData.push_back(std::byte(*(pThirdResRawDataBegin + i)));
+											for (unsigned iterResRawData = 0; iterResRawData < pThirdResDataEntry->Size; iterResRawData++)
+												vecThirdResRawData.push_back(std::byte(*(pThirdResRawDataBegin + iterResRawData)));
 									}
 
 									vecResLvL3.push_back({ *pThirdResDirEntry, std::move(strThirdResName),
@@ -1324,15 +1331,15 @@ HRESULT Clibpe::getResourceTable()
 							}
 						}
 						else
-						{	//////Resource LvL2 RAW Data
+						{	//////Resource LvL2 RAW Data.
 							pSecondResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + (DWORD_PTR)pSecondResDirEntry->OffsetToData);
 							if ((DWORD_PTR)pSecondResDataEntry < m_dwMaxPointerBound)
 							{
 								PBYTE pSecondResRawDataBegin = (PBYTE)rVAToPtr(pSecondResDataEntry->OffsetToData);
 								//Checking RAW Resource data pointer out of bounds.
 								if (pSecondResRawDataBegin && (DWORD_PTR)pSecondResRawDataBegin + (DWORD_PTR)pSecondResDataEntry->Size <= m_dwMaxPointerBound)
-									for (unsigned i = 0; i < pSecondResDataEntry->Size; i++)
-										vecSecondResRawData.push_back(std::byte(*(pSecondResRawDataBegin + i)));
+									for (unsigned iterResRawData = 0; iterResRawData < pSecondResDataEntry->Size; iterResRawData++)
+										vecSecondResRawData.push_back(std::byte(*(pSecondResRawDataBegin + iterResRawData)));
 							}
 						}
 						vecResLvL2.push_back({ *pSecondResDirEntry, std::move(strSecondResName),
@@ -1348,15 +1355,15 @@ HRESULT Clibpe::getResourceTable()
 				}
 			}
 			else
-			{	//////Resource LvL Root RAW Data
+			{	//////Resource LvL Root RAW Data.
 				pRootResDataEntry = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pRootResDir + (DWORD_PTR)pRootResDirEntry->OffsetToData);
 				if ((DWORD_PTR)pRootResDataEntry < m_dwMaxPointerBound)
 				{
 					PBYTE pRootResRawDataBegin = (PBYTE)rVAToPtr(pRootResDataEntry->OffsetToData);
 					//Checking RAW Resource data pointer out of bounds.
 					if (pRootResRawDataBegin && (DWORD_PTR)pRootResRawDataBegin + (DWORD_PTR)pRootResDataEntry->Size <= m_dwMaxPointerBound)
-						for (unsigned i = 0; i < pRootResDataEntry->Size; i++)
-							vecRootResRawData.push_back(std::byte(*(pRootResRawDataBegin + i)));
+						for (unsigned iterResRawData = 0; iterResRawData < pRootResDataEntry->Size; iterResRawData++)
+							vecRootResRawData.push_back(std::byte(*(pRootResRawDataBegin + iterResRawData)));
 				}
 			}
 			vecResLvLRoot.push_back({ *pRootResDirEntry, std::move(strRootResName),
@@ -1411,7 +1418,7 @@ HRESULT Clibpe::getSecurityTable()
 	DWORD dwSecurityDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
 
 	if (dwSecurityDirOffset == 0 || dwSecurityDirSize == 0)
-		return IMAGE_HAS_NO_SECURITY_DIR;
+		return IMAGE_HAS_NO_ARCHITECTURE_DIR;
 
 	ULONGLONG dwSecurityDirStartVA { };
 	if (m_fMapViewOfFileWhole)
@@ -1423,22 +1430,22 @@ HRESULT Clibpe::getSecurityTable()
 
 	//Checking for crossing file's size bounds.
 	if (dwSecurityDirStartVA >= m_dwMaxPointerBound || dwSecurityDirEndVA > m_dwMaxPointerBound)
-		return IMAGE_HAS_NO_SECURITY_DIR;
+		return IMAGE_HAS_NO_ARCHITECTURE_DIR;
 
-	LPWIN_CERTIFICATE pSertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
+	LPWIN_CERTIFICATE pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
 	std::vector<std::byte> vecCertBytes { };
 	while (dwSecurityDirStartVA < dwSecurityDirEndVA)
 	{
-		for (unsigned i = 0; i < (DWORD_PTR)pSertificate->dwLength - offsetof(WIN_CERTIFICATE, bCertificate); i++)
-			vecCertBytes.push_back((std::byte)pSertificate->bCertificate[i]);
+		for (unsigned iterCertData = 0; iterCertData < (DWORD_PTR)pCertificate->dwLength - offsetof(WIN_CERTIFICATE, bCertificate); iterCertData++)
+			vecCertBytes.push_back((std::byte)pCertificate->bCertificate[iterCertData]);
 
-		m_vecSecurity.push_back({ *pSertificate, std::move(vecCertBytes) });
+		m_vecSecurity.push_back({ *pCertificate, std::move(vecCertBytes) });
 		vecCertBytes.clear();
 
 		//Get next sertificate entry.
 		//All entries starts at 8 rounded address.
-		dwSecurityDirStartVA = (pSertificate->dwLength + dwSecurityDirStartVA) % 8 + (pSertificate->dwLength + dwSecurityDirStartVA);
-		pSertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
+		dwSecurityDirStartVA = (pCertificate->dwLength + dwSecurityDirStartVA) % 8 + (pCertificate->dwLength + dwSecurityDirStartVA);
+		pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
 	}
 	m_dwFileSummary |= IMAGE_SECURITY_DIRECTORY_FLAG;
 
@@ -1450,7 +1457,7 @@ HRESULT Clibpe::getRelocationTable()
 	PIMAGE_BASE_RELOCATION pBaseRelocDescriptor = (PIMAGE_BASE_RELOCATION)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC));
 
 	if (!pBaseRelocDescriptor)
-		return IMAGE_HAS_NO_BASERELOC_DIR;
+		return IMAGE_HAS_NO_GLOBALPTR_DIR;
 
 	std::vector<std::tuple<WORD/*type*/, WORD/*offset*/>> vecRelocs { };
 
@@ -1461,7 +1468,7 @@ HRESULT Clibpe::getRelocationTable()
 			if (pBaseRelocDescriptor->SizeOfBlock < sizeof(IMAGE_BASE_RELOCATION))
 				return -1;
 
-			//Amount of Reloc entries
+			//Amount of Reloc entries.
 			DWORD iRelocEntries = (pBaseRelocDescriptor->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
 			PWORD pRelocEntry = PWORD((DWORD_PTR)pBaseRelocDescriptor + sizeof(IMAGE_BASE_RELOCATION));
 			WORD relocType { };
@@ -1470,7 +1477,7 @@ HRESULT Clibpe::getRelocationTable()
 			{
 				if ((DWORD_PTR)pRelocEntry >= m_dwMaxPointerBound)
 					break;
-				// Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
+				//Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
 				relocType = (*pRelocEntry & 0xF000) >> 12;
 				vecRelocs.push_back({ relocType, ((*pRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/ });
 
@@ -1486,16 +1493,17 @@ HRESULT Clibpe::getRelocationTable()
 				pRelocEntry++;
 			}
 			m_vecRelocationTable.push_back({ *pBaseRelocDescriptor, std::move(vecRelocs) });
-			vecRelocs.clear(); //clear temp vector to fill with next entries
+			vecRelocs.clear(); //clear temp vector to fill with next entries.
 
-			//Too big (bogus) SizeOfBlock may cause DWORD_PTR overflow
-#if INTPTR_MAX == INT32_MAX
+			//Too big (bogus) SizeOfBlock may cause DWORD_PTR overflow.
+			//Checking to prevent.
+		#if INTPTR_MAX == INT32_MAX
 			if ((DWORD_PTR)pBaseRelocDescriptor > ((DWORD_PTR)UINT_MAX - (DWORD_PTR)pBaseRelocDescriptor->SizeOfBlock))
 				break;
-#elif INTPTR_MAX == INT64_MAX
+		#elif INTPTR_MAX == INT64_MAX
 			if ((DWORD_PTR)pBaseRelocDescriptor > (MAXDWORD64 - (DWORD_PTR)pBaseRelocDescriptor->SizeOfBlock))
 				break;
-#endif
+		#endif
 			pBaseRelocDescriptor = PIMAGE_BASE_RELOCATION((DWORD_PTR)pBaseRelocDescriptor + (DWORD_PTR)pBaseRelocDescriptor->SizeOfBlock);
 			if ((DWORD_PTR)pBaseRelocDescriptor >= m_dwMaxPointerBound)
 				break;
