@@ -43,6 +43,8 @@ private:
 	LPVOID rVAToPtr(ULONGLONG ullRVA) const;
 	DWORD getDirEntryRVA(UINT uiDirEntry) const;
 	DWORD getDirEntrySize(UINT uiDirEntry) const;
+	inline bool isPtrSafe(LPCVOID ptr, bool bCanPointToEnd = false) const;
+	inline bool isPtrSafe(DWORD_PTR dw, bool fCanReferenceBoundary = false) const;
 	void resetAll();
 	HRESULT getHeaders();
 	HRESULT getRichHeader();

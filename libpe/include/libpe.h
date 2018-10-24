@@ -54,9 +54,22 @@ namespace libpe {
 	typedef std::vector<std::tuple<IMAGE_IMPORT_DESCRIPTOR, std::string, std::vector<std::tuple<LONGLONG, std::string, LONGLONG>>>> LIBPE_IMPORT_VEC;
 	typedef const LIBPE_IMPORT_VEC *PCLIBPE_IMPORT_VEC;
 
-	/*****************************Resources by Levels**************************************
-	* Totally 3 levels of resources. Highest level include lowest levels.
-	**************************************************************************************/
+	/**************************************Resources by Levels*******************************************
+	* There are 3 levels of resources — highest level includes lowest levels.							*
+	* Highest (root) resource structure is LIBPE_RESOURCE_ROOT_TUP. It's, in fact, an std::tuple		*
+	* that includes: an IMAGE_RESOURCE_DIRECTORY of root resource directory itself, 					*
+	* and LIBPE_RESOURCE_ROOT_VEC, that is actually an std::vector that includes std::tuple of all		*
+	* IMAGE_RESOURCE_DIRECTORY_ENTRY structures of the root resource directory.							*
+	* It also includes: std::wstring(Resource name), IMAGE_RESOURCE_DATA_ENTRY, 						*
+	* std::vector<std::byte> (RAW resource data), and LIBPE_RESOURCE_LVL2_TUP that is, in fact,			*
+	* a tuple of the next, second, resource level, that replicates tuple of root resource level.		*
+	* LIBPE_RESOURCE_LVL2_TUP includes IMAGE_RESOURCE_DIRECTORY of second resource level, and 			*
+	* LIBPE_RESOURCE_LVL2_VEC that includes LIBPE_RESOURCE_LVL3_TUP	that is an std::tuple of the last,	* 
+	* third, level of resources.																		*
+	* Like previous two, this last level's tuple consist of IMAGE_RESOURCE_DIRECTORY 					*
+	* and LIBPE_RESOURCE_LVL3_VEC, that is again — vector of tuples of all 								*
+	* IMAGE_RESOURCE_DIRECTORY_ENTRY of the last, third, level of resources. See code below.			*
+	****************************************************************************************************/
 	//Level 3 (the lowest) Resources.
 	typedef std::vector<std::tuple<IMAGE_RESOURCE_DIRECTORY_ENTRY, std::wstring/*ResName*/,
 		IMAGE_RESOURCE_DATA_ENTRY, std::vector<std::byte>/*resource LVL3 RAW data*/>> LIBPE_RESOURCE_LVL3_VEC;
@@ -74,7 +87,7 @@ namespace libpe {
 	//Level 1 (Root) Resources — Includes LVL2 Resources.
 	typedef std::vector<std::tuple<IMAGE_RESOURCE_DIRECTORY_ENTRY, std::wstring/*ResName*/,
 		IMAGE_RESOURCE_DATA_ENTRY, std::vector<std::byte>/*LVL1 RAW data*/, LIBPE_RESOURCE_LVL2_TUP>> LIBPE_RESOURCE_ROOT_VEC;
-	typedef const LIBPE_RESOURCE_ROOT_VEC *PLIBPE_RESOURCE_LVL1_VEC;
+	typedef const LIBPE_RESOURCE_ROOT_VEC *PLIBPE_RESOURCE_ROOT_VEC;
 	typedef std::tuple<IMAGE_RESOURCE_DIRECTORY, LIBPE_RESOURCE_ROOT_VEC> LIBPE_RESOURCE_ROOT_TUP;
 	typedef const LIBPE_RESOURCE_ROOT_TUP *PCLIBPE_RESOURCE_ROOT_TUP;
 	/***************************************************************************************
