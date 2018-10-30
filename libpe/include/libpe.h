@@ -10,7 +10,7 @@
 namespace libpe {
 	static_assert(_MSC_VER >= 1914, "MSVS 15.7 (C++17) or higher needed.");
 
-#include <Imagehlp.h>
+#include <ImageHlp.h>
 
 	typedef const DWORD* PCDWORD;
 	typedef const IMAGE_DOS_HEADER *PCLIBPE_DOSHEADER;
@@ -55,7 +55,17 @@ namespace libpe {
 	typedef const LIBPE_IMPORT_VEC *PCLIBPE_IMPORT_VEC;
 
 	/**************************************Resources by Levels*******************************************
-	* There are 3 levels of resources — highest level includes lowest levels.							*
+	* There are 3 levels of resources: 1. Type 2. Name 3. Language.										*
+	* https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format#the-rsrc-section					*
+	* «Each directory table is followed by a series of directory entries that give the name				*
+	* or identifier (ID) for that level (Type, Name, or Language level) and an address of either a data *
+	* description or another directory table. If the address points to a data description, then 		*
+	* the data is a leaf in the tree. If the address points to another directory table, then that table *
+	* lists directory entries at the next level down.													*
+	* A leaf's Type, Name, and Language IDs are determined by the path that is taken through directory 	*
+	* tables to reach the leaf. The first table determines Type ID, the second table (pointed to by 	*
+	* the directory entry in the first table) determines Name ID, and the third table determines 		*
+	* Language ID.»																						*
 	* Highest (root) resource structure is LIBPE_RESOURCE_ROOT_TUP. It's, in fact, an std::tuple		*
 	* that includes: an IMAGE_RESOURCE_DIRECTORY of root resource directory itself, 					*
 	* and LIBPE_RESOURCE_ROOT_VEC, that is actually an std::vector that includes std::tuple of all		*
