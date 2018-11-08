@@ -47,7 +47,7 @@ private:
 	LPVOID rVAToPtr(ULONGLONG ullRVA) const;
 	DWORD getDirEntryRVA(UINT uiDirEntry) const;
 	DWORD getDirEntrySize(UINT uiDirEntry) const;
-	template<typename T> bool isPtrSafe(T tPtr, bool fCanReferenceBoundary = false) const;
+	template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
 	void resetAll();
 	HRESULT getHeaders();
 	HRESULT getRichHeader();
@@ -81,7 +81,10 @@ private:
 	//Reserve 16K of memory that we can delete 
 	//to properly handle E_OUTOFMEMORY exceptions,
 	//in case we catch one.
-	char* m_lpszEmergencyMemory = new char[16384];
+	char* m_lpszEmergencyMemory = new char[0x8FFF];
+
+	//Minimum bytes to map, if it's not possible to map file as a whole.
+	const DWORD m_dwMinBytesToMap { 0xFFFF };
 
 	//For big files that can't be mapped completely
 	//shows offset the mapping begins from.

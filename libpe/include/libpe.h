@@ -180,6 +180,7 @@ namespace libpe {
 	constexpr auto CALL_LOADPE_FIRST = 0xFFFF;
 	constexpr auto FILE_OPEN_FAILED = 0x0010;
 	constexpr auto FILE_SIZE_TOO_SMALL = 0x0011;
+	constexpr auto FILE_SECTION_DATA_CORRUPTED = 0x002D;
 	constexpr auto FILE_CREATE_FILE_MAPPING_FAILED = 0x0012;
 	constexpr auto FILE_MAP_VIEW_OF_FILE_FAILED = 0x0013;
 	constexpr auto IMAGE_TYPE_UNSUPPORTED = 0x0014;
