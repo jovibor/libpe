@@ -980,6 +980,7 @@ HRESULT Clibpe::getSectionsHeaders()
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
+		m_vecSectionHeaders.reserve(m_pNTHeader32->FileHeader.NumberOfSections);
 
 		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSecHdr++)
 		{
@@ -1014,6 +1015,7 @@ HRESULT Clibpe::getSectionsHeaders()
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
+		m_vecSectionHeaders.reserve(m_pNTHeader64->FileHeader.NumberOfSections);
 
 		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSecHdr++)
 		{
@@ -1040,7 +1042,6 @@ HRESULT Clibpe::getSectionsHeaders()
 	if (m_vecSectionHeaders.empty())
 		return IMAGE_HAS_NO_SECTIONS;
 
-	m_vecSectionHeaders.shrink_to_fit();
 	m_dwFileSummary |= IMAGE_SECTION_HEADERS_FLAG;
 
 	return S_OK;
@@ -1052,22 +1053,22 @@ HRESULT Clibpe::getExportTable()
 	const DWORD dwExportEndRVA = dwExportStartRVA + getDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXPORT);
 
 	const PIMAGE_EXPORT_DIRECTORY pExportDir = (PIMAGE_EXPORT_DIRECTORY)rVAToPtr(dwExportStartRVA);
-
 	if (!pExportDir)
 		return IMAGE_HAS_NO_EXPORT_DIR;
-	std::vector<std::tuple<DWORD/*Exported func RVA/Forwarder RVA*/, DWORD/*func Ordinal*/, std::string /*Func Name*/,
-		std::string/*Forwarder func name*/>> vecFuncs { };
-	std::string strFuncName { }, strFuncNameForwarder { }, strExportName { };
 
 	const PDWORD pFuncs = (PDWORD)rVAToPtr(pExportDir->AddressOfFunctions);
-
 	if (!pFuncs)
 		return IMAGE_HAS_NO_EXPORT_DIR;
 
+	std::vector<std::tuple<DWORD/*Exported func RVA/Forwarder RVA*/, DWORD/*func Ordinal*/, std::string /*Func Name*/,
+		std::string/*Forwarder func name*/>> vecFuncs { };
+	std::string strFuncName { }, strFuncNameForwarder { }, strExportName { };
 	const PWORD pOrdinals = (PWORD)rVAToPtr(pExportDir->AddressOfNameOrdinals);
 	LPCSTR* szNames = (LPCSTR*)rVAToPtr(pExportDir->AddressOfNames);
 
 	try {
+
+		vecFuncs.reserve(pExportDir->NumberOfFunctions);
 		for (DWORD iterFuncs = 0; iterFuncs < pExportDir->NumberOfFunctions; iterFuncs++)
 		{
 			if (pFuncs[iterFuncs]) //if RVA==0 —> going next entry.
@@ -1105,11 +1106,18 @@ HRESULT Clibpe::getExportTable()
 	catch (const std::bad_alloc&)
 	{
 		delete [] m_lpszEmergencyMemory;
-		MessageBox(nullptr, TEXT("E_OUTOFMEMORY error while trying to get Export Table."), TEXT("Error"), MB_ICONERROR);
+		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Export table.\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
 
 		vecFuncs.clear();
 		m_lpszEmergencyMemory = new char[0x8FFF];
 	}
+	catch (...)
+	{
+		MessageBox(nullptr, L"Unknown exception raised while trying to get Export table.\r\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
+	}
+
 	m_dwFileSummary |= IMAGE_EXPORT_DIRECTORY_FLAG;
 
 	return S_OK;
@@ -1274,8 +1282,8 @@ HRESULT Clibpe::getImportTable()
 	catch (const std::bad_alloc&)
 	{
 		delete [] m_lpszEmergencyMemory;
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Import Table.\r\n"
-			L"Seems like too many Imports.", L"Error", MB_ICONERROR);
+		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Import table.\r\n"
+			L"Too many import entries!\nFile seems to be corrupted.", L"Error", MB_ICONERROR);
 
 		vecFunc.clear();
 		m_vecImportTable.clear();
@@ -1283,12 +1291,10 @@ HRESULT Clibpe::getImportTable()
 	}
 	catch (...)
 	{
-		delete [] m_lpszEmergencyMemory;
-		MessageBox(nullptr, L"Unknown exception raised, while trying to get Import Table.\r\n", L"Error", MB_ICONERROR);
-		vecFunc.clear();
-		m_vecImportTable.clear();
-		m_lpszEmergencyMemory = new char[0x8FFF];
+		MessageBox(nullptr, L"Unknown exception raised while trying to get Import table.\r\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
 	}
+
 	m_dwFileSummary |= IMAGE_IMPORT_DIRECTORY_FLAG;
 
 	return S_OK;
@@ -1312,6 +1318,7 @@ HRESULT Clibpe::getResourceTable()
 	PIMAGE_RESOURCE_DIR_STRING_U pResDirStr;
 
 	try {
+		vecResLvLRoot.reserve(pRootResDir->NumberOfNamedEntries + pRootResDir->NumberOfIdEntries);
 		for (int iLvL1 = 0; iLvL1 < pRootResDir->NumberOfNamedEntries + pRootResDir->NumberOfIdEntries; iLvL1++)
 		{
 			PIMAGE_RESOURCE_DATA_ENTRY pRootResDataEntry { };
@@ -1335,8 +1342,8 @@ HRESULT Clibpe::getResourceTable()
 					tupResLvL2 = { *pSecondResDir, vecResLvL2 };
 				else
 				{
-
 					PIMAGE_RESOURCE_DIRECTORY_ENTRY pSecondResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pSecondResDir + 1);
+					vecResLvL2.reserve(pSecondResDir->NumberOfNamedEntries + pSecondResDir->NumberOfIdEntries);
 					for (int iLvL2 = 0; iLvL2 < pSecondResDir->NumberOfNamedEntries + pSecondResDir->NumberOfIdEntries; iLvL2++)
 					{
 						PIMAGE_RESOURCE_DATA_ENTRY pSecondResDataEntry { };
@@ -1361,7 +1368,7 @@ HRESULT Clibpe::getResourceTable()
 							else
 							{
 								PIMAGE_RESOURCE_DIRECTORY_ENTRY pThirdResDirEntry = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pThirdResDir + 1);
-
+								vecResLvL3.reserve(pThirdResDir->NumberOfNamedEntries + pThirdResDir->NumberOfIdEntries);
 								for (int iLvL3 = 0; iLvL3 < pThirdResDir->NumberOfNamedEntries + pThirdResDir->NumberOfIdEntries; iLvL3++)
 								{
 									std::vector<std::byte> vecThirdResRawData { };
@@ -1386,8 +1393,11 @@ HRESULT Clibpe::getResourceTable()
 										PBYTE pThirdResRawDataBegin = (PBYTE)rVAToPtr(pThirdResDataEntry->OffsetToData);
 										//Checking RAW Resource data pointer out of bounds.
 										if (pThirdResRawDataBegin && isPtrSafe((DWORD_PTR)pThirdResRawDataBegin + (DWORD_PTR)pThirdResDataEntry->Size, true))
+										{
+											vecThirdResRawData.reserve(pThirdResDataEntry->Size);
 											for (unsigned iterResRawData = 0; iterResRawData < pThirdResDataEntry->Size; iterResRawData++)
 												vecThirdResRawData.push_back(std::byte(*(pThirdResRawDataBegin + iterResRawData)));
+										}
 									}
 
 									vecResLvL3.emplace_back(*pThirdResDirEntry, std::move(strThirdResName),
@@ -1410,8 +1420,11 @@ HRESULT Clibpe::getResourceTable()
 								PBYTE pSecondResRawDataBegin = (PBYTE)rVAToPtr(pSecondResDataEntry->OffsetToData);
 								//Checking RAW Resource data pointer out of bounds.
 								if (pSecondResRawDataBegin && isPtrSafe((DWORD_PTR)pSecondResRawDataBegin + (DWORD_PTR)pSecondResDataEntry->Size, true))
+								{
+									vecSecondResRawData.reserve(pSecondResDataEntry->Size);
 									for (unsigned iterResRawData = 0; iterResRawData < pSecondResDataEntry->Size; iterResRawData++)
 										vecSecondResRawData.push_back(std::byte(*(pSecondResRawDataBegin + iterResRawData)));
+								}
 							}
 						}
 						vecResLvL2.emplace_back(*pSecondResDirEntry, std::move(strSecondResName),
@@ -1434,8 +1447,11 @@ HRESULT Clibpe::getResourceTable()
 					PBYTE pRootResRawDataBegin = (PBYTE)rVAToPtr(pRootResDataEntry->OffsetToData);
 					//Checking RAW Resource data pointer out of bounds.
 					if (pRootResRawDataBegin && isPtrSafe((DWORD_PTR)pRootResRawDataBegin + (DWORD_PTR)pRootResDataEntry->Size, true))
+					{
+						vecRootResRawData.reserve(pRootResDataEntry->Size);
 						for (unsigned iterResRawData = 0; iterResRawData < pRootResDataEntry->Size; iterResRawData++)
 							vecRootResRawData.push_back(std::byte(*(pRootResRawDataBegin + iterResRawData)));
+					}
 				}
 			}
 			vecResLvLRoot.emplace_back(*pRootResDirEntry, std::move(strRootResName),
@@ -1452,13 +1468,20 @@ HRESULT Clibpe::getResourceTable()
 	catch (const std::bad_alloc&)
 	{
 		delete [] m_lpszEmergencyMemory;
-		MessageBox(nullptr, TEXT("E_OUTOFMEMORY error while trying to get Resource Table."), TEXT("Error"), MB_ICONERROR);
+		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Resource table.\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
 
 		vecResLvLRoot.clear();
 		vecResLvL2.clear();
 		vecResLvL3.clear();
 		m_lpszEmergencyMemory = new char[0x8FFF];
 	}
+	catch (...)
+	{
+		MessageBox(nullptr, L"Unknown exception raised while trying to get Resource table.\r\n\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
+	}
+
 	m_dwFileSummary |= IMAGE_RESOURCE_DIRECTORY_FLAG;
 
 	return S_OK;
@@ -1476,6 +1499,7 @@ HRESULT Clibpe::getExceptionTable()
 	if (!nEntries)
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
 
+	m_vecExceptionTable.reserve(nEntries);
 	for (unsigned i = 0; i < nEntries; i++, pRuntimeFuncsEntry++)
 		m_vecExceptionTable.push_back(*pRuntimeFuncsEntry);
 
@@ -1551,7 +1575,7 @@ HRESULT Clibpe::getSecurityTable()
 	m_dwFileSummary |= IMAGE_SECURITY_DIRECTORY_FLAG;
 
 	return S_OK;
-}
+	}
 
 HRESULT Clibpe::getRelocationTable()
 {
@@ -1570,11 +1594,12 @@ HRESULT Clibpe::getRelocationTable()
 				return -1;
 
 			//Amount of Reloc entries.
-			DWORD iRelocEntries = (pBaseRelocDescriptor->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
+			DWORD nRelocEntries = (pBaseRelocDescriptor->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
 			PWORD pRelocEntry = PWORD((DWORD_PTR)pBaseRelocDescriptor + sizeof(IMAGE_BASE_RELOCATION));
 			WORD relocType { };
 
-			for (DWORD i = 0; i < iRelocEntries; i++)
+			vecRelocs.reserve(nRelocEntries);
+			for (DWORD i = 0; i < nRelocEntries; i++)
 			{
 				if (!isPtrSafe(pRelocEntry))
 					break;
@@ -1592,7 +1617,7 @@ HRESULT Clibpe::getRelocationTable()
 						break;
 					}
 					vecRelocs.emplace_back(relocType, *pRelocEntry/*The low 16-bit field*/);
-					iRelocEntries--; //to compensate pRelocEntry++
+					nRelocEntries--; //to compensate pRelocEntry++
 				}
 				pRelocEntry++;
 			}
@@ -1611,21 +1636,27 @@ HRESULT Clibpe::getRelocationTable()
 			pBaseRelocDescriptor = PIMAGE_BASE_RELOCATION((DWORD_PTR)pBaseRelocDescriptor + (DWORD_PTR)pBaseRelocDescriptor->SizeOfBlock);
 			if (!isPtrSafe(pBaseRelocDescriptor))
 				break;
+			}
 		}
-	}
 	catch (const std::bad_alloc&)
 	{
 		delete [] m_lpszEmergencyMemory;
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Relocation Table.", L"Error", MB_ICONERROR);
+		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Relocation table.\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
 
 		vecRelocs.clear();
 		m_lpszEmergencyMemory = new char[0x8FFF];
+	}
+	catch (...)
+	{
+		MessageBox(nullptr, L"Unknown exception raised while trying to get Relocation table.\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
 	}
 
 	m_dwFileSummary |= IMAGE_BASERELOC_DIRECTORY_FLAG;
 
 	return S_OK;
-}
+	}
 
 HRESULT Clibpe::getDebugTable()
 {
@@ -1664,6 +1695,7 @@ HRESULT Clibpe::getDebugTable()
 	if (!nDebugEntries)
 		return -1;
 
+	m_vecDebugTable.reserve(nDebugEntries);
 	for (unsigned i = 0; i < nDebugEntries; i++)
 	{
 		m_vecDebugTable.push_back(*pDebugDir);
