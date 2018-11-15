@@ -1575,7 +1575,7 @@ HRESULT Clibpe::getSecurityTable()
 	m_dwFileSummary |= IMAGE_SECURITY_DIRECTORY_FLAG;
 
 	return S_OK;
-	}
+}
 
 HRESULT Clibpe::getRelocationTable()
 {
@@ -1636,8 +1636,8 @@ HRESULT Clibpe::getRelocationTable()
 			pBaseRelocDescriptor = PIMAGE_BASE_RELOCATION((DWORD_PTR)pBaseRelocDescriptor + (DWORD_PTR)pBaseRelocDescriptor->SizeOfBlock);
 			if (!isPtrSafe(pBaseRelocDescriptor))
 				break;
-			}
 		}
+	}
 	catch (const std::bad_alloc&)
 	{
 		delete [] m_lpszEmergencyMemory;
@@ -1656,7 +1656,7 @@ HRESULT Clibpe::getRelocationTable()
 	m_dwFileSummary |= IMAGE_BASERELOC_DIRECTORY_FLAG;
 
 	return S_OK;
-	}
+}
 
 HRESULT Clibpe::getDebugTable()
 {
@@ -1737,28 +1737,89 @@ HRESULT Clibpe::getTLSTable()
 	const DWORD dwTLSDirRVA = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
 	if (!dwTLSDirRVA)
 		return IMAGE_HAS_NO_TLS_DIR;
+	try {
+		std::vector<std::byte> vecTLSRawData { };
+		std::vector<DWORD> vecTLSCallbacks { };
 
-	std::vector<std::byte> vecTLSRawData { };
-	std::vector<DWORD> vecTLSCallbacks { };
+		if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
+		{
+			const PIMAGE_TLS_DIRECTORY32 pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
+			if (!pTLSDir32)
+				return IMAGE_HAS_NO_TLS_DIR;
+			//All TLS adresses are not RVA, but actual VA.
+			//So we must subtract ImageBase before pass to rVAToPtr().
+			PBYTE dwTLSRawStart = (PBYTE)rVAToPtr(pTLSDir32->StartAddressOfRawData - m_pNTHeader32->OptionalHeader.ImageBase);
+			PBYTE dwTLSRawEnd = (PBYTE)rVAToPtr(pTLSDir32->EndAddressOfRawData - m_pNTHeader32->OptionalHeader.ImageBase);
+			if (dwTLSRawStart && dwTLSRawEnd && dwTLSRawEnd > dwTLSRawStart)
+			{
+				vecTLSRawData.reserve(dwTLSRawEnd - dwTLSRawStart);
+				for (unsigned i = 0; i < dwTLSRawEnd - dwTLSRawStart; i++)
+					vecTLSRawData.push_back(std::byte(*(dwTLSRawStart + i)));
 
-	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
-	{
-		const PIMAGE_TLS_DIRECTORY32 pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
-		if (!pTLSDir32)
-			return IMAGE_HAS_NO_TLS_DIR;
+			}
+			PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(pTLSDir32->AddressOfCallBacks - m_pNTHeader32->OptionalHeader.ImageBase);
+			if (pTLSCallbacks)
+			{
+				while (*pTLSCallbacks)
+				{
+					vecTLSCallbacks.push_back(*pTLSCallbacks);
+					if (!isPtrSafe(++pTLSCallbacks))
+					{
+						vecTLSCallbacks.clear();
+						break;
+					}
+				}
+			}
+			
+			m_tupTLS = { *pTLSDir32, IMAGE_TLS_DIRECTORY64 { }, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
+		}
+		else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
+		{
+			const PIMAGE_TLS_DIRECTORY64 pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)rVAToPtr(dwTLSDirRVA);
+			if (!pTLSDir64)
+				return IMAGE_HAS_NO_TLS_DIR;
 
-		m_tupTLS = { *pTLSDir32, IMAGE_TLS_DIRECTORY64 { }, vecTLSRawData, vecTLSCallbacks };
+			PBYTE pTLSRawStart = (PBYTE)rVAToPtr(pTLSDir64->StartAddressOfRawData - m_pNTHeader64->OptionalHeader.ImageBase);
+			PBYTE pTLSRawEnd = (PBYTE)rVAToPtr(pTLSDir64->EndAddressOfRawData - m_pNTHeader64->OptionalHeader.ImageBase);
+			if (pTLSRawStart && pTLSRawEnd && pTLSRawEnd > pTLSRawStart)
+			{
+				vecTLSRawData.reserve(pTLSRawEnd - pTLSRawStart);
+				for (unsigned i = 0; i < pTLSRawEnd - pTLSRawStart; i++)
+					vecTLSRawData.push_back(std::byte(*(pTLSRawStart + i)));
+
+			}
+			PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(pTLSDir64->AddressOfCallBacks - m_pNTHeader64->OptionalHeader.ImageBase);
+			if (pTLSCallbacks)
+			{
+				while (*pTLSCallbacks)
+				{
+					vecTLSCallbacks.push_back(*pTLSCallbacks);
+					if (!isPtrSafe(++pTLSCallbacks))
+					{
+						vecTLSCallbacks.clear();
+						break;
+					}
+				}
+			}
+
+			m_tupTLS = { IMAGE_TLS_DIRECTORY32 { }, *pTLSDir64, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
+		}
+		m_dwFileSummary |= IMAGE_TLS_DIRECTORY_FLAG;
 	}
-	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
+	catch (const std::bad_alloc&)
 	{
-		const PIMAGE_TLS_DIRECTORY64 pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)rVAToPtr(dwTLSDirRVA);
-		if (!pTLSDir64)
-			return IMAGE_HAS_NO_TLS_DIR;
+		delete [] m_lpszEmergencyMemory;
+		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get TLS table.\r\n"
+			L"File seems to be corrupted.", L"Error", MB_ICONERROR);
 
-		m_tupTLS = { IMAGE_TLS_DIRECTORY32 { }, *pTLSDir64, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
+		m_lpszEmergencyMemory = new char[0x8FFF];
 	}
-	m_dwFileSummary |= IMAGE_TLS_DIRECTORY_FLAG;
-
+	catch (...)
+	{
+		MessageBox(nullptr, L"Unknown exception raised while trying to get TLS table.\r\nFile seems to be corrupted.",
+			L"Error", MB_ICONERROR);
+	}
+	
 	return S_OK;
 }
 

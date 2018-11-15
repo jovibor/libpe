@@ -123,10 +123,11 @@ namespace libpe {
 
 	//TLS tuple. Only one structure is filled depending on file type - x86 or x64, second is zeroed.
 	//vector of std::byte — TLS Raw data, vector of TLS Callbacks. 
-	typedef std::tuple<IMAGE_TLS_DIRECTORY32, IMAGE_TLS_DIRECTORY64, std::vector<std::byte>/*Raw Data*/, std::vector<DWORD>> LIBPE_TLS_TUP;
+	typedef std::tuple<IMAGE_TLS_DIRECTORY32, IMAGE_TLS_DIRECTORY64, std::vector<std::byte>/*Raw Data*/,
+		std::vector<DWORD>/*Callbacks*/> LIBPE_TLS_TUP;
 	typedef const LIBPE_TLS_TUP *PCLIBPE_TLS_TUP;
 
-	//Filled depending on file type - x86 or x64, second is zeroed.
+	//LoadConfigTable tuple. Filled depending on file type - x86 or x64, second is zeroed.
 	typedef std::tuple<IMAGE_LOAD_CONFIG_DIRECTORY32, IMAGE_LOAD_CONFIG_DIRECTORY64> LIBPE_LOADCONFIGTABLE_TUP;
 	typedef const LIBPE_LOADCONFIGTABLE_TUP *PCLIBPE_LOADCONFIGTABLE_TUP;
 
