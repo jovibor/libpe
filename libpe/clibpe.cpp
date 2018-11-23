@@ -405,29 +405,28 @@ HRESULT Clibpe::Release()
 PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA) const
 {
 	PIMAGE_SECTION_HEADER pSecHdr;
+	WORD wNumberOfSections;
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
-		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSecHdr++)
-		{
-			if (!isPtrSafe(pSecHdr))
-				return nullptr;
-			//Is RVA within this section?
-			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
-				return pSecHdr;
-		}
+		wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
-		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSecHdr++)
-		{
-			if (!isPtrSafe(pSecHdr))
-				return nullptr;
-			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
-				return pSecHdr;
-		}
+		wNumberOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
+	}
+	else
+		return nullptr;
+
+	for (unsigned i = 0; i < wNumberOfSections; i++, pSecHdr++)
+	{
+		if (!isPtrSafe(pSecHdr))
+			return nullptr;
+		//Is RVA within this section?
+		if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
+			return pSecHdr;
 	}
 
 	return nullptr;
@@ -436,30 +435,27 @@ PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA) const
 PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromName(LPCSTR lpszName) const
 {
 	PIMAGE_SECTION_HEADER pSecHdr;
+	WORD wNumberOfSections;
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
-
-		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSecHdr++)
-		{
-			if (!isPtrSafe(pSecHdr))
-				break;
-			if (strncmp((char*)pSecHdr->Name, lpszName, IMAGE_SIZEOF_SHORT_NAME) == 0)
-				return pSecHdr;
-		}
+		wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
+		wNumberOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
+	}
+	else
+		return nullptr;
 
-		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSecHdr++)
-		{
-			if (!isPtrSafe(pSecHdr))
-				break;
-			if (strncmp((char*)pSecHdr->Name, lpszName, IMAGE_SIZEOF_SHORT_NAME) == 0)
-				return pSecHdr;
-		}
+	for (unsigned i = 0; i < wNumberOfSections; i++, pSecHdr++)
+	{
+		if (!isPtrSafe(pSecHdr))
+			break;
+		if (strncmp((char*)pSecHdr->Name, lpszName, IMAGE_SIZEOF_SHORT_NAME) == 0)
+			return pSecHdr;
 	}
 
 	return nullptr;
@@ -686,7 +682,7 @@ HRESULT Clibpe::getHeaders()
 
 	if (((PIMAGE_NT_HEADERS32)((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew))->Signature != IMAGE_NT_SIGNATURE)
 		return IMAGE_NT_SIGNATURE_MISMATCH;
-	
+
 	switch (((PIMAGE_NT_HEADERS32)((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew))->OptionalHeader.Magic)
 	{
 	case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
@@ -694,7 +690,8 @@ HRESULT Clibpe::getHeaders()
 		m_pNTHeader32 = (PIMAGE_NT_HEADERS32)((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew);
 		m_varNTHeader = *m_pNTHeader32;
 		m_stFileHeader = m_pNTHeader32->FileHeader;
-		m_varOptHeader = m_pNTHeader32->OptionalHeader; 
+		m_varOptHeader = m_pNTHeader32->OptionalHeader;
+		m_ulImageBase = m_pNTHeader32->OptionalHeader.ImageBase;
 		break;
 	case  IMAGE_NT_OPTIONAL_HDR64_MAGIC:
 		m_dwFileSummary |= IMAGE_PE64_FLAG;
@@ -702,6 +699,7 @@ HRESULT Clibpe::getHeaders()
 		m_varNTHeader = *m_pNTHeader64;
 		m_stFileHeader = m_pNTHeader64->FileHeader;
 		m_varOptHeader = m_pNTHeader64->OptionalHeader;
+		m_ulImageBase = m_pNTHeader64->OptionalHeader.ImageBase;
 		break;
 	case  IMAGE_ROM_OPTIONAL_HDR_MAGIC:
 		break;
@@ -724,7 +722,7 @@ HRESULT Clibpe::getRichHeader()
 	//«Rich» stub starts at 0x80 offset,
 	//before m_pDosHeader->e_lfanew (PE header start offset)
 	//If e_lfanew <= 0x80 — there is no «Rich» header.
-	if (m_pDosHeader->e_lfanew <= 0x80)
+	if (m_pDosHeader->e_lfanew <= 0x80 || !isPtrSafe(m_pDosHeader->e_lfanew))
 		return IMAGE_HAS_NO_RICH_HEADER;
 
 	const PDWORD pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
@@ -769,41 +767,34 @@ HRESULT Clibpe::getDataDirectories()
 {
 	PIMAGE_DATA_DIRECTORY pDataDir;
 	PIMAGE_SECTION_HEADER pSecHdr;
+	DWORD dwRVAAndSizes;
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
 		pDataDir = (PIMAGE_DATA_DIRECTORY)m_pNTHeader32->OptionalHeader.DataDirectory;
-
-		//Filling DataDirectories vector.
-		for (unsigned i = 0; i < (m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes > 15 ?
-			15 : m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes); i++, pDataDir++)
-		{
-			std::string strSecName { };
-
-			pSecHdr = getSecHdrFromRVA(pDataDir->VirtualAddress);
-			//RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is file RAW offset.
-			if (pSecHdr && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
-				strSecName.assign((char * const)pSecHdr->Name, 8);
-
-			m_vecDataDirectories.emplace_back(*pDataDir, std::move(strSecName));
-		}
+		dwRVAAndSizes = m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes;
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
 		pDataDir = (PIMAGE_DATA_DIRECTORY)m_pNTHeader64->OptionalHeader.DataDirectory;
-
-		for (unsigned i = 0; i < (m_pNTHeader64->OptionalHeader.NumberOfRvaAndSizes > 15 ?
-			15 : m_pNTHeader64->OptionalHeader.NumberOfRvaAndSizes); i++, pDataDir++)
-		{
-			std::string strSecName { };
-
-			pSecHdr = getSecHdrFromRVA(pDataDir->VirtualAddress);
-			if (pSecHdr && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
-				strSecName.assign((char * const)pSecHdr->Name, 8);
-
-			m_vecDataDirectories.emplace_back(*pDataDir, std::move(strSecName));
-		}
+		dwRVAAndSizes = m_pNTHeader64->OptionalHeader.NumberOfRvaAndSizes;
 	}
+	else
+		return IMAGE_HAS_NO_DATA_DIRECTORIES;
+
+	//Filling DataDirectories vector.
+	for (unsigned i = 0; i < (dwRVAAndSizes > 15 ? 15 : dwRVAAndSizes); i++, pDataDir++)
+	{
+		std::string strSecName { };
+
+		pSecHdr = getSecHdrFromRVA(pDataDir->VirtualAddress);
+		//RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is file RAW offset.
+		if (pSecHdr && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
+			strSecName.assign((char * const)pSecHdr->Name, 8);
+
+		m_vecDataDirectories.emplace_back(*pDataDir, std::move(strSecName));
+	}
+
 	if (m_vecDataDirectories.empty())
 		return IMAGE_HAS_NO_DATA_DIRECTORIES;
 
@@ -815,69 +806,57 @@ HRESULT Clibpe::getDataDirectories()
 HRESULT Clibpe::getSectionsHeaders()
 {
 	PIMAGE_SECTION_HEADER pSecHdr;
+	WORD wNumSections;
+	DWORD dwSymbolTable, dwNumberOfSymbols;
 
 	if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
-		m_vecSectionHeaders.reserve(m_pNTHeader32->FileHeader.NumberOfSections);
-
-		for (unsigned i = 0; i < m_pNTHeader32->FileHeader.NumberOfSections; i++, pSecHdr++)
-		{	
-			if (!isPtrSafe(pSecHdr))
-				break;
-
-			std::string strSecRealName { };
-
-			if (pSecHdr->Name[0] == '/')
-			{	//Deprecated, but still used "feature" of section name.
-				//https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_section_header#members
-				//«An 8-byte, null-padded UTF-8 string. There is no terminating null character 
-				//if the string is exactly eight characters long.
-				//For longer names, this member contains a forward slash (/) followed by an ASCII representation 
-				//of a decimal number that is an offset into the string table.»
-				//String Table dwells right after the end of Symbol Table.
-				//Each symbol in Symbol Table occupies exactly 18 bytes.
-				//So String Table's beginning can be calculated like this:
-				//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
-				const long lOffset = strtol((const char*)&pSecHdr->Name[1], nullptr, 10);
-				if (lOffset != LONG_MAX && lOffset != LONG_MIN && lOffset != 0)
-				{
-					const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase + (DWORD_PTR)m_pNTHeader32->FileHeader.PointerToSymbolTable +
-						(DWORD_PTR)m_pNTHeader32->FileHeader.NumberOfSymbols * 18 + (DWORD_PTR)lOffset);
-					if (isPtrSafe(lpszSecRealName))
-						strSecRealName = lpszSecRealName;
-				}
-			}
-
-			m_vecSectionHeaders.emplace_back(*pSecHdr, std::move(strSecRealName));
-		}
+		wNumSections = m_pNTHeader32->FileHeader.NumberOfSections;
+		dwSymbolTable = (DWORD_PTR)m_pNTHeader32->FileHeader.PointerToSymbolTable;
+		dwNumberOfSymbols = (DWORD_PTR)m_pNTHeader32->FileHeader.NumberOfSymbols;
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
 		pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
-		m_vecSectionHeaders.reserve(m_pNTHeader64->FileHeader.NumberOfSections);
+		wNumSections = m_pNTHeader64->FileHeader.NumberOfSections;
+		dwSymbolTable = (DWORD_PTR)m_pNTHeader64->FileHeader.PointerToSymbolTable;
+		dwNumberOfSymbols = (DWORD_PTR)m_pNTHeader64->FileHeader.NumberOfSymbols;
+	}
+	else
+		return IMAGE_HAS_NO_SECTIONS;
 
-		for (unsigned i = 0; i < m_pNTHeader64->FileHeader.NumberOfSections; i++, pSecHdr++)
-		{	
-			if (!isPtrSafe(pSecHdr))
-				break;
+	m_vecSectionHeaders.reserve(wNumSections);
 
-			std::string strSecRealName { };
+	for (unsigned i = 0; i < wNumSections; i++, pSecHdr++)
+	{
+		if (!isPtrSafe(pSecHdr))
+			break;
 
-			if (pSecHdr->Name[0] == '/')
+		std::string strSecRealName { };
+
+		if (pSecHdr->Name[0] == '/')
+		{	//Deprecated, but still used "feature" of section name.
+			//https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_section_header#members
+			//«An 8-byte, null-padded UTF-8 string. There is no terminating null character 
+			//if the string is exactly eight characters long.
+			//For longer names, this member contains a forward slash (/) followed by an ASCII representation 
+			//of a decimal number that is an offset into the string table.»
+			//String Table dwells right after the end of Symbol Table.
+			//Each symbol in Symbol Table occupies exactly 18 bytes.
+			//So String Table's beginning can be calculated like this:
+			//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
+			const long lOffset = strtol((const char*)&pSecHdr->Name[1], nullptr, 10);
+			if (lOffset != LONG_MAX && lOffset != LONG_MIN && lOffset != 0)
 			{
-				const long lOffset = strtol((const char*)&pSecHdr->Name[1], nullptr, 10);
-				if (lOffset != LONG_MAX && lOffset != LONG_MIN && lOffset != 0)
-				{
-					const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase + (DWORD_PTR)m_pNTHeader64->FileHeader.PointerToSymbolTable +
-						(DWORD_PTR)m_pNTHeader64->FileHeader.NumberOfSymbols * 18 + (DWORD_PTR)lOffset);
-					if (isPtrSafe(lpszSecRealName))
-						strSecRealName = lpszSecRealName;
-				}
+				const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase + dwSymbolTable +
+					dwNumberOfSymbols * 18 + (DWORD_PTR)lOffset);
+				if (isPtrSafe(lpszSecRealName))
+					strSecRealName = lpszSecRealName;
 			}
-
-			m_vecSectionHeaders.emplace_back(*pSecHdr, std::move(strSecRealName));
 		}
+
+		m_vecSectionHeaders.emplace_back(*pSecHdr, std::move(strSecRealName));
 	}
 
 	if (m_vecSectionHeaders.empty())
@@ -982,18 +961,18 @@ HRESULT Clibpe::getImportTable()
 				std::vector<std::tuple<LONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, LONGLONG/*Thunk table RVA*/>> vecFunc { };
 				std::string strDllName { };
 
-				//Checking for TLS Index patching trick, to fade out fake imports.
+				//Checking for TLS Index patching trick, to strip fake imports.
 				//The trick is: OS loader, while loading PE file, patches address in memory 
-				//that is pointed at by PIMAGE_TLS_DIRECTORY->AddressOfIndex.
+				//that is pointed to by PIMAGE_TLS_DIRECTORY->AddressOfIndex.
 				//If at this address file had, say, Import descriptor with fake imports
 				//it will be zeroed, and PE file will be executed just fine.
 				//But trying to read this fake Import descriptor from file on disk
-				//may lead to many "interesting" things. Import table can be enormous,
+				//may lead to many «interesting» things. Import table can be enormous,
 				//with absolutely unreadable import names.
 				if (pTLSDir32 && pTLSDir32->AddressOfIndex && (((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_pNTHeader32->OptionalHeader.ImageBase) ||
+					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ulImageBase) ||
 					((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_pNTHeader32->OptionalHeader.ImageBase)))
+					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ulImageBase)))
 				{
 					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescriptor->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
@@ -1057,9 +1036,9 @@ HRESULT Clibpe::getImportTable()
 				std::string strDllName { };
 
 				if (pTLSDir64 && pTLSDir64->AddressOfIndex && (((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase) ||
+					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ulImageBase) ||
 					((DWORD_PTR)pImportDescriptor + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase)))
+					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ulImageBase)))
 				{
 					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescriptor->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
@@ -1077,12 +1056,6 @@ HRESULT Clibpe::getImportTable()
 
 				if (pThunk64)
 				{
-					if (pTLSDir64 && ((DWORD_PTR)pThunk64 >= (pTLSDir64->AddressOfIndex - m_pNTHeader64->OptionalHeader.ImageBase)))
-					{
-						m_vecImportTable.emplace_back(*pImportDescriptor, "(fake import stripped)", std::move(vecFunc));
-						break;
-					}
-
 					pThunk64 = (PIMAGE_THUNK_DATA64)rVAToPtr((DWORD_PTR)pThunk64);
 					if (!pThunk64)
 						return IMAGE_HAS_NO_IMPORT_DIR;
@@ -1332,12 +1305,12 @@ HRESULT Clibpe::getExceptionTable()
 	if (!pRuntimeFuncsEntry)
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
 
-	const DWORD nEntries = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXCEPTION) / (DWORD)sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY);
-	if (!nEntries)
+	const DWORD dwEntries = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXCEPTION) / (DWORD)sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY);
+	if (!dwEntries || !isPtrSafe(pRuntimeFuncsEntry + dwEntries))
 		return IMAGE_HAS_NO_EXCEPTION_DIR;
 
-	m_vecExceptionTable.reserve(nEntries);
-	for (unsigned i = 0; i < nEntries; i++, pRuntimeFuncsEntry++)
+	m_vecExceptionTable.reserve(dwEntries);
+	for (unsigned i = 0; i < dwEntries; i++, pRuntimeFuncsEntry++)
 		m_vecExceptionTable.push_back(*pRuntimeFuncsEntry);
 
 	m_dwFileSummary |= IMAGE_EXCEPTION_DIRECTORY_FLAG;
@@ -1521,10 +1494,12 @@ HRESULT Clibpe::getDebugTable()
 	}
 	else //Looking for the debug directory.
 	{
+		if (!(pDebugSecHdr = getSecHdrFromRVA(dwDebugDirRVA)))
+			return IMAGE_HAS_NO_DEBUG_DIR;
+
 		if (!(pDebugDir = (PIMAGE_DEBUG_DIRECTORY)rVAToPtr(dwDebugDirRVA)))
 			return IMAGE_HAS_NO_DEBUG_DIR;
 
-		pDebugSecHdr = getSecHdrFromRVA(dwDebugDirRVA);
 		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG);
 	}
 
@@ -1535,7 +1510,7 @@ HRESULT Clibpe::getDebugTable()
 
 	try {
 		m_vecDebugTable.reserve(dwDebugEntries);
-		for (unsigned i = 0; i < dwDebugEntries; i++, pDebugDir++)
+		for (unsigned i = 0; i < dwDebugEntries; i++)
 		{
 			std::vector<std::byte> vecDebugRawData { };
 			std::byte* pDebugRawData { };
@@ -1553,6 +1528,8 @@ HRESULT Clibpe::getDebugTable()
 			}
 
 			m_vecDebugTable.emplace_back(*pDebugDir, std::move(vecDebugRawData));
+			if (!isPtrSafe(++pDebugDir))
+				break;
 		}
 
 		m_dwFileSummary |= IMAGE_DEBUG_DIRECTORY_FLAG;
@@ -1603,42 +1580,19 @@ HRESULT Clibpe::getTLSTable()
 	try {
 		std::vector<std::byte> vecTLSRawData { };
 		std::vector<DWORD> vecTLSCallbacks { };
+		ULONGLONG ulStartAddressOfRawData { }, ulEndAddressOfRawData { }, ulAddressOfCallBacks { };
+		std::variant<IMAGE_TLS_DIRECTORY32, IMAGE_TLS_DIRECTORY64> varTLSDir { };
 
 		if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE32_FLAG))
 		{
 			const PIMAGE_TLS_DIRECTORY32 pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
 			if (!pTLSDir32)
 				return IMAGE_HAS_NO_TLS_DIR;
-			//All TLS adresses are not RVA, but actual VA.
-			//So we must subtract ImageBase before pass to rVAToPtr().
-			PBYTE pTLSRawStart = (PBYTE)rVAToPtr(pTLSDir32->StartAddressOfRawData - m_pNTHeader32->OptionalHeader.ImageBase);
-			PBYTE pTLSRawEnd = (PBYTE)rVAToPtr(pTLSDir32->EndAddressOfRawData - m_pNTHeader32->OptionalHeader.ImageBase);
-			if (pTLSRawStart && pTLSRawEnd && pTLSRawEnd > pTLSRawStart)
-			{
-				DWORD_PTR dwTLSRawSize = pTLSRawEnd - pTLSRawStart;
-				if (!isPtrSafe(pTLSRawStart + dwTLSRawSize))
-					return IMAGE_HAS_NO_TLS_DIR;
 
-				vecTLSRawData.reserve(dwTLSRawSize);
-				for (size_t iterTLS = 0; iterTLS < dwTLSRawSize; iterTLS++)
-					vecTLSRawData.push_back(std::byte(*(pTLSRawStart + iterTLS)));
-
-			}
-			PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(pTLSDir32->AddressOfCallBacks - m_pNTHeader32->OptionalHeader.ImageBase);
-			if (pTLSCallbacks)
-			{
-				while (*pTLSCallbacks)
-				{
-					vecTLSCallbacks.push_back(*pTLSCallbacks);
-					if (!isPtrSafe(++pTLSCallbacks))
-					{
-						vecTLSCallbacks.clear();
-						break;
-					}
-				}
-			}
-
-			m_tupTLS = { *pTLSDir32, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
+			varTLSDir = *pTLSDir32;
+			ulStartAddressOfRawData = pTLSDir32->StartAddressOfRawData;
+			ulEndAddressOfRawData = pTLSDir32->EndAddressOfRawData;
+			ulAddressOfCallBacks = pTLSDir32->AddressOfCallBacks;
 		}
 		else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 		{
@@ -1646,35 +1600,45 @@ HRESULT Clibpe::getTLSTable()
 			if (!pTLSDir64)
 				return IMAGE_HAS_NO_TLS_DIR;
 
-			PBYTE pTLSRawStart = (PBYTE)rVAToPtr(pTLSDir64->StartAddressOfRawData - m_pNTHeader64->OptionalHeader.ImageBase);
-			PBYTE pTLSRawEnd = (PBYTE)rVAToPtr(pTLSDir64->EndAddressOfRawData - m_pNTHeader64->OptionalHeader.ImageBase);
-			if (pTLSRawStart && pTLSRawEnd && pTLSRawEnd > pTLSRawStart)
-			{
-				DWORD_PTR dwTLSRawSize = pTLSRawEnd - pTLSRawStart;
-				if (!isPtrSafe(pTLSRawStart + dwTLSRawSize))
-					return IMAGE_HAS_NO_TLS_DIR;
+			varTLSDir = *pTLSDir64;
+			ulStartAddressOfRawData = pTLSDir64->StartAddressOfRawData;
+			ulEndAddressOfRawData = pTLSDir64->EndAddressOfRawData;
+			ulAddressOfCallBacks = pTLSDir64->AddressOfCallBacks;
+		}
+		else
+			return IMAGE_HAS_NO_TLS_DIR;
 
-				vecTLSRawData.reserve(dwTLSRawSize);
-				for (size_t iterTLS = 0; iterTLS < dwTLSRawSize; iterTLS++)
-					vecTLSRawData.push_back(std::byte(*(pTLSRawStart + iterTLS)));
+		//All TLS adresses are not RVA, but actual VA.
+		//So we must subtract ImageBase before pass to rVAToPtr().
+		std::byte* pTLSRawStart = (std::byte*)rVAToPtr(ulStartAddressOfRawData - m_ulImageBase);
+		std::byte* pTLSRawEnd = (std::byte*)rVAToPtr(ulEndAddressOfRawData - m_ulImageBase);
+		if (pTLSRawStart && pTLSRawEnd && pTLSRawEnd > pTLSRawStart)
+		{
+			DWORD_PTR dwTLSRawSize = pTLSRawEnd - pTLSRawStart;
+			if (!isPtrSafe(pTLSRawStart + dwTLSRawSize))
+				return IMAGE_HAS_NO_TLS_DIR;
 
-			}
-			PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(pTLSDir64->AddressOfCallBacks - m_pNTHeader64->OptionalHeader.ImageBase);
-			if (pTLSCallbacks)
+			vecTLSRawData.reserve(dwTLSRawSize);
+			for (size_t iterTLS = 0; iterTLS < dwTLSRawSize; iterTLS++)
+				vecTLSRawData.push_back(*(pTLSRawStart + iterTLS));
+
+		}
+		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ulAddressOfCallBacks - m_ulImageBase);
+		if (pTLSCallbacks)
+		{
+			while (*pTLSCallbacks)
 			{
-				while (*pTLSCallbacks)
+				vecTLSCallbacks.push_back(*pTLSCallbacks);
+				if (!isPtrSafe(++pTLSCallbacks))
 				{
-					vecTLSCallbacks.push_back(*pTLSCallbacks);
-					if (!isPtrSafe(++pTLSCallbacks))
-					{
-						vecTLSCallbacks.clear();
-						break;
-					}
+					vecTLSCallbacks.clear();
+					break;
 				}
 			}
-
-			m_tupTLS = { *pTLSDir64, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
 		}
+
+		m_tupTLS = { std::move(varTLSDir), std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
+
 		m_dwFileSummary |= IMAGE_TLS_DIRECTORY_FLAG;
 	}
 	catch (const std::bad_alloc&)
@@ -1703,7 +1667,7 @@ HRESULT Clibpe::getLoadConfigTable()
 		if (!pLoadConfigDir32)
 			return IMAGE_HAS_NO_LOADCONFIG_DIR;
 
-		m_varLoadConfigDir = { *pLoadConfigDir32, IMAGE_LOAD_CONFIG_DIRECTORY64 { } };
+		m_varLoadConfigDir = *pLoadConfigDir32;
 	}
 	else if (IMAGE_HAS_FLAG(m_dwFileSummary, IMAGE_PE64_FLAG))
 	{
@@ -1712,7 +1676,7 @@ HRESULT Clibpe::getLoadConfigTable()
 		if (!pLoadConfigDir64)
 			return IMAGE_HAS_NO_LOADCONFIG_DIR;
 
-		m_varLoadConfigDir = { IMAGE_LOAD_CONFIG_DIRECTORY32 { }, *pLoadConfigDir64 };
+		m_varLoadConfigDir = *pLoadConfigDir64;
 	}
 	m_dwFileSummary |= IMAGE_LOADCONFIG_DIRECTORY_FLAG;
 

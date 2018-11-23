@@ -129,6 +129,9 @@ private:
 	//NT header pointer, if file is PE32+ (x64).
 	PIMAGE_NT_HEADERS64 m_pNTHeader64 { };
 
+	//ImageBase.
+	ULONGLONG m_ulImageBase { };
+
 	/******************************************************
 	* Next go vars for all of the loaded file structures: *
 	* headers, sections, tables, etc..., that's gonna be  *
