@@ -5,19 +5,31 @@ ___________________________________
 **Usage:**  
 ```C++
 #pragma comment(lib, "libpe.lib")
-#include "libpe.h"  
+#include "libpe.h"
   
-Ilibpe* pLibpe;  
-Getlibpe(&pLibpe);  
-pLibpe->LoadPe("FileName");  
+using namespace libpe;
+libpe_ptr pLibpe;
+Getlibpe(&pLibpe);
 
-PCLIBPE_IMPORT_VEC pImport;
-pLibpe->GetImportTable(&pImport);
-
-PCLIBPE_EXPORT_TUP pExport;
-pLibpe->GetExportTable(&pExport)
-.  
-.  
-.  
-pLibpe->Release();
+pLibpe->LoadPe(L"FileName");
+pLibpe->GetFileSummary(PCDWORD*);
+pLibpe->GetMSDOSHeader(PCLIBPE_DOSHEADER*);
+pLibpe->GetRichHeader(PCLIBPE_RICHHEADER_VEC*);
+pLibpe->GetNTHeader(PCLIBPE_NTHEADER_VAR*);
+pLibpe->GetFileHeader(PCLIBPE_FILEHEADER*);
+pLibpe->GetOptionalHeader(PCLIBPE_OPTHEADER_VAR*);
+pLibpe->GetDataDirectories(PCLIBPE_DATADIRS_VEC*);
+pLibpe->GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC*);
+pLibpe->GetExportTable(PCLIBPE_EXPORT_TUP*);
+pLibpe->GetImportTable(PCLIBPE_IMPORT_VEC*);
+pLibpe->GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP*);
+pLibpe->GetExceptionTable(PCLIBPE_EXCEPTION_VEC*);
+pLibpe->GetSecurityTable(PCLIBPE_SECURITY_VEC*);
+pLibpe->GetRelocationTable(PCLIBPE_RELOCATION_VEC*);
+pLibpe->GetDebugTable(PCLIBPE_DEBUG_VEC*);
+pLibpe->GetTLSTable(PCLIBPE_TLS_TUP*);
+pLibpe->GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR*);
+pLibpe->GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC*);
+pLibpe->GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC*);
+pLibpe->GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR*);
 ```

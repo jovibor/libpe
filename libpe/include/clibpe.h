@@ -6,6 +6,7 @@
 * Additional info can be found at https://github.com/jovibor/libpe	 *
 *********************************************************************/
 #pragma once
+#include "libpe.h"
 
 using namespace libpe;
 
@@ -40,7 +41,6 @@ public:
 	HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC*) override;
 	HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC*) override;
 	HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR*) override;
-	HRESULT Release() override;
 private:
 	PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 	PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
