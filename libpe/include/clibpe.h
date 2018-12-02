@@ -14,12 +14,12 @@ using namespace libpe;
 class Clibpe : public Ilibpe
 {
 public:
-	Clibpe() = default;
+	Clibpe() = default;	
+	virtual ~Clibpe() = default;
 	Clibpe(const Clibpe&) = delete;
 	Clibpe(Clibpe&&) = delete;
 	Clibpe& operator=(const Clibpe&) = delete;
 	Clibpe& operator=(Clibpe&&) = delete;
-	virtual ~Clibpe();
 	HRESULT LoadPe(LPCWSTR) override;
 	HRESULT GetFileSummary(PCDWORD*) override;
 	HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER*) override;
@@ -48,10 +48,11 @@ private:
 	DWORD getDirEntryRVA(UINT uiDirEntry) const;
 	DWORD getDirEntrySize(UINT uiDirEntry) const;
 	template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
-	HRESULT getDirBySecMap(DWORD dwDirectory);
+	HRESULT getDirByMappingSec(DWORD dwDirectory);
 	void resetAll();
-	HRESULT getHeaders();
+	HRESULT getMSDOSHeader();
 	HRESULT getRichHeader();
+	HRESULT getNTFileOptHeader();
 	HRESULT getDataDirectories();
 	HRESULT getSectionsHeaders();
 	HRESULT getExportTable();
@@ -79,10 +80,9 @@ private:
 	//Maximum address that can be dereferensed.
 	ULONGLONG m_dwMaxPointerBound { };
 
-	//Reserve 16K of memory that we can delete 
-	//to properly handle E_OUTOFMEMORY exceptions,
-	//in case we catch one.
-	char* m_lpszEmergencyMemory = new char[0x8FFF];
+	//Reserved 16K of memory that we can delete to properly handle 
+	//E_OUTOFMEMORY exceptions, in case we catch one.
+	std::unique_ptr<char []> m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
 
 	//Minimum bytes to map, if it's not possible to map file as a whole.
 	const DWORD m_dwMinBytesToMap { 0xFFFF };
