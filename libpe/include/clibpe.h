@@ -14,33 +14,33 @@ using namespace libpe;
 class Clibpe : public Ilibpe
 {
 public:
-	Clibpe() = default;	
+	Clibpe() = default;
 	virtual ~Clibpe() = default;
 	Clibpe(const Clibpe&) = delete;
 	Clibpe(Clibpe&&) = delete;
 	Clibpe& operator=(const Clibpe&) = delete;
 	Clibpe& operator=(Clibpe&&) = delete;
 	HRESULT LoadPe(LPCWSTR) override;
-	HRESULT GetFileSummary(PCDWORD*) override;
-	HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER*) override;
-	HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC*) override;
-	HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR*) override;
-	HRESULT GetFileHeader(PCLIBPE_FILEHEADER*) override;
-	HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR*) override;
-	HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC*) override;
-	HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC*) override;
-	HRESULT GetExportTable(PCLIBPE_EXPORT_TUP*) override;
-	HRESULT GetImportTable(PCLIBPE_IMPORT_VEC*) override;
-	HRESULT GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP*) override;
-	HRESULT GetExceptionTable(PCLIBPE_EXCEPTION_VEC*) override;
-	HRESULT GetSecurityTable(PCLIBPE_SECURITY_VEC*) override;
-	HRESULT GetRelocationTable(PCLIBPE_RELOCATION_VEC*) override;
-	HRESULT GetDebugTable(PCLIBPE_DEBUG_VEC*) override;
-	HRESULT GetTLSTable(PCLIBPE_TLS_TUP*) override;
-	HRESULT GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR*) override;
-	HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC*) override;
-	HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC*) override;
-	HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR*) override;
+	HRESULT GetFileSummary(PCDWORD&) override;
+	HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) override;
+	HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) override;
+	HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&) override;
+	HRESULT GetFileHeader(PCLIBPE_FILEHEADER&) override;
+	HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) override;
+	HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) override;
+	HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&) override;
+	HRESULT GetExportTable(PCLIBPE_EXPORT_TUP&) override;
+	HRESULT GetImportTable(PCLIBPE_IMPORT_VEC&) override;
+	HRESULT GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP&) override;
+	HRESULT GetExceptionTable(PCLIBPE_EXCEPTION_VEC&) override;
+	HRESULT GetSecurityTable(PCLIBPE_SECURITY_VEC&) override;
+	HRESULT GetRelocationTable(PCLIBPE_RELOCATION_VEC&) override;
+	HRESULT GetDebugTable(PCLIBPE_DEBUG_VEC&) override;
+	HRESULT GetTLSTable(PCLIBPE_TLS_TUP&) override;
+	HRESULT GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR&) override;
+	HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC&) override;
+	HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC&) override;
+	HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR&) override;
 private:
 	PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 	PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
@@ -48,6 +48,7 @@ private:
 	DWORD getDirEntryRVA(UINT uiDirEntry) const;
 	DWORD getDirEntrySize(UINT uiDirEntry) const;
 	template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
+	bool isSumOverflow(DWORD_PTR, DWORD_PTR);
 	HRESULT getDirByMappingSec(DWORD dwDirectory);
 	void resetAll();
 	HRESULT getMSDOSHeader();
@@ -138,7 +139,7 @@ private:
 	* given to client code.								  *
 	******************************************************/
 	//DOS Header.
-	IMAGE_DOS_HEADER m_stDOSHeader { };
+	IMAGE_DOS_HEADER m_stMSDOSHeader { };
 
 	//«Rich» header.
 	LIBPE_RICHHEADER_VEC m_vecRichHeader { };
@@ -156,41 +157,41 @@ private:
 	LIBPE_DATADIRS_VEC m_vecDataDirectories { };
 
 	//Sections.
-	LIBPE_SECHEADERS_VEC m_vecSectionHeaders { };
+	LIBPE_SECHEADERS_VEC m_vecSecHeaders { };
 
 	//Export table.
 	LIBPE_EXPORT_TUP m_tupExport { };
 
 	//Import table.
-	LIBPE_IMPORT_VEC m_vecImportTable { };
+	LIBPE_IMPORT_VEC m_vecImport { };
 
 	//Resources.
-	LIBPE_RESOURCE_ROOT_TUP m_tupResourceTable { };
+	LIBPE_RESOURCE_ROOT_TUP m_tupResource { };
 
 	//Exceptions.
-	LIBPE_EXCEPTION_VEC m_vecExceptionTable;
+	LIBPE_EXCEPTION_VEC m_vecException;
 
 	//Security table.
 	LIBPE_SECURITY_VEC m_vecSecurity { };
 
 	//Relocations.
-	LIBPE_RELOCATION_VEC m_vecRelocationTable { };
+	LIBPE_RELOCATION_VEC m_vecRelocs { };
 
 	//Debug Table.
-	LIBPE_DEBUG_VEC m_vecDebugTable { };
+	LIBPE_DEBUG_VEC m_vecDebug { };
 
 	//TLS.
 	LIBPE_TLS_TUP m_tupTLS { };
 
 	//LoadConfigTable.
-	LIBPE_LOADCONFIGTABLE_VAR m_varLoadConfigDir { };
+	LIBPE_LOADCONFIGTABLE_VAR m_varLoadConfig { };
 
 	//Bound import.
-	LIBPE_BOUNDIMPORT_VEC m_vecBoundImportTable { };
+	LIBPE_BOUNDIMPORT_VEC m_vecBoundImport { };
 
 	//Delay import.
-	LIBPE_DELAYIMPORT_VEC m_vecDelayImportTable { };
+	LIBPE_DELAYIMPORT_VEC m_vecDelayImport { };
 
 	//COM table descriptor.
-	IMAGE_COR20_HEADER m_stCOR20Header { };
+	IMAGE_COR20_HEADER m_stCOR20Desc { };
 };

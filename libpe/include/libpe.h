@@ -166,26 +166,26 @@ namespace libpe
 	{
 	public:
 		virtual HRESULT LoadPe(LPCWSTR) = 0;
-		virtual HRESULT GetFileSummary(PCDWORD*) = 0;
-		virtual HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER*) = 0;
-		virtual HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC*) = 0;
-		virtual HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR*) = 0;
-		virtual HRESULT GetFileHeader(PCLIBPE_FILEHEADER*) = 0;
-		virtual HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR*) = 0;
-		virtual HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC*) = 0;
-		virtual HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC*) = 0;
-		virtual HRESULT GetExportTable(PCLIBPE_EXPORT_TUP*) = 0;
-		virtual HRESULT GetImportTable(PCLIBPE_IMPORT_VEC*) = 0;
-		virtual HRESULT GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP*) = 0;
-		virtual HRESULT GetExceptionTable(PCLIBPE_EXCEPTION_VEC*) = 0;
-		virtual HRESULT GetSecurityTable(PCLIBPE_SECURITY_VEC*) = 0;
-		virtual HRESULT GetRelocationTable(PCLIBPE_RELOCATION_VEC*) = 0;
-		virtual HRESULT GetDebugTable(PCLIBPE_DEBUG_VEC*) = 0;
-		virtual HRESULT GetTLSTable(PCLIBPE_TLS_TUP*) = 0;
-		virtual HRESULT GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR*) = 0;
-		virtual HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC*) = 0;
-		virtual HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC*) = 0;
-		virtual HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR*) = 0;
+		virtual HRESULT GetFileSummary(PCDWORD&) = 0;
+		virtual HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) = 0;
+		virtual HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) = 0;
+		virtual HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&) = 0;
+		virtual HRESULT GetFileHeader(PCLIBPE_FILEHEADER&) = 0;
+		virtual HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) = 0;
+		virtual HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) = 0;
+		virtual HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&) = 0;
+		virtual HRESULT GetExportTable(PCLIBPE_EXPORT_TUP&) = 0;
+		virtual HRESULT GetImportTable(PCLIBPE_IMPORT_VEC&) = 0;
+		virtual HRESULT GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP&) = 0;
+		virtual HRESULT GetExceptionTable(PCLIBPE_EXCEPTION_VEC&) = 0;
+		virtual HRESULT GetSecurityTable(PCLIBPE_SECURITY_VEC&) = 0;
+		virtual HRESULT GetRelocationTable(PCLIBPE_RELOCATION_VEC&) = 0;
+		virtual HRESULT GetDebugTable(PCLIBPE_DEBUG_VEC&) = 0;
+		virtual HRESULT GetTLSTable(PCLIBPE_TLS_TUP&) = 0;
+		virtual HRESULT GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR&) = 0;
+		virtual HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC&) = 0;
+		virtual HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC&) = 0;
+		virtual HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR&) = 0;
 	};
 	using libpe_ptr = std::shared_ptr<Ilibpe>;
 
