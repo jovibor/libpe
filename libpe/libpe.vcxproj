@@ -23,7 +23,7 @@
     <ProjectGuid>{3C2559D5-7A9A-4E39-A2C5-C4D4806376EA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>libpe</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -130,7 +130,6 @@
       <ProgramDataBaseFileName />
       <XMLDocumentationFileName />
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>true</OmitFramePointers>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
