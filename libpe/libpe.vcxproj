@@ -81,6 +81,7 @@
     <GenerateManifest>false</GenerateManifest>
     <EmbedManifest>false</EmbedManifest>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <IntDir>$(SolutionDir)$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -154,7 +155,7 @@
       <Path />
     </BuildLog>
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)set_verinfo.ps1 $(TargetDir)$(ProjectName).dll</Command>
+      <Command>powershell.exe $(ProjectDir)\verinfo\set_verinfo.ps1 $(TargetDir)$(ProjectName).dll</Command>
     </PostBuildEvent>
     <Manifest>
       <OutputManifestFile />
