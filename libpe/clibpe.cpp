@@ -770,7 +770,7 @@ HRESULT Clibpe::getRichHeader()
 	//«Rich» stub starts at 0x80 offset,
 	//before m_pDosHeader->e_lfanew (PE header start offset)
 	//If e_lfanew <= 0x80 — there is no «Rich» header.
-	if (m_pDosHeader->e_lfanew <= 0x80 || !isPtrSafe(m_pDosHeader->e_lfanew))
+	if (m_pDosHeader->e_lfanew <= 0x80 || !isPtrSafe((DWORD_PTR)m_pDosHeader + m_pDosHeader->e_lfanew))
 		return E_IMAGE_HAS_NO_RICHHEADER;
 
 	const PDWORD pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
