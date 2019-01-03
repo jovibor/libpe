@@ -1,4 +1,5 @@
-#### libpe — Windows library for viewing PE file information, including all internal structures and tables.
+## libpe 
+#### Windows library for viewing PE file information, including all internal structures and tables.
 Supports x32 (PE32) and x64 (PE32+) binares.  
 MSVS 2017, C++17.  
 [Microsoft Visual C++ Redistributable for Visual Studio 2017 required.](https://aka.ms/vs/15/release/VC_redist.x86.exe)
@@ -34,3 +35,6 @@ pLibpe->GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC&);
 pLibpe->GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC&);
 pLibpe->GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR&);
 ```
+
+## **License**
+This software is available under the conditions stated in the LICENSE file.
