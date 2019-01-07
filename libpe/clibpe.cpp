@@ -55,7 +55,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 				return E_FILE_MAP_VIEW_OF_FILE_FAILED;
 			}
 			m_fMapViewOfFileWhole = false;
-			m_dwMaxPointerBound = (DWORD_PTR)m_lpBase + (DWORD_PTR)m_dwMinBytesToMap;
+			m_ullwMaxPointerBound = (DWORD_PTR)m_lpBase + (DWORD_PTR)m_dwMinBytesToMap;
 			::GetSystemInfo(&m_stSysInfo);
 		}
 		else
@@ -68,7 +68,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	else
 	{
 		m_fMapViewOfFileWhole = true;
-		m_dwMaxPointerBound = (DWORD_PTR)m_lpBase + m_stFileSize.QuadPart;
+		m_ullwMaxPointerBound = (DWORD_PTR)m_lpBase + m_stFileSize.QuadPart;
 	}
 
 	if (getMSDOSHeader() != S_OK)
@@ -504,7 +504,7 @@ PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA) const
 
 	for (unsigned i = 0; i < wNumberOfSections; i++, pSecHdr++)
 	{
-		if (!isPtrSafe(pSecHdr))
+		if (!isPtrSafe((DWORD_PTR)pSecHdr + sizeof(IMAGE_SECTION_HEADER)))
 			return nullptr;
 		//Is RVA within this section?
 		if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
@@ -534,7 +534,7 @@ PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromName(LPCSTR lpszName) const
 
 	for (unsigned i = 0; i < wNumberOfSections; i++, pSecHdr++)
 	{
-		if (!isPtrSafe(pSecHdr))
+		if (!isPtrSafe((DWORD_PTR)pSecHdr + sizeof(IMAGE_SECTION_HEADER)))
 			break;
 		if (strncmp((char*)pSecHdr->Name, lpszName, IMAGE_SIZEOF_SHORT_NAME) == 0)
 			return pSecHdr;
@@ -593,8 +593,8 @@ DWORD Clibpe::getDirEntrySize(UINT uiDirEntry) const
 template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoundary) const
 {
 	return !tPtr ? false : (fCanReferenceBoundary ?
-		((DWORD_PTR)tPtr <= m_dwMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase) :
-		((DWORD_PTR)tPtr < m_dwMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase));
+		((DWORD_PTR)tPtr <= m_ullwMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase) :
+		((DWORD_PTR)tPtr < m_ullwMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase));
 }
 
 //Performs checking of DWORD_PTR overflow at summing of two variables.
@@ -636,7 +636,7 @@ HRESULT Clibpe::getDirByMappingSec(DWORD dwDirectory)
 					if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, dwSizeToMap)))
 						return E_FILE_MAP_VIEW_OF_FILE_FAILED;
 
-					m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + dwSizeToMap;
+					m_ullwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + dwSizeToMap;
 					getSecurityTable();
 					UnmapViewOfFile(m_lpSectionBase);
 				}
@@ -662,7 +662,7 @@ HRESULT Clibpe::getDirByMappingSec(DWORD dwDirectory)
 		if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedAddressToMap, dwSizeToMap)))
 			return E_FILE_MAP_VIEW_OF_FILE_FAILED;
 
-		m_dwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + dwSizeToMap;
+		m_ullwMaxPointerBound = (DWORD_PTR)m_lpSectionBase + dwSizeToMap;
 		switch (dwDirectory)
 		{
 		case IMAGE_DIRECTORY_ENTRY_EXPORT:
@@ -828,7 +828,7 @@ HRESULT Clibpe::getNTFileOptHeader()
 		m_varNTHeader = *m_pNTHeader32;
 		m_stFileHeader = m_pNTHeader32->FileHeader;
 		m_varOptHeader = m_pNTHeader32->OptionalHeader;
-		m_ulImageBase = m_pNTHeader32->OptionalHeader.ImageBase;
+		m_ullImageBase = m_pNTHeader32->OptionalHeader.ImageBase;
 		break;
 	case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
 		m_dwFileSummary |= IMAGE_FLAG_PE64;
@@ -836,7 +836,7 @@ HRESULT Clibpe::getNTFileOptHeader()
 		m_varNTHeader = *m_pNTHeader64;
 		m_stFileHeader = m_pNTHeader64->FileHeader;
 		m_varOptHeader = m_pNTHeader64->OptionalHeader;
-		m_ulImageBase = m_pNTHeader64->OptionalHeader.ImageBase;
+		m_ullImageBase = m_pNTHeader64->OptionalHeader.ImageBase;
 		break;
 	case IMAGE_ROM_OPTIONAL_HDR_MAGIC:
 		return E_NOTIMPL; //not implemented yet
@@ -916,7 +916,7 @@ HRESULT Clibpe::getSectionsHeaders()
 
 	for (unsigned i = 0; i < wNumSections; i++, pSecHdr++)
 	{
-		if (!isPtrSafe(pSecHdr))
+		if (!isPtrSafe((DWORD_PTR)pSecHdr + sizeof(IMAGE_SECTION_HEADER)))
 			break;
 
 		std::string strSecRealName { };
@@ -932,8 +932,9 @@ HRESULT Clibpe::getSectionsHeaders()
 			//Each symbol in Symbol Table occupies exactly 18 bytes.
 			//So String Table's beginning can be calculated like this:
 			//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
-			const long lOffset = strtol((const char*)&pSecHdr->Name[1], nullptr, 10);
-			if (lOffset != LONG_MAX && lOffset != LONG_MIN && lOffset != 0)
+			char* pEndPtr { };
+			const long lOffset = strtol((const char*)&pSecHdr->Name[1], &pEndPtr, 10);
+			if (!(lOffset == 0 && (pEndPtr == (const char*)&pSecHdr->Name[1] || *pEndPtr != '\0')))
 			{
 				const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase +
 					DWORD_PTR(dwSymbolTable + dwNumberOfSymbols * 18 + lOffset));
@@ -1063,9 +1064,9 @@ HRESULT Clibpe::getImportTable()
 				//may lead to many «interesting» things. Import table can be enormous,
 				//with absolutely unreadable import names.
 				if (pTLSDir32 && pTLSDir32->AddressOfIndex && (((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ulImageBase) ||
+					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ullImageBase) ||
 					((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ulImageBase)))
+					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ullImageBase)))
 				{
 					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescr->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
@@ -1129,9 +1130,9 @@ HRESULT Clibpe::getImportTable()
 				std::string strDllName { };
 
 				if (pTLSDir64 && pTLSDir64->AddressOfIndex && (((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ulImageBase) ||
+					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ullImageBase) ||
 					((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ulImageBase)))
+					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ullImageBase)))
 				{
 					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescr->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
@@ -1708,8 +1709,8 @@ HRESULT Clibpe::getTLSTable()
 
 		//All TLS adresses are not RVA, but actual VA.
 		//So we must subtract ImageBase before pass to rVAToPtr().
-		std::byte* pTLSRawStart = (std::byte*)rVAToPtr(ulStartAddressOfRawData - m_ulImageBase);
-		std::byte* pTLSRawEnd = (std::byte*)rVAToPtr(ulEndAddressOfRawData - m_ulImageBase);
+		std::byte* pTLSRawStart = (std::byte*)rVAToPtr(ulStartAddressOfRawData - m_ullImageBase);
+		std::byte* pTLSRawEnd = (std::byte*)rVAToPtr(ulEndAddressOfRawData - m_ullImageBase);
 		if (pTLSRawStart && pTLSRawEnd && pTLSRawEnd > pTLSRawStart)
 		{
 			DWORD_PTR dwTLSRawSize = pTLSRawEnd - pTLSRawStart;
@@ -1721,7 +1722,7 @@ HRESULT Clibpe::getTLSTable()
 				vecTLSRawData.push_back(*(pTLSRawStart + iterTLS));
 
 		}
-		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ulAddressOfCallBacks - m_ulImageBase);
+		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ulAddressOfCallBacks - m_ullImageBase);
 		if (pTLSCallbacks)
 		{
 			while (*pTLSCallbacks)

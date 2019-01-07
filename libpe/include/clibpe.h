@@ -79,7 +79,7 @@ private:
 	LARGE_INTEGER m_stFileSize { };
 
 	//Maximum address that can be dereferensed.
-	ULONGLONG m_dwMaxPointerBound { };
+	ULONGLONG m_ullwMaxPointerBound { };
 
 	//Reserved 16K of memory that we can delete to properly handle 
 	//E_OUTOFMEMORY exceptions, in case we catch one.
@@ -131,7 +131,7 @@ private:
 	PIMAGE_NT_HEADERS64 m_pNTHeader64 { };
 
 	//ImageBase.
-	ULONGLONG m_ulImageBase { };
+	ULONGLONG m_ullImageBase { };
 
 	/******************************************************
 	* Next go vars for all of the loaded file structures: *
