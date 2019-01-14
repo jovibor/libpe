@@ -1038,19 +1038,25 @@ HRESULT Clibpe::getExportTable()
 
 HRESULT Clibpe::getImportTable()
 {
-	PIMAGE_IMPORT_DESCRIPTOR pImportDescr = (PIMAGE_IMPORT_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT));
+	PIMAGE_IMPORT_DESCRIPTOR pImpDesc = (PIMAGE_IMPORT_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT));
 
-	if (!pImportDescr)
+	if (!pImpDesc)
 		return E_IMAGE_HAS_NO_IMPORT;
 
 	const DWORD dwTLSDirRVA = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
+	DWORD_PTR dwTLSIndex { };
+	bool fTLSIndex { false };
 
 	try {
 		if (ImageHasFlag(m_dwFileSummary, IMAGE_FLAG_PE32))
 		{
 			const PIMAGE_TLS_DIRECTORY32 pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
+			if (pTLSDir32 && pTLSDir32->AddressOfIndex) {
+				fTLSIndex = true;
+				dwTLSIndex = (DWORD_PTR)rVAToPtr((ULONGLONG)pTLSDir32->AddressOfIndex - m_ullImageBase);
+			}
 
-			while (pImportDescr->Name)
+			while (pImpDesc->Name)
 			{
 				std::vector<std::tuple<ULONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, ULONGLONG/*Thunk table RVA*/>> vecFunc { };
 				std::string strDllName { };
@@ -1058,29 +1064,29 @@ HRESULT Clibpe::getImportTable()
 				//Checking for TLS Index patching trick, to strip fake imports.
 				//The trick is: OS loader, while loading PE file, patches address in memory 
 				//that is pointed to by PIMAGE_TLS_DIRECTORY->AddressOfIndex.
-				//If at this address file had, say, Import descriptor with fake imports
-				//it will be zeroed, and PE file will be executed just fine.
+				//If at this address file had Import descriptor with fake imports,
+				//it will be zeroed, and PE file will be executed normally.
 				//But trying to read this fake Import descriptor from file on disk
 				//may lead to many «interesting» things. Import table can be enormous,
 				//with absolutely unreadable import names.
-				if (pTLSDir32 && pTLSDir32->AddressOfIndex && (((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ullImageBase) ||
-					((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir32->AddressOfIndex - m_ullImageBase)))
+				if (fTLSIndex && (
+					dwTLSIndex == (DWORD_PTR)&pImpDesc->Name ||
+					dwTLSIndex == (DWORD_PTR)&pImpDesc->OriginalFirstThunk ||
+					dwTLSIndex == (DWORD_PTR)&pImpDesc->FirstThunk))
 				{
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescr->Name);
+					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
-					strDllName += " (--> stripped by TLS::AddressOfIndex trick)";
-
-					m_vecImport.emplace_back(*pImportDescr, std::move(strDllName), std::move(vecFunc));
-					break;
+					strDllName += " (TLS::AddressOfIndex Patch!)";
+					m_vecImport.emplace_back(*pImpDesc, std::move(strDllName), std::move(vecFunc));
+					m_dwFileSummary |= IMAGE_FLAG_IMPORT;
+					return S_OK;
 				}
 
-				PIMAGE_THUNK_DATA32 pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImportDescr->OriginalFirstThunk;
+				PIMAGE_THUNK_DATA32 pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
 				if (!pThunk32)
-					pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImportDescr->FirstThunk;
+					pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->FirstThunk;
 
 				if (pThunk32)
 				{
@@ -1106,47 +1112,51 @@ HRESULT Clibpe::getImportTable()
 						if (!isPtrSafe(++pThunk32))
 							break;
 					}
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescr->Name);
+					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
-					m_vecImport.emplace_back(*pImportDescr, std::move(strDllName), std::move(vecFunc));
+					m_vecImport.emplace_back(*pImpDesc, std::move(strDllName), std::move(vecFunc));
 
-					if (!isPtrSafe(++pImportDescr))
+					if (!isPtrSafe(++pImpDesc))
 						break;
 				}
 				else //No IMPORT pointers for that DLL?...
-					if (!isPtrSafe(++pImportDescr))  //Going next dll.
+					if (!isPtrSafe(++pImpDesc))  //Going next dll.
 						break;
 			}
 		}
 		else if (ImageHasFlag(m_dwFileSummary, IMAGE_FLAG_PE64))
 		{
 			const PIMAGE_TLS_DIRECTORY64 pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)rVAToPtr(dwTLSDirRVA);
+			if (pTLSDir64 && pTLSDir64->AddressOfIndex) {
+				fTLSIndex = true;
+				dwTLSIndex = (DWORD_PTR)rVAToPtr((ULONGLONG)pTLSDir64->AddressOfIndex - m_ullImageBase);
+			}
 
-			while (pImportDescr->Name)
+			while (pImpDesc->Name)
 			{
 				std::vector<std::tuple<ULONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, ULONGLONG/*Thunk table RVA*/>> vecFunc { };
 				std::string strDllName { };
 
-				if (pTLSDir64 && pTLSDir64->AddressOfIndex && (((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, FirstThunk)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ullImageBase) ||
-					((DWORD_PTR)pImportDescr + offsetof(IMAGE_IMPORT_DESCRIPTOR, Name)) ==
-					(DWORD_PTR)rVAToPtr(pTLSDir64->AddressOfIndex - m_ullImageBase)))
+				if (fTLSIndex && (
+					dwTLSIndex == (DWORD_PTR)&pImpDesc->Name ||
+					dwTLSIndex == (DWORD_PTR)&pImpDesc->OriginalFirstThunk ||
+					dwTLSIndex == (DWORD_PTR)&pImpDesc->FirstThunk))
 				{
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescr->Name);
+					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
-					strDllName += " (--> stripped by TLS::AddressOfIndex trick)";
-
-					m_vecImport.emplace_back(*pImportDescr, std::move(strDllName), std::move(vecFunc));
-					break;
+					strDllName += " (TLS::AddressOfIndex Patch!)";
+					m_vecImport.emplace_back(*pImpDesc, std::move(strDllName), std::move(vecFunc));
+					m_dwFileSummary |= IMAGE_FLAG_IMPORT;
+					return S_OK;
 				}
 
-				PIMAGE_THUNK_DATA64 pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImportDescr->OriginalFirstThunk;
+				PIMAGE_THUNK_DATA64 pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
 				if (!pThunk64)
-					pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImportDescr->FirstThunk;
+					pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->FirstThunk;
 
 				if (pThunk64)
 				{
@@ -1173,17 +1183,17 @@ HRESULT Clibpe::getImportTable()
 						pThunk64++;
 					}
 
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImportDescr->Name);
+					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
-					m_vecImport.emplace_back(*pImportDescr, std::move(strDllName), std::move(vecFunc));
+					m_vecImport.emplace_back(*pImpDesc, std::move(strDllName), std::move(vecFunc));
 
-					if (!isPtrSafe(++pImportDescr))
+					if (!isPtrSafe(++pImpDesc))
 						break;
 				}
 				else
-					if (!isPtrSafe(++pImportDescr))
+					if (!isPtrSafe(++pImpDesc))
 						break;
 			}
 		}
