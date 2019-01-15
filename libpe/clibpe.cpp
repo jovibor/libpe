@@ -129,7 +129,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetFileSummary(PCDWORD& pFileSummary)
+HRESULT Clibpe::GetPESummary(PCDWORD& pFileSummary)
 {
 	if (!m_fLoaded)
 	{
@@ -268,7 +268,7 @@ HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExportTable(PCLIBPE_EXPORT_TUP& pTupExport)
+HRESULT Clibpe::GetExport(PCLIBPE_EXPORT_TUP& pTupExport)
 {
 	if (!m_fLoaded)
 	{
@@ -286,7 +286,7 @@ HRESULT Clibpe::GetExportTable(PCLIBPE_EXPORT_TUP& pTupExport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImportTable(PCLIBPE_IMPORT_VEC& pVecImport)
+HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)
 {
 	if (!m_fLoaded)
 	{
@@ -304,7 +304,7 @@ HRESULT Clibpe::GetImportTable(PCLIBPE_IMPORT_VEC& pVecImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP& pTupRes)
+HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT_TUP& pTupRes)
 {
 	if (!m_fLoaded)
 	{
@@ -322,7 +322,7 @@ HRESULT Clibpe::GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP& pTupRes)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExceptionTable(PCLIBPE_EXCEPTION_VEC& pVecException)
+HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)
 {
 	if (!m_fLoaded)
 	{
@@ -340,7 +340,7 @@ HRESULT Clibpe::GetExceptionTable(PCLIBPE_EXCEPTION_VEC& pVecException)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSecurityTable(PCLIBPE_SECURITY_VEC& pVecSecurity)
+HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)
 {
 	if (!m_fLoaded)
 	{
@@ -358,7 +358,7 @@ HRESULT Clibpe::GetSecurityTable(PCLIBPE_SECURITY_VEC& pVecSecurity)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRelocationTable(PCLIBPE_RELOCATION_VEC& pVecRelocs)
+HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)
 {
 	if (!m_fLoaded)
 	{
@@ -376,7 +376,7 @@ HRESULT Clibpe::GetRelocationTable(PCLIBPE_RELOCATION_VEC& pVecRelocs)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDebugTable(PCLIBPE_DEBUG_VEC& pVecDebug)
+HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)
 {
 	if (!m_fLoaded)
 	{
@@ -394,7 +394,7 @@ HRESULT Clibpe::GetDebugTable(PCLIBPE_DEBUG_VEC& pVecDebug)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetTLSTable(PCLIBPE_TLS_TUP& pTupTLS)
+HRESULT Clibpe::GetTLS(PCLIBPE_TLS_TUP& pTupTLS)
 {
 	if (!m_fLoaded)
 	{
@@ -412,7 +412,7 @@ HRESULT Clibpe::GetTLSTable(PCLIBPE_TLS_TUP& pTupTLS)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR& pVarLCD)
+HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG_VAR& pVarLCD)
 {
 	if (!m_fLoaded)
 	{
@@ -430,7 +430,7 @@ HRESULT Clibpe::GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR& pVarLCD)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)
+HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)
 {
 	if (!m_fLoaded)
 	{
@@ -448,7 +448,7 @@ HRESULT Clibpe::GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)
+HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)
 {
 	if (!m_fLoaded)
 	{
@@ -466,7 +466,7 @@ HRESULT Clibpe::GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR& pCOMDesc)
+HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)
 {
 	if (!m_fLoaded)
 	{
@@ -1043,47 +1043,17 @@ HRESULT Clibpe::getImportTable()
 	if (!pImpDesc)
 		return E_IMAGE_HAS_NO_IMPORT;
 
-	const DWORD dwTLSDirRVA = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
-	DWORD_PTR dwTLSIndex { };
-	bool fTLSIndex { false };
+	//Counter for import modules. If it exceeds iMaxModules we stop parsing file, it's definitely bogus.
+	//Very unlikely PE file has more than 1000 imports.
+	constexpr auto iMaxModules = 1000;
+	constexpr auto iMaxFuncs = 5000;	
+	int iModulesCount = 0;
 
 	try {
 		if (ImageHasFlag(m_dwFileSummary, IMAGE_FLAG_PE32))
 		{
-			const PIMAGE_TLS_DIRECTORY32 pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
-			if (pTLSDir32 && pTLSDir32->AddressOfIndex) {
-				fTLSIndex = true;
-				dwTLSIndex = (DWORD_PTR)rVAToPtr((ULONGLONG)pTLSDir32->AddressOfIndex - m_ullImageBase);
-			}
-
 			while (pImpDesc->Name)
 			{
-				std::vector<std::tuple<ULONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, ULONGLONG/*Thunk table RVA*/>> vecFunc { };
-				std::string strDllName { };
-
-				//Checking for TLS Index patching trick, to strip fake imports.
-				//The trick is: OS loader, while loading PE file, patches address in memory 
-				//that is pointed to by PIMAGE_TLS_DIRECTORY->AddressOfIndex.
-				//If at this address file had Import descriptor with fake imports,
-				//it will be zeroed, and PE file will be executed normally.
-				//But trying to read this fake Import descriptor from file on disk
-				//may lead to many «interesting» things. Import table can be enormous,
-				//with absolutely unreadable import names.
-				if (fTLSIndex && (
-					dwTLSIndex == (DWORD_PTR)&pImpDesc->Name ||
-					dwTLSIndex == (DWORD_PTR)&pImpDesc->OriginalFirstThunk ||
-					dwTLSIndex == (DWORD_PTR)&pImpDesc->FirstThunk))
-				{
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
-					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						strDllName = szName;
-
-					strDllName += " (TLS::AddressOfIndex Patch!)";
-					m_vecImport.emplace_back(*pImpDesc, std::move(strDllName), std::move(vecFunc));
-					m_dwFileSummary |= IMAGE_FLAG_IMPORT;
-					return S_OK;
-				}
-
 				PIMAGE_THUNK_DATA32 pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
 				if (!pThunk32)
 					pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->FirstThunk;
@@ -1093,6 +1063,11 @@ HRESULT Clibpe::getImportTable()
 					pThunk32 = (PIMAGE_THUNK_DATA32)rVAToPtr((DWORD_PTR)pThunk32);
 					if (!pThunk32)
 						break;
+
+					std::vector<std::tuple<ULONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, ULONGLONG/*Thunk table RVA*/>> vecFunc { };
+					std::string strDllName { };
+					//Counter for import module funcs. If it exceeds 5000 we stop parsing import descr, it's definitely bogus.
+					int iFuncsCount = 0;
 
 					while (pThunk32->u1.AddressOfData)
 					{
@@ -1111,6 +1086,8 @@ HRESULT Clibpe::getImportTable()
 						}
 						if (!isPtrSafe(++pThunk32))
 							break;
+						if (++iFuncsCount == iMaxFuncs)
+							break;
 					}
 					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
@@ -1124,36 +1101,15 @@ HRESULT Clibpe::getImportTable()
 				else //No IMPORT pointers for that DLL?...
 					if (!isPtrSafe(++pImpDesc))  //Going next dll.
 						break;
+
+				if (++iModulesCount == iMaxModules)
+					break;
 			}
 		}
 		else if (ImageHasFlag(m_dwFileSummary, IMAGE_FLAG_PE64))
 		{
-			const PIMAGE_TLS_DIRECTORY64 pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)rVAToPtr(dwTLSDirRVA);
-			if (pTLSDir64 && pTLSDir64->AddressOfIndex) {
-				fTLSIndex = true;
-				dwTLSIndex = (DWORD_PTR)rVAToPtr((ULONGLONG)pTLSDir64->AddressOfIndex - m_ullImageBase);
-			}
-
 			while (pImpDesc->Name)
 			{
-				std::vector<std::tuple<ULONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, ULONGLONG/*Thunk table RVA*/>> vecFunc { };
-				std::string strDllName { };
-
-				if (fTLSIndex && (
-					dwTLSIndex == (DWORD_PTR)&pImpDesc->Name ||
-					dwTLSIndex == (DWORD_PTR)&pImpDesc->OriginalFirstThunk ||
-					dwTLSIndex == (DWORD_PTR)&pImpDesc->FirstThunk))
-				{
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
-					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-						strDllName = szName;
-
-					strDllName += " (TLS::AddressOfIndex Patch!)";
-					m_vecImport.emplace_back(*pImpDesc, std::move(strDllName), std::move(vecFunc));
-					m_dwFileSummary |= IMAGE_FLAG_IMPORT;
-					return S_OK;
-				}
-
 				PIMAGE_THUNK_DATA64 pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
 				if (!pThunk64)
 					pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->FirstThunk;
@@ -1163,6 +1119,10 @@ HRESULT Clibpe::getImportTable()
 					pThunk64 = (PIMAGE_THUNK_DATA64)rVAToPtr((DWORD_PTR)pThunk64);
 					if (!pThunk64)
 						return E_IMAGE_HAS_NO_IMPORT;
+
+					std::vector<std::tuple<ULONGLONG/*Ordinal/Hint*/, std::string/*Func name*/, ULONGLONG/*Thunk table RVA*/>> vecFunc { };
+					std::string strDllName { };
+					int iFuncsCount = 0;
 
 					while (pThunk64->u1.AddressOfData)
 					{
@@ -1181,6 +1141,8 @@ HRESULT Clibpe::getImportTable()
 							vecFunc.emplace_back(pName ? pName->Hint : 0, std::move(strFuncName), pThunk64->u1.AddressOfData);
 						}
 						pThunk64++;
+						if (++iFuncsCount == iMaxFuncs)
+							break;
 					}
 
 					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
@@ -1195,6 +1157,9 @@ HRESULT Clibpe::getImportTable()
 				else
 					if (!isPtrSafe(++pImpDesc))
 						break;
+
+				if (++iModulesCount == iMaxModules)
+					break;
 			}
 		}
 	}
@@ -1770,21 +1735,21 @@ HRESULT Clibpe::getLoadConfigTable()
 {
 	if (ImageHasFlag(m_dwFileSummary, IMAGE_FLAG_PE32))
 	{
-		const PIMAGE_LOAD_CONFIG_DIRECTORY32 pLoadConfigDir32 = (PIMAGE_LOAD_CONFIG_DIRECTORY32)rVAToPtr(
-			getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
-		if (!pLoadConfigDir32)
+		const PIMAGE_LOAD_CONFIG_DIRECTORY32 pLCD32 =
+			(PIMAGE_LOAD_CONFIG_DIRECTORY32)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
+		if (!pLCD32 || !isPtrSafe((DWORD_PTR)pLCD32 + sizeof(IMAGE_LOAD_CONFIG_DIRECTORY32)))
 			return E_IMAGE_HAS_NO_LOADCONFIG;
 
-		m_varLoadConfig = *pLoadConfigDir32;
+		m_varLoadConfig = *pLCD32;
 	}
 	else if (ImageHasFlag(m_dwFileSummary, IMAGE_FLAG_PE64))
 	{
-		const PIMAGE_LOAD_CONFIG_DIRECTORY64 pLoadConfigDir64 = (PIMAGE_LOAD_CONFIG_DIRECTORY64)rVAToPtr(
-			getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
-		if (!pLoadConfigDir64)
+		const PIMAGE_LOAD_CONFIG_DIRECTORY64 pLCD64 =
+			(PIMAGE_LOAD_CONFIG_DIRECTORY64)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
+		if (!pLCD64 || !isPtrSafe((DWORD_PTR)pLCD64 + sizeof(IMAGE_LOAD_CONFIG_DIRECTORY32)))
 			return E_IMAGE_HAS_NO_LOADCONFIG;
 
-		m_varLoadConfig = *pLoadConfigDir64;
+		m_varLoadConfig = *pLCD64;
 	}
 	else
 		return E_IMAGE_HAS_NO_LOADCONFIG;

@@ -14,7 +14,7 @@ libpe_ptr pLibpe;
 Getlibpe(&pLibpe);
 
 pLibpe->LoadPe(L"FileName");
-pLibpe->GetFileSummary(PCDWORD&);
+pLibpe->GetPESummary(PCDWORD&);
 pLibpe->GetMSDOSHeader(PCLIBPE_DOSHEADER&);
 pLibpe->GetRichHeader(PCLIBPE_RICHHEADER_VEC&);
 pLibpe->GetNTHeader(PCLIBPE_NTHEADER_VAR&);
@@ -22,18 +22,18 @@ pLibpe->GetFileHeader(PCLIBPE_FILEHEADER&);
 pLibpe->GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&);
 pLibpe->GetDataDirectories(PCLIBPE_DATADIRS_VEC&);
 pLibpe->GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&);
-pLibpe->GetExportTable(PCLIBPE_EXPORT_TUP&);
-pLibpe->GetImportTable(PCLIBPE_IMPORT_VEC&);
-pLibpe->GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP&);
-pLibpe->GetExceptionTable(PCLIBPE_EXCEPTION_VEC&);
-pLibpe->GetSecurityTable(PCLIBPE_SECURITY_VEC&);
-pLibpe->GetRelocationTable(PCLIBPE_RELOCATION_VEC&);
-pLibpe->GetDebugTable(PCLIBPE_DEBUG_VEC&);
-pLibpe->GetTLSTable(PCLIBPE_TLS_TUP&);
-pLibpe->GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR&);
-pLibpe->GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC&);
-pLibpe->GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC&);
-pLibpe->GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR&);
+pLibpe->GetExport(PCLIBPE_EXPORT_TUP&);
+pLibpe->GetImport(PCLIBPE_IMPORT_VEC&);
+pLibpe->GetResources(PCLIBPE_RESOURCE_ROOT_TUP&);
+pLibpe->GetExceptions(PCLIBPE_EXCEPTION_VEC&);
+pLibpe->GetSecurity(PCLIBPE_SECURITY_VEC&);
+pLibpe->GetRelocations(PCLIBPE_RELOCATION_VEC&);
+pLibpe->GetDebug(PCLIBPE_DEBUG_VEC&);
+pLibpe->GetTLS(PCLIBPE_TLS_TUP&);
+pLibpe->GetLoadConfig(PCLIBPE_LOADCONFIGTABLE_VAR&);
+pLibpe->GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&);
+pLibpe->GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&);
+pLibpe->GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&);
 ```
 
 ## **License**

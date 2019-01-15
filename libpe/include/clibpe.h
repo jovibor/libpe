@@ -21,7 +21,7 @@ public:
 	Clibpe& operator=(const Clibpe&) = delete;
 	Clibpe& operator=(Clibpe&&) = delete;
 	HRESULT LoadPe(LPCWSTR) override;
-	HRESULT GetFileSummary(PCDWORD&) override;
+	HRESULT GetPESummary(PCDWORD&) override;
 	HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) override;
 	HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) override;
 	HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&) override;
@@ -29,18 +29,18 @@ public:
 	HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) override;
 	HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) override;
 	HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&) override;
-	HRESULT GetExportTable(PCLIBPE_EXPORT_TUP&) override;
-	HRESULT GetImportTable(PCLIBPE_IMPORT_VEC&) override;
-	HRESULT GetResourceTable(PCLIBPE_RESOURCE_ROOT_TUP&) override;
-	HRESULT GetExceptionTable(PCLIBPE_EXCEPTION_VEC&) override;
-	HRESULT GetSecurityTable(PCLIBPE_SECURITY_VEC&) override;
-	HRESULT GetRelocationTable(PCLIBPE_RELOCATION_VEC&) override;
-	HRESULT GetDebugTable(PCLIBPE_DEBUG_VEC&) override;
-	HRESULT GetTLSTable(PCLIBPE_TLS_TUP&) override;
-	HRESULT GetLoadConfigTable(PCLIBPE_LOADCONFIGTABLE_VAR&) override;
-	HRESULT GetBoundImportTable(PCLIBPE_BOUNDIMPORT_VEC&) override;
-	HRESULT GetDelayImportTable(PCLIBPE_DELAYIMPORT_VEC&) override;
-	HRESULT GetCOMDescriptorTable(PCLIBPE_COMDESCRIPTOR&) override;
+	HRESULT GetExport(PCLIBPE_EXPORT_TUP&) override;
+	HRESULT GetImport(PCLIBPE_IMPORT_VEC&) override;
+	HRESULT GetResources(PCLIBPE_RESOURCE_ROOT_TUP&) override;
+	HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&) override;
+	HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&) override;
+	HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&) override;
+	HRESULT GetDebug(PCLIBPE_DEBUG_VEC&) override;
+	HRESULT GetTLS(PCLIBPE_TLS_TUP&) override;
+	HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG_VAR&) override;
+	HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&) override;
+	HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&) override;
+	HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&) override;
 private:
 	PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 	PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
@@ -184,7 +184,7 @@ private:
 	LIBPE_TLS_TUP m_tupTLS { };
 
 	//LoadConfigTable.
-	LIBPE_LOADCONFIGTABLE_VAR m_varLoadConfig { };
+	LIBPE_LOADCONFIG_VAR m_varLoadConfig { };
 
 	//Bound import.
 	LIBPE_BOUNDIMPORT_VEC m_vecBoundImport { };
