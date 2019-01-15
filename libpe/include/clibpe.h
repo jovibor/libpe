@@ -29,15 +29,15 @@ public:
 	HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) override;
 	HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) override;
 	HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&) override;
-	HRESULT GetExport(PCLIBPE_EXPORT_TUP&) override;
+	HRESULT GetExport(PCLIBPE_EXPORT&) override;
 	HRESULT GetImport(PCLIBPE_IMPORT_VEC&) override;
-	HRESULT GetResources(PCLIBPE_RESOURCE_ROOT_TUP&) override;
+	HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&) override;
 	HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&) override;
 	HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&) override;
 	HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&) override;
 	HRESULT GetDebug(PCLIBPE_DEBUG_VEC&) override;
-	HRESULT GetTLS(PCLIBPE_TLS_TUP&) override;
-	HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG_VAR&) override;
+	HRESULT GetTLS(PCLIBPE_TLS&) override;
+	HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&) override;
 	HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&) override;
 	HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&) override;
 	HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&) override;
@@ -56,21 +56,21 @@ private:
 	HRESULT getNTFileOptHeader();
 	HRESULT getDataDirectories();
 	HRESULT getSectionsHeaders();
-	HRESULT getExportTable();
-	HRESULT getImportTable();
-	HRESULT getResourceTable();
-	HRESULT getExceptionTable();
-	HRESULT getSecurityTable();
-	HRESULT getRelocationTable();
-	HRESULT getDebugTable();
-	HRESULT getArchitectureTable();
-	HRESULT getGlobalPtrTable();
-	HRESULT getTLSTable();
-	HRESULT getLoadConfigTable();
-	HRESULT getBoundImportTable();
-	HRESULT getIATTable();
-	HRESULT getDelayImportTable();
-	HRESULT getCOMDescriptorTable();
+	HRESULT getExport();
+	HRESULT getImport();
+	HRESULT getResources();
+	HRESULT getExceptions();
+	HRESULT getSecurity();
+	HRESULT getRelocations();
+	HRESULT getDebug();
+	HRESULT getArchitecture();
+	HRESULT getGlobalPtr();
+	HRESULT getTLS();
+	HRESULT getLCD();
+	HRESULT getBoundImport();
+	HRESULT getIAT();
+	HRESULT getDelayImport();
+	HRESULT getCOMDescriptor();
 
 	/************************************
 	* Internal variables.				*
@@ -160,13 +160,13 @@ private:
 	LIBPE_SECHEADERS_VEC m_vecSecHeaders { };
 
 	//Export table.
-	LIBPE_EXPORT_TUP m_tupExport { };
+	LIBPE_EXPORT m_stExport { };
 
 	//Import table.
 	LIBPE_IMPORT_VEC m_vecImport { };
 
 	//Resources.
-	LIBPE_RESOURCE_ROOT_TUP m_tupResource { };
+	LIBPE_RESOURCE_ROOT m_stResource { };
 
 	//Exceptions.
 	LIBPE_EXCEPTION_VEC m_vecException;
@@ -181,10 +181,10 @@ private:
 	LIBPE_DEBUG_VEC m_vecDebug { };
 
 	//TLS.
-	LIBPE_TLS_TUP m_tupTLS { };
+	LIBPE_TLS m_stTLS { };
 
 	//LoadConfigTable.
-	LIBPE_LOADCONFIG_VAR m_varLoadConfig { };
+	LIBPE_LOADCONFIG m_stLCD { };
 
 	//Bound import.
 	LIBPE_BOUNDIMPORT_VEC m_vecBoundImport { };
@@ -193,5 +193,5 @@ private:
 	LIBPE_DELAYIMPORT_VEC m_vecDelayImport { };
 
 	//COM table descriptor.
-	IMAGE_COR20_HEADER m_stCOR20Desc { };
+	LIBPE_COMDESCRIPTOR m_stCOR20Desc { };
 };
