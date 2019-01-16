@@ -45,11 +45,12 @@ private:
 	PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 	PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
 	LPVOID rVAToPtr(ULONGLONG ullRVA) const;
+	DWORD ptrToOffset(LPCVOID lp) const;
 	DWORD getDirEntryRVA(UINT uiDirEntry) const;
 	DWORD getDirEntrySize(UINT uiDirEntry) const;
 	template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
 	bool isSumOverflow(DWORD_PTR, DWORD_PTR);
-	HRESULT getDirByMappingSec(DWORD dwDirectory);
+	HRESULT getDirBySecMapping(DWORD dwDirectory);
 	void resetAll();
 	HRESULT getMSDOSHeader();
 	HRESULT getRichHeader();
