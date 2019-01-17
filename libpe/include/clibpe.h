@@ -1,10 +1,9 @@
-/*********************************************************************
-* Copyright (C) 2018, Jovibor: https://github.com/jovibor/			 *
-* PE viewer library for x86 (PE32) and x64 (PE32+) binares.			 *
-* This code is provided «AS IS» without any warranty, and			 *
-* can be used without any limitations for non-commercial usage.		 *
-* Additional info can be found at https://github.com/jovibor/libpe	 *
-*********************************************************************/
+/****************************************************************************************
+* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
+* PE viewer library for x86 (PE32) and x64 (PE32+) binares.			 					*
+* This software is available under the MIT License modified with The Commons Clause.	*
+* Additional info can be found at https://github.com/jovibor/libpe	 					*
+****************************************************************************************/
 #pragma once
 #include "libpe.h"
 
@@ -21,7 +20,8 @@ public:
 	Clibpe& operator=(const Clibpe&) = delete;
 	Clibpe& operator=(Clibpe&&) = delete;
 	HRESULT LoadPe(LPCWSTR) override;
-	HRESULT GetPESummary(PCDWORD&) override;
+	HRESULT GetImageFlags(DWORD&) override;
+	HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset) override;
 	HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) override;
 	HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) override;
 	HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&) override;
@@ -45,11 +45,14 @@ private:
 	PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 	PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
 	LPVOID rVAToPtr(ULONGLONG ullRVA) const;
+	DWORD rVAToOffset(ULONGLONG ullRVA);
 	DWORD ptrToOffset(LPCVOID lp) const;
 	DWORD getDirEntryRVA(UINT uiDirEntry) const;
 	DWORD getDirEntrySize(UINT uiDirEntry) const;
 	template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
 	bool isSumOverflow(DWORD_PTR, DWORD_PTR);
+	bool mapDirSection(DWORD dwDirectory);
+	void unmapDirSection() const;
 	HRESULT getDirBySecMapping(DWORD dwDirectory);
 	void resetAll();
 	HRESULT getMSDOSHeader();
@@ -80,7 +83,7 @@ private:
 	LARGE_INTEGER m_stFileSize { };
 
 	//Maximum address that can be dereferensed.
-	ULONGLONG m_ullwMaxPointerBound { };
+	ULONGLONG m_ullMaxPointerBound { };
 
 	//Reserved 16K of memory that we can delete to properly handle 
 	//E_OUTOFMEMORY exceptions, in case we catch one.
@@ -110,7 +113,10 @@ private:
 	bool m_fLoaded { false };
 
 	//File summary info (type, sections, directories, etc...).
-	DWORD m_dwFileSummary { };
+	DWORD m_dwImageFlags { };
+
+	//Returned by CreateFileW.
+	HANDLE m_hFile { };
 
 	//Returned by CreateFileMappingW.
 	HANDLE m_hMapObject { };

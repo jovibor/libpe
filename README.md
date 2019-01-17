@@ -6,15 +6,16 @@ MSVS 2017, C++17.
 ___________________________________
 #### Usage:  
 ```C++
-#pragma comment(lib, "libpe.lib")
 #include "libpe.h"
   
 using namespace libpe;
+
 libpe_ptr pLibpe;
 Getlibpe(&pLibpe);
 
-pLibpe->LoadPe(L"FileName");
-pLibpe->GetPESummary(PCDWORD&);
+pLibpe->LoadPe(LPCWSTR);
+pLibpe->GetImageFlags(DWORD&);
+pLibpe->GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset);
 pLibpe->GetMSDOSHeader(PCLIBPE_DOSHEADER&);
 pLibpe->GetRichHeader(PCLIBPE_RICHHEADER_VEC&);
 pLibpe->GetNTHeader(PCLIBPE_NTHEADER_VAR&);
@@ -22,19 +23,19 @@ pLibpe->GetFileHeader(PCLIBPE_FILEHEADER&);
 pLibpe->GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&);
 pLibpe->GetDataDirectories(PCLIBPE_DATADIRS_VEC&);
 pLibpe->GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&);
-pLibpe->GetExport(PCLIBPE_EXPORT_TUP&);
+pLibpe->GetExport(PCLIBPE_EXPORT&);
 pLibpe->GetImport(PCLIBPE_IMPORT_VEC&);
-pLibpe->GetResources(PCLIBPE_RESOURCE_ROOT_TUP&);
+pLibpe->GetResources(PCLIBPE_RESOURCE_ROOT&);
 pLibpe->GetExceptions(PCLIBPE_EXCEPTION_VEC&);
 pLibpe->GetSecurity(PCLIBPE_SECURITY_VEC&);
 pLibpe->GetRelocations(PCLIBPE_RELOCATION_VEC&);
 pLibpe->GetDebug(PCLIBPE_DEBUG_VEC&);
-pLibpe->GetTLS(PCLIBPE_TLS_TUP&);
-pLibpe->GetLoadConfig(PCLIBPE_LOADCONFIGTABLE_VAR&);
+pLibpe->GetTLS(PCLIBPE_TLS&);
+pLibpe->GetLoadConfig(PCLIBPE_LOADCONFIG&);
 pLibpe->GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&);
 pLibpe->GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&);
 pLibpe->GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&);
 ```
 
 ## **License**
-This software is available under the conditions stated in the LICENSE file.
+This software is available under the **MIT License** modified with **The Commons Clause**.
