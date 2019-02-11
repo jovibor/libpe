@@ -40,7 +40,12 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	}
 
 	m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, 0);
-	if (!m_lpBase) //Not enough memory? File is too big?
+	if (m_lpBase)
+	{
+		m_fMapViewOfFileWhole = true;
+		m_ullMaxPointerBound = (DWORD_PTR)m_lpBase + m_stFileSize.QuadPart;
+	}
+	else //Not enough memory? File is too big?
 	{
 		if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY)
 		{
@@ -55,7 +60,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 			}
 			m_fMapViewOfFileWhole = false;
 			m_ullMaxPointerBound = (DWORD_PTR)m_lpBase + (DWORD_PTR)m_dwMinBytesToMap;
-			::GetSystemInfo(&m_stSysInfo);
+			::GetNativeSystemInfo(&m_stSysInfo);
 		}
 		else
 		{
@@ -63,11 +68,6 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 			CloseHandle(m_hFile);
 			return E_FILE_MAPVIEWOFFILE_FAILED;
 		}
-	}
-	else
-	{
-		m_fMapViewOfFileWhole = true;
-		m_ullMaxPointerBound = (DWORD_PTR)m_lpBase + m_stFileSize.QuadPart;
 	}
 
 	if (getMSDOSHeader() != S_OK)
@@ -559,8 +559,8 @@ LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA) const
 	if (m_fMapViewOfFileWhole)
 		ptr = (LPVOID)((DWORD_PTR)m_lpBase + ullRVA - (DWORD_PTR)(pSecHdr->VirtualAddress - pSecHdr->PointerToRawData));
 	else
-		ptr = (LPVOID)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetToMap +
-		(ullRVA - (DWORD_PTR)(pSecHdr->VirtualAddress - pSecHdr->PointerToRawData) - m_dwFileOffsetToMap));
+		ptr = (LPVOID)((DWORD_PTR)m_lpSectionBase + (ullRVA - (DWORD_PTR)(pSecHdr->VirtualAddress - pSecHdr->PointerToRawData)
+			- m_dwFileOffsetMapped));
 
 	return isPtrSafe(ptr, true) ? ptr : nullptr;
 }
@@ -590,7 +590,7 @@ DWORD Clibpe::ptrToOffset(LPCVOID lp) const
 	if (m_fMapViewOfFileWhole)
 		return (DWORD_PTR)lp - (DWORD_PTR)m_lpBase;
 	else
-		return (DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + m_dwFileOffsetToMap - m_dwDeltaFileOffsetToMap;
+		return (DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + m_dwFileOffsetMapped;
 }
 
 DWORD Clibpe::getDirEntryRVA(UINT uiDirEntry) const
@@ -639,42 +639,38 @@ bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond)
 
 bool Clibpe::mapDirSection(DWORD dwDirectory)
 {
-	DWORD dwAlignedOffsetToMap;
 	DWORD_PTR dwSizeToMap;
 	PIMAGE_SECTION_HEADER pSecHdr;
 
 	if (dwDirectory == IMAGE_DIRECTORY_ENTRY_SECURITY)
 	{
 		//This is an actual file RAW offset on disk.
-		m_dwFileOffsetToMap = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
+		m_dwFileOffsetMapped = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
 		//Checking for out of bounds file's size to map.
-		if (((LONGLONG)m_dwFileOffsetToMap + (LONGLONG)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY)) > (m_stFileSize.QuadPart))
+		if (((LONGLONG)m_dwFileOffsetMapped + (LONGLONG)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY)) > (m_stFileSize.QuadPart))
 			return false;
 	}
 	else if ((pSecHdr = getSecHdrFromRVA(getDirEntryRVA(dwDirectory))))
-		m_dwFileOffsetToMap = pSecHdr->PointerToRawData;
+		m_dwFileOffsetMapped = pSecHdr->PointerToRawData;
 	else
 		return false;
 
-	if (m_dwFileOffsetToMap > m_stFileSize.QuadPart)
+	if (m_dwFileOffsetMapped > m_stFileSize.QuadPart)
 		return E_FILE_SECTION_DATA_CORRUPTED;
 
-	if (m_dwFileOffsetToMap % m_stSysInfo.dwAllocationGranularity > 0)
-		dwAlignedOffsetToMap = (m_dwFileOffsetToMap < m_stSysInfo.dwAllocationGranularity) ? 0 :
-		(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % m_stSysInfo.dwAllocationGranularity));
-	else
-		dwAlignedOffsetToMap = m_dwFileOffsetToMap;
-
-	m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedOffsetToMap;
+	m_dwDeltaFileOffsetMapped = m_dwFileOffsetMapped % m_stSysInfo.dwAllocationGranularity;
+	if (m_dwDeltaFileOffsetMapped > 0)
+		m_dwFileOffsetMapped = m_dwFileOffsetMapped < m_stSysInfo.dwAllocationGranularity ? 0 :
+		(m_dwFileOffsetMapped - m_dwDeltaFileOffsetMapped);
 
 	if (dwDirectory == IMAGE_DIRECTORY_ENTRY_SECURITY)
-		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + (DWORD_PTR)m_dwDeltaFileOffsetToMap;
+		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
 	else
-		dwSizeToMap = DWORD_PTR(pSecHdr->Misc.VirtualSize + m_dwDeltaFileOffsetToMap);
+		dwSizeToMap = DWORD_PTR(pSecHdr->Misc.VirtualSize + m_dwDeltaFileOffsetMapped);
 
-	if (((LONGLONG)dwAlignedOffsetToMap + dwSizeToMap) > m_stFileSize.QuadPart)
+	if (((LONGLONG)m_dwFileOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
 		return false;
-	if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwAlignedOffsetToMap, dwSizeToMap)))
+	if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, m_dwFileOffsetMapped, dwSizeToMap)))
 		return false;
 
 	m_ullMaxPointerBound = (DWORD_PTR)m_lpSectionBase + dwSizeToMap;
@@ -1470,7 +1466,7 @@ HRESULT Clibpe::getSecurity()
 		if (isSumOverflow((DWORD_PTR)dwSecurityDirOffset, (DWORD_PTR)m_lpSectionBase))
 			return E_IMAGE_HAS_NO_SECURITY;
 
-		dwSecurityDirStartVA = (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetToMap;
+		dwSecurityDirStartVA = (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
 	}
 
 	if (isSumOverflow((DWORD_PTR)dwSecurityDirStartVA, (DWORD_PTR)dwSecurityDirSize))
@@ -1602,7 +1598,7 @@ HRESULT Clibpe::getDebug()
 		if (m_fMapViewOfFileWhole)
 			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)pDebugSecHdr->PointerToRawData + (DWORD_PTR)m_lpBase);
 		else
-			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetToMap);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetMapped);
 
 		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
 	}

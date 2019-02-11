@@ -98,13 +98,13 @@ private:
 
 	//For big files that can't be mapped completely
 	//shows offset the mapping begins from.
-	DWORD m_dwFileOffsetToMap { };
+	DWORD m_dwFileOffsetMapped { };
 
 	//Delta after file mapping alignment.
-	//m_dwDeltaFileOffsetToMap = m_dwFileOffsetToMap - dwAlignedAddressToMap;
-	//dwAlignedAddressToMap = (m_dwFileOffsetToMap < SysInfo.dwAllocationGranularity) ? 0 :
-	//(m_dwFileOffsetToMap - (m_dwFileOffsetToMap % SysInfo.dwAllocationGranularity));
-	DWORD m_dwDeltaFileOffsetToMap { };
+	//m_dwDeltaFileOffsetMapped = m_dwFileOffsetMapped - dwAlignedAddressToMap;
+	//dwAlignedAddressToMap = (m_dwFileOffsetMapped < SysInfo.dwAllocationGranularity) ? 0 :
+	//(m_dwFileOffsetMapped - (m_dwFileOffsetMapped % SysInfo.dwAllocationGranularity));
+	DWORD m_dwDeltaFileOffsetMapped { };
 
 	//Is file loaded (mapped) completely, or section by section?
 	bool m_fMapViewOfFileWhole { };
