@@ -1596,11 +1596,11 @@ HRESULT Clibpe::getDebug()
 	if (pDebugSecHdr && (pDebugSecHdr->VirtualAddress == dwDebugDirRVA))
 	{
 		if (m_fMapViewOfFileWhole)
-			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)pDebugSecHdr->PointerToRawData + (DWORD_PTR)m_lpBase);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpBase + pDebugSecHdr->PointerToRawData);
 		else
-			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetMapped);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + m_dwDeltaFileOffsetMapped);
 
-		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
+		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * sizeof(IMAGE_DEBUG_DIRECTORY);
 	}
 	else //Looking for the debug directory.
 	{
@@ -1620,17 +1620,32 @@ HRESULT Clibpe::getDebug()
 		return E_IMAGE_HAS_NO_DEBUG;
 
 	try {
-
 		for (unsigned i = 0; i < dwDebugEntries; i++)
 		{
 			std::vector<std::byte> vecDebugRawData { };
 			std::byte* pDebugRawData { };
+			LPVOID lpDebugRaw { }; //In case of Big file.
 
 			if (m_fMapViewOfFileWhole)
 				pDebugRawData = (std::byte*)((DWORD_PTR)m_lpBase + (DWORD_PTR)pDebugDir->PointerToRawData);
 			else
-				pDebugRawData = (std::byte*)((DWORD_PTR)m_lpSectionBase +
-				(DWORD_PTR)(pDebugDir->PointerToRawData - pDebugSecHdr->PointerToRawData));
+			{	//Map Debug raw data file's part.
+				DWORD dwOffsetMapped = pDebugDir->PointerToRawData;
+				DWORD dwDelta = pDebugDir->PointerToRawData % m_stSysInfo.dwAllocationGranularity;
+				if (dwDelta > 0)
+					dwOffsetMapped = dwOffsetMapped < m_stSysInfo.dwAllocationGranularity ? 0 :
+					(dwOffsetMapped - dwDelta);
+
+				DWORD dwSizeToMap = pDebugDir->SizeOfData + dwDelta;
+
+				if (((LONGLONG)dwOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
+					break;
+				lpDebugRaw = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwOffsetMapped, dwSizeToMap);
+				if (!lpDebugRaw)
+					break;
+
+				pDebugRawData = (std::byte*)((DWORD_PTR)lpDebugRaw + dwDelta);
+			}
 
 			if (isPtrSafe(pDebugRawData) && isPtrSafe((DWORD_PTR)pDebugRawData + (DWORD_PTR)pDebugDir->SizeOfData))
 			{
@@ -1638,6 +1653,8 @@ HRESULT Clibpe::getDebug()
 				for (size_t iterRawData = 0; iterRawData < (size_t)pDebugDir->SizeOfData; iterRawData++)
 					vecDebugRawData.push_back(*(pDebugRawData + iterRawData));
 			}
+			if (!m_fMapViewOfFileWhole)
+				UnmapViewOfFile(lpDebugRaw);
 
 			m_vecDebug.emplace_back(LIBPE_DEBUG { ptrToOffset(pDebugDir), *pDebugDir, std::move(vecDebugRawData) });
 			if (!isPtrSafe(++pDebugDir))
