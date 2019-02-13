@@ -1,8 +1,8 @@
 /****************************************************************************************
 * Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
-* PE viewer library for x86 (PE32) and x64 (PE32+) binares.			 					*
-* This software is available under the MIT License modified with The Commons Clause.	*
-* Additional info can be found at https://github.com/jovibor/libpe	 					*
+* This software is available under the "MIT License modified with The Commons Clause."	*
+* Windows library for reading PE (x86) and PE+ (x64) files inner structure information.	*
+* https://github.com/jovibor/libpe	 													*
 ****************************************************************************************/
 #pragma once
 #include <vector>
@@ -155,8 +155,8 @@ namespace libpe
 	using PCLIBPE_RELOCATION_VEC = const LIBPE_RELOCATION_VEC*;
 
 	//Debug table.
-	//Vector of debug entries: dwOffset, IMAGE_DEBUG_DIRECTORY, vector of raw data.
-	struct LIBPE_DEBUG { DWORD dwOffsetDebug; IMAGE_DEBUG_DIRECTORY stDebugDir; std::vector<std::byte> vecDebugRawData; };
+	//Vector of debug entries: dwOffset, IMAGE_DEBUG_DIRECTORY.
+	struct LIBPE_DEBUG { DWORD dwOffsetDebug; IMAGE_DEBUG_DIRECTORY stDebugDir; };
 	using LIBPE_DEBUG_VEC = std::vector<LIBPE_DEBUG>;
 	using PCLIBPE_DEBUG_VEC = const LIBPE_DEBUG_VEC*;
 

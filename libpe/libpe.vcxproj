@@ -218,6 +218,7 @@
     <ClInclude Include="include\clibpe.h" />
     <ClInclude Include="include\libpe.h" />
     <ClInclude Include="include\stdafx.h" />
+    <ClInclude Include="verinfo\version.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

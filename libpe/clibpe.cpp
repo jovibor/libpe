@@ -1,13 +1,15 @@
 /****************************************************************************************
 * Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
-* PE viewer library for x86 (PE32) and x64 (PE32+) binares.			 					*
-* This software is available under the MIT License modified with The Commons Clause.	*
-* Additional info can be found at https://github.com/jovibor/libpe	 					*
+* This software is available under the "MIT License modified with The Commons Clause."	*
+* Windows library for reading PE (x86) and PE+ (x64) files inner structure information.	*
+* https://github.com/jovibor/libpe	 													*
 ****************************************************************************************/
 #include "stdafx.h"
 #include "clibpe.h"
 
-extern "C" HRESULT ILIBPEAPI Getlibpe(libpe::libpe_ptr& libpe_ptr)
+using namespace libpe;
+
+extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& libpe_ptr)
 {
 	libpe_ptr = std::make_shared<Clibpe>();
 	if (!libpe_ptr)
@@ -1477,6 +1479,7 @@ HRESULT Clibpe::getSecurity()
 	if (!isPtrSafe(dwSecurityDirStartVA) || !isPtrSafe(dwSecurityDirEndVA, true))
 		return E_IMAGE_HAS_NO_SECURITY;
 
+	//Actual raw data.
 	while (dwSecurityDirStartVA < dwSecurityDirEndVA)
 	{
 		LPWIN_CERTIFICATE pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
@@ -1498,6 +1501,7 @@ HRESULT Clibpe::getSecurity()
 		if (!isPtrSafe(dwSecurityDirStartVA))
 			break;
 	}
+
 	m_dwImageFlags |= IMAGE_FLAG_SECURITY;
 
 	return S_OK;
@@ -1622,41 +1626,7 @@ HRESULT Clibpe::getDebug()
 	try {
 		for (unsigned i = 0; i < dwDebugEntries; i++)
 		{
-			std::vector<std::byte> vecDebugRawData { };
-			std::byte* pDebugRawData { };
-			LPVOID lpDebugRaw { }; //In case of Big file.
-
-			if (m_fMapViewOfFileWhole)
-				pDebugRawData = (std::byte*)((DWORD_PTR)m_lpBase + (DWORD_PTR)pDebugDir->PointerToRawData);
-			else
-			{	//Map Debug raw data file's part.
-				DWORD dwOffsetMapped = pDebugDir->PointerToRawData;
-				DWORD dwDelta = pDebugDir->PointerToRawData % m_stSysInfo.dwAllocationGranularity;
-				if (dwDelta > 0)
-					dwOffsetMapped = dwOffsetMapped < m_stSysInfo.dwAllocationGranularity ? 0 :
-					(dwOffsetMapped - dwDelta);
-
-				DWORD dwSizeToMap = pDebugDir->SizeOfData + dwDelta;
-
-				if (((LONGLONG)dwOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
-					break;
-				lpDebugRaw = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, dwOffsetMapped, dwSizeToMap);
-				if (!lpDebugRaw)
-					break;
-
-				pDebugRawData = (std::byte*)((DWORD_PTR)lpDebugRaw + dwDelta);
-			}
-
-			if (isPtrSafe(pDebugRawData) && isPtrSafe((DWORD_PTR)pDebugRawData + (DWORD_PTR)pDebugDir->SizeOfData))
-			{
-				vecDebugRawData.reserve(pDebugDir->SizeOfData);
-				for (size_t iterRawData = 0; iterRawData < (size_t)pDebugDir->SizeOfData; iterRawData++)
-					vecDebugRawData.push_back(*(pDebugRawData + iterRawData));
-			}
-			if (!m_fMapViewOfFileWhole)
-				UnmapViewOfFile(lpDebugRaw);
-
-			m_vecDebug.emplace_back(LIBPE_DEBUG { ptrToOffset(pDebugDir), *pDebugDir, std::move(vecDebugRawData) });
+			m_vecDebug.emplace_back(LIBPE_DEBUG { ptrToOffset(pDebugDir), *pDebugDir });
 			if (!isPtrSafe(++pDebugDir))
 				break;
 		}
