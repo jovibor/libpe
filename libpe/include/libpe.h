@@ -142,8 +142,8 @@ namespace libpe
 	using PCLIBPE_EXCEPTION_VEC = const LIBPE_EXCEPTION_VEC*;
 
 	//Security table.
-	//Vector of WIN_CERTIFICATE and vector of actual data in form of std::byte.
-	struct LIBPE_SECURITY { DWORD dwOffsetWinCertDesc; WIN_CERTIFICATE stWinSert; std::vector<std::byte> vecRawData; };
+	//Vector of: 1. descriptor offset 2. WIN_CERTIFICATE.
+	struct LIBPE_SECURITY { DWORD dwOffsetWinCertDesc; WIN_CERTIFICATE stWinSert; };
 	using LIBPE_SECURITY_VEC = std::vector<LIBPE_SECURITY>;
 	using PCLIBPE_SECURITY_VEC = const LIBPE_SECURITY_VEC*;
 

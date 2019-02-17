@@ -1479,23 +1479,17 @@ HRESULT Clibpe::getSecurity()
 	if (!isPtrSafe(dwSecurityDirStartVA) || !isPtrSafe(dwSecurityDirEndVA, true))
 		return E_IMAGE_HAS_NO_SECURITY;
 
-	//Actual raw data.
 	while (dwSecurityDirStartVA < dwSecurityDirEndVA)
 	{
 		LPWIN_CERTIFICATE pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
-		DWORD_PTR dwCertByteEnd = (DWORD_PTR)pCertificate->dwLength - offsetof(WIN_CERTIFICATE, bCertificate);
-		if (!isPtrSafe(dwSecurityDirStartVA + dwCertByteEnd))
+		DWORD dwCertSize = pCertificate->dwLength - (DWORD)offsetof(WIN_CERTIFICATE, bCertificate);
+		if (!isPtrSafe(dwSecurityDirStartVA + dwCertSize))
 			break;
 
-		std::vector<std::byte> vecCertBytes { };
-
-		for (DWORD_PTR iterCertData = 0; iterCertData < dwCertByteEnd; iterCertData++)
-			vecCertBytes.push_back((std::byte)pCertificate->bCertificate[iterCertData]);
-
-		m_vecSecurity.emplace_back(LIBPE_SECURITY { ptrToOffset(pCertificate), *pCertificate, std::move(vecCertBytes) });
+		m_vecSecurity.emplace_back(LIBPE_SECURITY { ptrToOffset(pCertificate), *pCertificate });
 
 		//Get next certificate entry, all entries start at 8 aligned address.
-		DWORD_PTR dwLength = (DWORD_PTR)pCertificate->dwLength;
+		DWORD dwLength = (DWORD_PTR)pCertificate->dwLength;
 		dwLength += (8 - (dwLength & 7)) & 7;
 		dwSecurityDirStartVA = dwSecurityDirStartVA + dwLength;
 		if (!isPtrSafe(dwSecurityDirStartVA))
