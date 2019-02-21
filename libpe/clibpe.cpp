@@ -199,7 +199,7 @@ HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER_VAR& pVarNTHdr)
 		return E_IMAGE_HAS_NO_NTHEADER;
 	}
 
-	pVarNTHdr = &m_varNTHeader;
+	pVarNTHdr = &m_stNTHeader;
 
 	return S_OK;
 }
@@ -858,7 +858,8 @@ HRESULT Clibpe::getNTFileOptHeader()
 	case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
 		m_dwImageFlags |= IMAGE_FLAG_PE32;
 		m_pNTHeader32 = pNTHeader;
-		m_varNTHeader.stNTHdr32 = *m_pNTHeader32;
+		m_stNTHeader.varHdr.stNTHdr32 = *m_pNTHeader32;
+		m_stNTHeader.dwOffsetNTHdrDesc = ptrToOffset(m_pNTHeader32);
 		m_stFileHeader = m_pNTHeader32->FileHeader;
 		m_varOptHeader.stOptHdr32 = m_pNTHeader32->OptionalHeader;
 		m_ullImageBase = m_pNTHeader32->OptionalHeader.ImageBase;
@@ -866,7 +867,8 @@ HRESULT Clibpe::getNTFileOptHeader()
 	case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
 		m_dwImageFlags |= IMAGE_FLAG_PE64;
 		m_pNTHeader64 = (PIMAGE_NT_HEADERS64)pNTHeader;
-		m_varNTHeader.stNTHdr64 = *m_pNTHeader64;
+		m_stNTHeader.varHdr.stNTHdr64 = *m_pNTHeader64;
+		m_stNTHeader.dwOffsetNTHdrDesc = ptrToOffset(m_pNTHeader64);
 		m_stFileHeader = m_pNTHeader64->FileHeader;
 		m_varOptHeader.stOptHdr64 = m_pNTHeader64->OptionalHeader;
 		m_ullImageBase = m_pNTHeader64->OptionalHeader.ImageBase;

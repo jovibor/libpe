@@ -151,7 +151,7 @@ namespace libpe {
 		LIBPE_RICHHEADER_VEC m_vecRichHeader { };
 
 		//NT header.
-		LIBPE_NTHEADER_VAR m_varNTHeader { };
+		LIBPE_NTHEADER m_stNTHeader { };
 
 		//File header.
 		IMAGE_FILE_HEADER m_stFileHeader { };
