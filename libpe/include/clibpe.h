@@ -23,7 +23,7 @@ namespace libpe {
 		HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset) override;
 		HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) override;
 		HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) override;
-		HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&) override;
+		HRESULT GetNTHeader(PCLIBPE_NTHEADER&) override;
 		HRESULT GetFileHeader(PCLIBPE_FILEHEADER&) override;
 		HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) override;
 		HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) override;

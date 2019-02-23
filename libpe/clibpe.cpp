@@ -186,7 +186,7 @@ HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER_VAR& pVarNTHdr)
+HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)
 {
 	if (!m_fLoaded)
 	{
@@ -770,7 +770,6 @@ void Clibpe::resetAll()
 	m_vecSecurity.clear();
 	m_vecRelocs.clear();
 	m_vecDebug.clear();
-	m_stTLS.vecTLSRawData.clear();
 	m_stTLS.vecTLSCallbacks.clear();
 	m_vecBoundImport.clear();
 	m_vecDelayImport.clear();
@@ -906,10 +905,10 @@ HRESULT Clibpe::getDataDirectories()
 	//Filling DataDirectories vector.
 	for (unsigned i = 0; i < (dwRVAAndSizes > 15 ? 15 : dwRVAAndSizes); i++, pDataDir++)
 	{
-		std::string strSecName { };
+		std::string strSecName;
 
 		pSecHdr = getSecHdrFromRVA(pDataDir->VirtualAddress);
-		//RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is file RAW offset.
+		//RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is the file RAW offset.
 		if (pSecHdr && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
 			strSecName.assign((char * const)pSecHdr->Name, 8);
 
@@ -1673,7 +1672,6 @@ HRESULT Clibpe::getTLS()
 		return E_IMAGE_HAS_NO_TLS;
 
 	try {
-		std::vector<std::byte> vecTLSRawData;
 		std::vector<DWORD> vecTLSCallbacks;
 		ULONGLONG ulStartAddressOfRawData { }, ulEndAddressOfRawData { }, ulAddressOfCallBacks { };
 		LIBPE_TLS::LIBPE_TLS_VAR varTLSDir;
@@ -1708,19 +1706,12 @@ HRESULT Clibpe::getTLS()
 
 		//All TLS adresses are not RVA, but actual VA.
 		//So we must subtract ImageBase before pass to rVAToPtr().
-		std::byte* pTLSRawStart = (std::byte*)rVAToPtr(ulStartAddressOfRawData - m_ullImageBase);
-		std::byte* pTLSRawEnd = (std::byte*)rVAToPtr(ulEndAddressOfRawData - m_ullImageBase);
-		if (pTLSRawStart && pTLSRawEnd && pTLSRawEnd > pTLSRawStart)
-		{
-			DWORD_PTR dwTLSRawSize = pTLSRawEnd - pTLSRawStart;
-			if (!isPtrSafe((DWORD_PTR)pTLSRawStart + dwTLSRawSize))
-				return E_IMAGE_HAS_NO_TLS;
+		DWORD dwTLSRawStart = rVAToOffset(ulStartAddressOfRawData - m_ullImageBase);
+		DWORD dwTLSRawEnd = rVAToOffset(ulEndAddressOfRawData - m_ullImageBase);
+		DWORD dwTLSRawSize = dwTLSRawEnd - dwTLSRawStart;
+		if (!dwTLSRawStart || !dwTLSRawEnd || dwTLSRawEnd < dwTLSRawStart)
+			return E_IMAGE_HAS_NO_TLS;
 
-			vecTLSRawData.reserve(dwTLSRawSize);
-			for (size_t iterTLS = 0; iterTLS < dwTLSRawSize; iterTLS++)
-				vecTLSRawData.push_back(*(pTLSRawStart + iterTLS));
-
-		}
 		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ulAddressOfCallBacks - m_ullImageBase);
 		if (pTLSCallbacks)
 		{
@@ -1735,7 +1726,8 @@ HRESULT Clibpe::getTLS()
 			}
 		}
 
-		m_stTLS = LIBPE_TLS { ptrToOffset(pdwTLSPtr), varTLSDir, std::move(vecTLSRawData), std::move(vecTLSCallbacks) };
+		m_stTLS = LIBPE_TLS { ptrToOffset(pdwTLSPtr), varTLSDir, dwTLSRawStart,
+			dwTLSRawSize, std::move(vecTLSCallbacks) };
 		m_dwImageFlags |= IMAGE_FLAG_TLS;
 	}
 	catch (const std::bad_alloc&)
