@@ -14,7 +14,8 @@ libpe_ptr pLibpe;
 Getlibpe(&pLibpe);
 
 pLibpe->LoadPe(LPCWSTR);
-pLibpe->GetImageFlags(DWORD&);
+pLibpe->GetImageInfo(DWORD&);
+pLibpe->GetImageFlag(DWORD dwFlag, bool& f);
 pLibpe->GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset);
 pLibpe->GetMSDOSHeader(PCLIBPE_DOSHEADER&);
 pLibpe->GetRichHeader(PCLIBPE_RICHHEADER_VEC&);

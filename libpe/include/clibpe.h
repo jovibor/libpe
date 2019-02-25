@@ -19,7 +19,8 @@ namespace libpe {
 		Clibpe& operator=(const Clibpe&) = delete;
 		Clibpe& operator=(Clibpe&&) = delete;
 		HRESULT LoadPe(LPCWSTR) override;
-		HRESULT GetImageFlags(DWORD&) override;
+		HRESULT GetImageInfo(DWORD&) override;
+		HRESULT GetImageFlag(DWORD dwFlag, bool& f) override;
 		HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset) override;
 		HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) override;
 		HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) override;

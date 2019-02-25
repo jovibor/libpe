@@ -130,12 +130,22 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageFlags(DWORD& dwImageUlong)
+HRESULT Clibpe::GetImageInfo(DWORD& dw)
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
 
-	dwImageUlong = m_dwImageFlags;
+	dw = m_dwImageFlags;
+
+	return S_OK;
+}
+
+HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)
+{
+	if (!m_fLoaded)
+		return E_CALL_LOADPE_FIRST;
+
+	f = ImageHasFlag(m_dwImageFlags, dwFlag);
 
 	return S_OK;
 }
