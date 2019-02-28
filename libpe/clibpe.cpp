@@ -600,9 +600,9 @@ DWORD Clibpe::ptrToOffset(LPCVOID lp) const
 	if (!lp)
 		return 0;
 	if (m_fMapViewOfFileWhole)
-		return (DWORD_PTR)lp - (DWORD_PTR)m_lpBase;
+		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpBase);
 	else
-		return (DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + m_dwFileOffsetMapped;
+		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + m_dwFileOffsetMapped);
 }
 
 DWORD Clibpe::getDirEntryRVA(UINT uiDirEntry) const
@@ -678,9 +678,9 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 	if (dwDirectory == IMAGE_DIRECTORY_ENTRY_SECURITY)
 		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
 	else
-		dwSizeToMap = DWORD_PTR(pSecHdr->Misc.VirtualSize + m_dwDeltaFileOffsetMapped);
+		dwSizeToMap = (DWORD_PTR)pSecHdr->Misc.VirtualSize + m_dwDeltaFileOffsetMapped;
 
-	if (((LONGLONG)m_dwFileOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
+	if ((m_dwFileOffsetMapped + dwSizeToMap) > (ULONGLONG)m_stFileSize.QuadPart)
 		return false;
 	if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, m_dwFileOffsetMapped, dwSizeToMap)))
 		return false;
@@ -837,7 +837,7 @@ HRESULT Clibpe::getRichHeader()
 			{
 				//Pushing double DWORD of «Rich» structure.
 				//Disassembling first DWORD by two WORDs.
-				m_vecRichHeader.emplace_back(LIBPE_RICH { (DWORD_PTR)pRichIter - (DWORD_PTR)m_lpBase,
+				m_vecRichHeader.emplace_back(LIBPE_RICH { (DWORD)((DWORD_PTR)pRichIter - (DWORD_PTR)m_lpBase),
 					HIWORD(dwRichXORMask ^ *pRichIter),
 					LOWORD(dwRichXORMask ^ *pRichIter),
 					dwRichXORMask ^ *(pRichIter + 1) });
@@ -981,7 +981,7 @@ HRESULT Clibpe::getSectionsHeaders()
 			if (!(lOffset == 0 && (pEndPtr == (const char*)&pSecHdr->Name[1] || *pEndPtr != '\0')))
 			{
 				const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase +
-					DWORD_PTR(dwSymbolTable + dwNumberOfSymbols * 18 + lOffset));
+					(DWORD_PTR)dwSymbolTable + dwNumberOfSymbols * 18 + lOffset);
 				if (isPtrSafe(lpszSecRealName))
 					strSecRealName = lpszSecRealName;
 			}
@@ -1050,7 +1050,8 @@ HRESULT Clibpe::getExport()
 					if (pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strForwarderName = pszForwarderName;
 				}
-				vecFuncs.emplace_back(LIBPE_EXPORT_FUNC { pdwFuncs[iterFuncs], iterFuncs/*Ordinal*/, std::move(strFuncName), std::move(strForwarderName) });
+				vecFuncs.emplace_back(LIBPE_EXPORT_FUNC
+					{ pdwFuncs[iterFuncs], (DWORD)iterFuncs/*Ordinal*/, std::move(strFuncName), std::move(strForwarderName) });
 			}
 		}
 		const LPCSTR szExportName = (LPCSTR)rVAToPtr(pExportDir->Name);
