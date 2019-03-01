@@ -1501,7 +1501,7 @@ HRESULT Clibpe::getSecurity()
 		m_vecSecurity.emplace_back(LIBPE_SECURITY { ptrToOffset(pCertificate), *pCertificate });
 
 		//Get next certificate entry, all entries start at 8 aligned address.
-		DWORD dwLength = (DWORD_PTR)pCertificate->dwLength;
+		DWORD dwLength = pCertificate->dwLength;
 		dwLength += (8 - (dwLength & 7)) & 7;
 		dwSecurityDirStartVA = dwSecurityDirStartVA + dwLength;
 		if (!isPtrSafe(dwSecurityDirStartVA))
@@ -1610,7 +1610,7 @@ HRESULT Clibpe::getDebug()
 		else
 			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + m_dwDeltaFileOffsetMapped);
 
-		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * sizeof(IMAGE_DEBUG_DIRECTORY);
+		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
 	}
 	else //Looking for the debug directory.
 	{

@@ -89,6 +89,7 @@
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir)$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>$(ProjectName)_$(Platform)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -156,7 +157,7 @@
       <Path />
     </BuildLog>
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)\verinfo\set_verinfo.ps1 $(TargetDir)$(ProjectName).dll</Command>
+      <Command>powershell.exe $(ProjectDir)verinfo\set_verinfo.ps1 $(TargetDir)$(TargetName)$(TargetExt)</Command>
     </PostBuildEvent>
     <Manifest>
       <OutputManifestFile />
@@ -204,6 +205,9 @@
     <BuildLog>
       <Path />
     </BuildLog>
+    <PostBuildEvent>
+      <Command>powershell.exe $(ProjectDir)verinfo\set_verinfo.ps1 $(TargetDir)$(TargetName)$(TargetExt)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="clibpe.cpp" />

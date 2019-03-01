@@ -1,8 +1,12 @@
 ## libpe 
-#### Windows library for viewing PE file information, including all internal structures and tables.
-Supports x32 (PE32) and x64 (PE32+) binares.  
+#### Windows library for viewing PE and PE+ file's information, including all internal structures, tables and resources.
+Supports x32 (PE32) and x64 (PE32+) binares.
 MSVS 2017, C++17.  
-[Microsoft Visual C++ Redistributable for Visual Studio 2017 required.](https://aka.ms/vs/15/release/VC_redist.x86.exe)
+[Microsoft Visual C++ Redistributable for Visual Studio 2017 might be needed.](https://aka.ms/vs/15/release/VC_redist.x86.exe)
+
+#### Some useful related info:
+https://en.wikipedia.org/wiki/Portable_Executable  
+http://www.dependencywalker.com/
 ___________________________________
 #### Usage:  
 ```C++
