@@ -580,9 +580,9 @@ LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA) const
 DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA)
 {
 	DWORD dwOffset { };
-	for (unsigned i = 0; i < m_vecSecHeaders.size(); i++)
+	for (size_t i = 0; i < m_vecSecHeaders.size(); i++)
 	{
-		auto& pSecHdr = m_vecSecHeaders.at(i).stSecHdr;
+		auto& pSecHdr = m_vecSecHeaders[i].stSecHdr;
 		//Is RVA within this section?
 		if ((ullRVA >= pSecHdr.VirtualAddress) && (ullRVA < (pSecHdr.VirtualAddress + pSecHdr.Misc.VirtualSize)))
 		{
@@ -602,7 +602,7 @@ DWORD Clibpe::ptrToOffset(LPCVOID lp) const
 	if (m_fMapViewOfFileWhole)
 		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpBase);
 	else
-		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + m_dwFileOffsetMapped);
+		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwFileOffsetMapped);
 }
 
 DWORD Clibpe::getDirEntryRVA(UINT uiDirEntry) const
@@ -652,7 +652,7 @@ bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond)
 bool Clibpe::mapDirSection(DWORD dwDirectory)
 {
 	DWORD_PTR dwSizeToMap;
-	PIMAGE_SECTION_HEADER pSecHdr;
+	PIMAGE_SECTION_HEADER pSecHdr { };
 
 	if (dwDirectory == IMAGE_DIRECTORY_ENTRY_SECURITY)
 	{
@@ -678,9 +678,9 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 	if (dwDirectory == IMAGE_DIRECTORY_ENTRY_SECURITY)
 		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
 	else
-		dwSizeToMap = (DWORD_PTR)pSecHdr->Misc.VirtualSize + m_dwDeltaFileOffsetMapped;
+		dwSizeToMap = (DWORD_PTR)pSecHdr->Misc.VirtualSize + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
 
-	if ((m_dwFileOffsetMapped + dwSizeToMap) > (ULONGLONG)m_stFileSize.QuadPart)
+	if (((DWORD_PTR)m_dwFileOffsetMapped + dwSizeToMap) > (ULONGLONG)m_stFileSize.QuadPart)
 		return false;
 	if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, m_dwFileOffsetMapped, dwSizeToMap)))
 		return false;
@@ -810,7 +810,7 @@ HRESULT Clibpe::getRichHeader()
 	//«Rich» stub starts at 0x80 offset,
 	//before m_pDosHeader->e_lfanew (PE header start offset)
 	//If e_lfanew <= 0x80 — there is no «Rich» header.
-	if (m_pDosHeader->e_lfanew <= 0x80 || !isPtrSafe((DWORD_PTR)m_pDosHeader + m_pDosHeader->e_lfanew))
+	if (m_pDosHeader->e_lfanew <= 0x80 || !isPtrSafe((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew))
 		return E_IMAGE_HAS_NO_RICHHEADER;
 
 	const PDWORD pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
@@ -981,7 +981,7 @@ HRESULT Clibpe::getSectionsHeaders()
 			if (!(lOffset == 0 && (pEndPtr == (const char*)&pSecHdr->Name[1] || *pEndPtr != '\0')))
 			{
 				const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase +
-					(DWORD_PTR)dwSymbolTable + dwNumberOfSymbols * 18 + lOffset);
+					(DWORD_PTR)dwSymbolTable + (DWORD_PTR)dwNumberOfSymbols * 18 + (DWORD_PTR)lOffset);
 				if (isPtrSafe(lpszSecRealName))
 					strSecRealName = lpszSecRealName;
 			}
@@ -1348,7 +1348,7 @@ HRESULT Clibpe::getResources()
 										//Checking RAW Resource data pointer out of bounds.
 										if (pThirdResRawDataBegin && isPtrSafe((DWORD_PTR)pThirdResRawDataBegin + (DWORD_PTR)pResDataEntryLvL3->Size, true))
 										{
-											vecResRawDataLvL3.reserve(pResDataEntryLvL3->Size);
+											vecResRawDataLvL3.reserve((size_t)pResDataEntryLvL3->Size);
 											for (size_t iterResRawData = 0; iterResRawData < (size_t)pResDataEntryLvL3->Size; iterResRawData++)
 												vecResRawDataLvL3.push_back(*(pThirdResRawDataBegin + iterResRawData));
 										}
@@ -1373,7 +1373,7 @@ HRESULT Clibpe::getResources()
 								//Checking RAW Resource data pointer out of bounds.
 								if (pSecondResRawDataBegin && isPtrSafe((DWORD_PTR)pSecondResRawDataBegin + (DWORD_PTR)pResDataEntryLvL2->Size, true))
 								{
-									vecResRawDataLvL2.reserve(pResDataEntryLvL2->Size);
+									vecResRawDataLvL2.reserve((size_t)pResDataEntryLvL2->Size);
 									for (size_t iterResRawData = 0; iterResRawData < (size_t)pResDataEntryLvL2->Size; iterResRawData++)
 										vecResRawDataLvL2.push_back(*(pSecondResRawDataBegin + iterResRawData));
 								}
@@ -1398,7 +1398,7 @@ HRESULT Clibpe::getResources()
 					//Checking RAW Resource data pointer out of bounds.
 					if (pRootResRawDataBegin && isPtrSafe((DWORD_PTR)pRootResRawDataBegin + (DWORD_PTR)pResDataEntryRoot->Size, true))
 					{
-						vecResRawDataRoot.reserve(pResDataEntryRoot->Size);
+						vecResRawDataRoot.reserve((size_t)pResDataEntryRoot->Size);
 						for (size_t iterResRawData = 0; iterResRawData < (size_t)pResDataEntryRoot->Size; iterResRawData++)
 							vecResRawDataRoot.push_back(*(pRootResRawDataBegin + iterResRawData));
 					}
@@ -1495,7 +1495,7 @@ HRESULT Clibpe::getSecurity()
 	{
 		LPWIN_CERTIFICATE pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
 		DWORD dwCertSize = pCertificate->dwLength - (DWORD)offsetof(WIN_CERTIFICATE, bCertificate);
-		if (!isPtrSafe(dwSecurityDirStartVA + dwCertSize))
+		if (!isPtrSafe(dwSecurityDirStartVA + (DWORD_PTR)dwCertSize))
 			break;
 
 		m_vecSecurity.emplace_back(LIBPE_SECURITY { ptrToOffset(pCertificate), *pCertificate });
@@ -1503,7 +1503,7 @@ HRESULT Clibpe::getSecurity()
 		//Get next certificate entry, all entries start at 8 aligned address.
 		DWORD dwLength = pCertificate->dwLength;
 		dwLength += (8 - (dwLength & 7)) & 7;
-		dwSecurityDirStartVA = dwSecurityDirStartVA + dwLength;
+		dwSecurityDirStartVA = dwSecurityDirStartVA + (DWORD_PTR)dwLength;
 		if (!isPtrSafe(dwSecurityDirStartVA))
 			break;
 	}
@@ -1606,9 +1606,9 @@ HRESULT Clibpe::getDebug()
 	if (pDebugSecHdr && (pDebugSecHdr->VirtualAddress == dwDebugDirRVA))
 	{
 		if (m_fMapViewOfFileWhole)
-			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpBase + pDebugSecHdr->PointerToRawData);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpBase + (DWORD_PTR)pDebugSecHdr->PointerToRawData);
 		else
-			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + m_dwDeltaFileOffsetMapped);
+			pDebugDir = (PIMAGE_DEBUG_DIRECTORY)((DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwDeltaFileOffsetMapped);
 
 		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY);
 	}
