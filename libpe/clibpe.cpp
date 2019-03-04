@@ -28,22 +28,19 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 		return E_FILE_OPEN_FAILED;
 
 	::GetFileSizeEx(m_hFile, &m_stFileSize);
-	if (m_stFileSize.QuadPart < sizeof(IMAGE_DOS_HEADER))
-	{
+	if (m_stFileSize.QuadPart < sizeof(IMAGE_DOS_HEADER)) {
 		CloseHandle(m_hFile);
 		return E_FILE_SIZE_TOO_SMALL;
 	}
 
 	m_hMapObject = CreateFileMappingW(m_hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
-	if (!m_hMapObject)
-	{
+	if (!m_hMapObject) {
 		CloseHandle(m_hFile);
 		return E_FILE_CREATEFILEMAPPING_FAILED;
 	}
 
 	m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, 0);
-	if (m_lpBase)
-	{
+	if (m_lpBase) {
 		m_fMapViewOfFileWhole = true;
 		m_ullMaxPointerBound = (DWORD_PTR)m_lpBase + m_stFileSize.QuadPart;
 	}
