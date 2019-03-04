@@ -19,38 +19,38 @@ namespace libpe {
 		Clibpe& operator=(const Clibpe&) = delete;
 		Clibpe& operator=(Clibpe&&) = delete;
 		HRESULT LoadPe(LPCWSTR) override;
-		HRESULT GetImageInfo(DWORD&) override;
-		HRESULT GetImageFlag(DWORD dwFlag, bool& f) override;
-		HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset) override;
-		HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) override;
-		HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) override;
-		HRESULT GetNTHeader(PCLIBPE_NTHEADER&) override;
-		HRESULT GetFileHeader(PCLIBPE_FILEHEADER&) override;
-		HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) override;
-		HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) override;
-		HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&) override;
-		HRESULT GetExport(PCLIBPE_EXPORT&) override;
-		HRESULT GetImport(PCLIBPE_IMPORT_VEC&) override;
-		HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&) override;
-		HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&) override;
-		HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&) override;
-		HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&) override;
-		HRESULT GetDebug(PCLIBPE_DEBUG_VEC&) override;
-		HRESULT GetTLS(PCLIBPE_TLS&) override;
-		HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&) override;
-		HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&) override;
-		HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&) override;
-		HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&) override;
+		HRESULT GetImageInfo(DWORD&)noexcept override;
+		HRESULT GetImageFlag(DWORD dwFlag, bool& f)noexcept override;
+		HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept override;
+		HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&)noexcept override;
+		HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&)noexcept override;
+		HRESULT GetNTHeader(PCLIBPE_NTHEADER&)noexcept override;
+		HRESULT GetFileHeader(PCLIBPE_FILEHEADER&)noexcept override;
+		HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&)noexcept override;
+		HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&)noexcept override;
+		HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&)noexcept override;
+		HRESULT GetExport(PCLIBPE_EXPORT&)noexcept override;
+		HRESULT GetImport(PCLIBPE_IMPORT_VEC&)noexcept override;
+		HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&)noexcept override;
+		HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&)noexcept override;
+		HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&)noexcept override;
+		HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&)noexcept override;
+		HRESULT GetDebug(PCLIBPE_DEBUG_VEC&)noexcept override;
+		HRESULT GetTLS(PCLIBPE_TLS&)noexcept override;
+		HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&)noexcept override;
+		HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&)noexcept override;
+		HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&)noexcept override;
+		HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&)noexcept override;
 	private:
 		PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 		PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
 		LPVOID rVAToPtr(ULONGLONG ullRVA) const;
-		DWORD rVAToOffset(ULONGLONG ullRVA);
+		DWORD rVAToOffset(ULONGLONG ullRVA) const;
 		DWORD ptrToOffset(LPCVOID lp) const;
 		DWORD getDirEntryRVA(UINT uiDirEntry) const;
 		DWORD getDirEntrySize(UINT uiDirEntry) const;
 		template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
-		bool isSumOverflow(DWORD_PTR, DWORD_PTR);
+		bool isSumOverflow(DWORD_PTR, DWORD_PTR) const;
 		bool mapDirSection(DWORD dwDirectory);
 		void unmapDirSection() const;
 		HRESULT getDirBySecMapping(DWORD dwDirectory);
@@ -82,7 +82,7 @@ namespace libpe {
 		//Size of the loaded PE file.
 		LARGE_INTEGER m_stFileSize { };
 
-		//Maximum address that can be dereferensed.
+		//Maximum address that can be dereferenced.
 		ULONGLONG m_ullMaxPointerBound { };
 
 		//Reserved 16K of memory that we can delete to properly handle 

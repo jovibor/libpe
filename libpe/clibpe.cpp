@@ -9,10 +9,10 @@
 
 using namespace libpe;
 
-extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& libpe_ptr)
+extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& plibpe)
 {
-	libpe_ptr = std::make_shared<Clibpe>();
-	if (!libpe_ptr)
+	plibpe = std::make_shared<Clibpe>();
+	if (!plibpe)
 		return E_FAIL;
 
 	return S_OK;
@@ -20,12 +20,12 @@ extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& libpe_ptr)
 
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 {
-	if (m_fLoaded) //If other PE file was already, previously loaded.
+	if (m_fLoaded) //If PE file was already previously loaded.
 		resetAll();
 
 	m_hFile = CreateFileW(lpszFileName, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE)
-		return E_FILE_OPEN_FAILED;
+		return E_FILE_CREATEFILE_FAILED;
 
 	::GetFileSizeEx(m_hFile, &m_stFileSize);
 	if (m_stFileSize.QuadPart < sizeof(IMAGE_DOS_HEADER)) {
@@ -127,7 +127,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageInfo(DWORD& dw)
+HRESULT Clibpe::GetImageInfo(DWORD& dw)noexcept
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
@@ -137,7 +137,7 @@ HRESULT Clibpe::GetImageInfo(DWORD& dw)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)
+HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)noexcept
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
@@ -147,7 +147,7 @@ HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)
+HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
@@ -157,7 +157,7 @@ HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)
+HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -175,7 +175,7 @@ HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)
+HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -193,7 +193,7 @@ HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)
+HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -211,7 +211,7 @@ HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)
+HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -229,7 +229,7 @@ HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)
+HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -247,7 +247,7 @@ HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)
+HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -265,7 +265,7 @@ HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)
+HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -283,7 +283,7 @@ HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)
+HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -301,7 +301,7 @@ HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)
+HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -319,7 +319,7 @@ HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)
+HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -337,7 +337,7 @@ HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)
+HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -355,7 +355,7 @@ HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)
+HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -373,7 +373,7 @@ HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)
+HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -391,7 +391,7 @@ HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)
+HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -409,7 +409,7 @@ HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)
+HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -427,7 +427,7 @@ HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)
+HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -445,7 +445,7 @@ HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)
+HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -463,7 +463,7 @@ HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)
+HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -481,7 +481,7 @@ HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)
+HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -574,7 +574,7 @@ LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA) const
 	return isPtrSafe(ptr, true) ? ptr : nullptr;
 }
 
-DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA)
+DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA) const
 {
 	DWORD dwOffset { };
 	for (size_t i = 0; i < m_vecSecHeaders.size(); i++)
@@ -641,7 +641,7 @@ template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoun
 }
 
 //Performs checking of DWORD_PTR overflow at summing of two variables.
-bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond)
+bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond) const
 {
 	return (dwFirst + dwSecond) < dwFirst;
 }

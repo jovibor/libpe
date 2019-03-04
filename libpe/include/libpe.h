@@ -18,8 +18,7 @@
 #endif
 static_assert(__cpp17_conformant, "C++17 conformant compiler is required (MSVS 15.7 with /std:c++17, or higher).");
 
-namespace libpe
-{
+namespace libpe {
 	//Standard DOS header struct.
 	using PCLIBPE_DOSHEADER = const IMAGE_DOS_HEADER*;
 
@@ -254,32 +253,32 @@ namespace libpe
 	using PCLIBPE_COMDESCRIPTOR = const LIBPE_COMDESCRIPTOR*;
 
 	//Pure Virtual base class Ilibpe.
-	class  Ilibpe
+	class Ilibpe
 	{
 	public:
 		virtual HRESULT LoadPe(LPCWSTR) = 0;
-		virtual HRESULT GetImageInfo(DWORD&) = 0;
-		virtual HRESULT GetImageFlag(DWORD dwFlag, bool& f) = 0;
-		virtual HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset) = 0;
-		virtual HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&) = 0;
-		virtual HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&) = 0;
-		virtual HRESULT GetNTHeader(PCLIBPE_NTHEADER&) = 0;
-		virtual HRESULT GetFileHeader(PCLIBPE_FILEHEADER&) = 0;
-		virtual HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&) = 0;
-		virtual HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&) = 0;
-		virtual HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&) = 0;
-		virtual HRESULT GetExport(PCLIBPE_EXPORT&) = 0;
-		virtual HRESULT GetImport(PCLIBPE_IMPORT_VEC&) = 0;
-		virtual HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&) = 0;
-		virtual HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&) = 0;
-		virtual HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&) = 0;
-		virtual HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&) = 0;
-		virtual HRESULT GetDebug(PCLIBPE_DEBUG_VEC&) = 0;
-		virtual HRESULT GetTLS(PCLIBPE_TLS&) = 0;
-		virtual HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&) = 0;
-		virtual HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&) = 0;
-		virtual HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&) = 0;
-		virtual HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&) = 0;
+		virtual HRESULT GetImageInfo(DWORD&)noexcept = 0;
+		virtual HRESULT GetImageFlag(DWORD dwFlag, bool& f)noexcept = 0;
+		virtual HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept = 0;
+		virtual HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&)noexcept = 0;
+		virtual HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&)noexcept = 0;
+		virtual HRESULT GetNTHeader(PCLIBPE_NTHEADER&)noexcept = 0;
+		virtual HRESULT GetFileHeader(PCLIBPE_FILEHEADER&)noexcept = 0;
+		virtual HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&)noexcept = 0;
+		virtual HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&)noexcept = 0;
+		virtual HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&)noexcept = 0;
+		virtual HRESULT GetExport(PCLIBPE_EXPORT&)noexcept = 0;
+		virtual HRESULT GetImport(PCLIBPE_IMPORT_VEC&)noexcept = 0;
+		virtual HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&)noexcept = 0;
+		virtual HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&)noexcept = 0;
+		virtual HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&)noexcept = 0;
+		virtual HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&)noexcept = 0;
+		virtual HRESULT GetDebug(PCLIBPE_DEBUG_VEC&)noexcept = 0;
+		virtual HRESULT GetTLS(PCLIBPE_TLS&)noexcept = 0;
+		virtual HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&)noexcept = 0;
+		virtual HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&)noexcept = 0;
+		virtual HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&)noexcept = 0;
+		virtual HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&)noexcept = 0;
 	};
 	using libpe_ptr = std::shared_ptr<Ilibpe>;
 
@@ -288,7 +287,7 @@ namespace libpe
 	*************************************************/
 
 	constexpr auto E_CALL_LOADPE_FIRST = 0xFFFF;
-	constexpr auto E_FILE_OPEN_FAILED = 0x0010;
+	constexpr auto E_FILE_CREATEFILE_FAILED = 0x0010;
 	constexpr auto E_FILE_SIZE_TOO_SMALL = 0x0011;
 	constexpr auto E_FILE_CREATEFILEMAPPING_FAILED = 0x0012;
 	constexpr auto E_FILE_MAPVIEWOFFILE_FAILED = 0x0013;
