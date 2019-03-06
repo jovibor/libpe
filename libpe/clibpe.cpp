@@ -6,6 +6,7 @@
 ****************************************************************************************/
 #include "stdafx.h"
 #include "clibpe.h"
+#include <strsafe.h>
 
 using namespace libpe;
 
@@ -641,7 +642,7 @@ template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoun
 }
 
 //Performs checking of DWORD_PTR overflow at summing of two variables.
-bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond) const
+bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond)
 {
 	return (dwFirst + dwSecond) < dwFirst;
 }
@@ -1087,12 +1088,13 @@ HRESULT Clibpe::getImport()
 
 	//Counter for import modules. If it exceeds iMaxModules we stop parsing file, it's definitely bogus.
 	//Very unlikely PE file has more than 1000 imports.
-	constexpr auto iMaxModules = 1000;
-	constexpr auto iMaxFuncs = 5000;
-	int iModulesCount = 0;
 	LIBPE_IMPORT_FUNC::LIBPE_IMPORT_THUNK_VAR varImpThunk;
 
 	try {
+		constexpr auto iMaxModules = 1000;
+		constexpr auto iMaxFuncs = 5000;
+		int iModulesCount = 0;
+
 		if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32))
 		{
 			while (pImpDesc->Name)
@@ -1533,16 +1535,13 @@ HRESULT Clibpe::getRelocations()
 			//Amount of Reloc entries.
 			DWORD dwNumRelocEntries = (pBaseRelocDesc->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
 			PWORD pwRelocEntry = PWORD((DWORD_PTR)pBaseRelocDesc + sizeof(IMAGE_BASE_RELOCATION));
-			WORD wRelocType { };
 			std::vector<LIBPE_RELOC_DATA> vecRelocs;
-
 			for (DWORD i = 0; i < dwNumRelocEntries; i++, pwRelocEntry++)
 			{
 				if (!isPtrSafe(pwRelocEntry))
 					break;
 				//Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
-				wRelocType = (*pwRelocEntry & 0xF000) >> 12;
-
+				WORD wRelocType = (*pwRelocEntry & 0xF000) >> 12;
 				vecRelocs.emplace_back(LIBPE_RELOC_DATA { ptrToOffset(pwRelocEntry), wRelocType, (WORD)((*pwRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/ });
 				if (wRelocType == IMAGE_REL_BASED_HIGHADJ)
 				{	//The base relocation adds the high 16 bits of the difference to the 16-bit field at offset.

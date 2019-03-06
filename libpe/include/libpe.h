@@ -7,6 +7,7 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <Windows.h>
 #include <ImageHlp.h>
 
 #ifndef __cpp_lib_byte
