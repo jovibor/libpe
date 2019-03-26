@@ -10,13 +10,15 @@
 
 using namespace libpe;
 
-extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& plibpe)
-{
-	plibpe = std::make_shared<Clibpe>();
-	if (!plibpe)
-		return E_FAIL;
+namespace libpe {
+	extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& plibpe)
+	{
+		plibpe = std::make_shared<Clibpe>();
+		if (!plibpe)
+			return E_FAIL;
 
-	return S_OK;
+		return S_OK;
+	}
 }
 
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
@@ -659,9 +661,14 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 		//Checking for out of bounds file's size to map.
 		if (((LONGLONG)m_dwFileOffsetMapped + (LONGLONG)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY)) > (m_stFileSize.QuadPart))
 			return false;
+
+		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
 	}
 	else if ((pSecHdr = getSecHdrFromRVA(getDirEntryRVA(dwDirectory))))
+	{
 		m_dwFileOffsetMapped = pSecHdr->PointerToRawData;
+		dwSizeToMap = (DWORD_PTR)pSecHdr->Misc.VirtualSize;
+	}
 	else
 		return false;
 
@@ -673,10 +680,7 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 		m_dwFileOffsetMapped = m_dwFileOffsetMapped < m_stSysInfo.dwAllocationGranularity ? 0 :
 		(m_dwFileOffsetMapped - m_dwDeltaFileOffsetMapped);
 
-	if (dwDirectory == IMAGE_DIRECTORY_ENTRY_SECURITY)
-		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY) + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
-	else
-		dwSizeToMap = (DWORD_PTR)pSecHdr->Misc.VirtualSize + (DWORD_PTR)m_dwDeltaFileOffsetMapped;
+	dwSizeToMap += (DWORD_PTR)m_dwDeltaFileOffsetMapped;
 
 	if (((DWORD_PTR)m_dwFileOffsetMapped + dwSizeToMap) > (ULONGLONG)m_stFileSize.QuadPart)
 		return false;
