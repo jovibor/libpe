@@ -13,7 +13,7 @@ namespace libpe {
 	{
 	public:
 		Clibpe() = default;
-		virtual ~Clibpe() = default;
+		~Clibpe() = default;
 		Clibpe(const Clibpe&) = delete;
 		Clibpe(Clibpe&&) = delete;
 		Clibpe& operator=(const Clibpe&) = delete;
@@ -87,7 +87,7 @@ namespace libpe {
 
 		//Reserved 16K of memory that we can delete to properly handle 
 		//E_OUTOFMEMORY exceptions, in case we catch one.
-		std::unique_ptr<char []> m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+		std::unique_ptr<char []> m_pEmergencyMemory { std::make_unique<char []>(0x8FFF) };
 
 		//Minimum bytes to map, if it's not possible to map file as a whole.
 		const DWORD m_dwMinBytesToMap { 0xFFFF };
