@@ -377,5 +377,5 @@ namespace libpe {
 #pragma comment(lib, LIBNAME_PROPER("libpe"))
 #endif
 
-	extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& plibpe);
+	extern "C" HRESULT ILIBPEAPI Createlibpe(libpe_ptr& plibpe);
 }

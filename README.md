@@ -18,7 +18,7 @@ MSVS 2017, C++17.
 using namespace libpe;
 
 libpe_ptr pLibpe;
-Getlibpe(&pLibpe);
+Createlibpe(&pLibpe);
 
 pLibpe->LoadPe(LPCWSTR);
 
@@ -50,7 +50,7 @@ pLibpe->GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&);
 Getting Export information is very simple:
 ```cpp
 libpe_ptr pLibpe;
-Getlibpe(pLibpe);
+Createlibpe(pLibpe);
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
 PCLIBPE_EXPORT pExport;
@@ -72,7 +72,7 @@ for (auto& itFuncs : pExport->vecFuncs)
 To obtain an **Import table** information from the PE file see the following code:
 ```cpp
 libpe_ptr pLibpe;
-Getlibpe(pLibpe);
+Createlibpe(pLibpe);
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
 PCLIBPE_IMPORT_VEC pImport;

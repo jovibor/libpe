@@ -11,7 +11,7 @@
 using namespace libpe;
 
 namespace libpe {
-	extern "C" HRESULT ILIBPEAPI Getlibpe(libpe_ptr& plibpe)
+	extern "C" HRESULT ILIBPEAPI Createlibpe(libpe_ptr& plibpe)
 	{
 		plibpe = std::make_shared<Clibpe>();
 		if (!plibpe)
