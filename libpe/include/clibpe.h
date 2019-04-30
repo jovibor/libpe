@@ -41,6 +41,7 @@ namespace libpe {
 		HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&)noexcept override;
 		HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&)noexcept override;
 		HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&)noexcept override;
+		HRESULT Destroy()override;
 	private:
 		PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
 		PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;

@@ -11,9 +11,9 @@
 using namespace libpe;
 
 namespace libpe {
-	extern "C" HRESULT ILIBPEAPI Createlibpe(libpe_ptr& plibpe)
+	extern "C" HRESULT ILIBPEAPI CreateRawlibpe(Ilibpe*& plibpe)
 	{
-		plibpe = std::make_shared<Clibpe>();
+		plibpe = new Clibpe();
 		if (!plibpe)
 			return E_FAIL;
 
@@ -502,6 +502,12 @@ HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)noexcept
 	return S_OK;
 }
 
+HRESULT Clibpe::Destroy()
+{
+	delete this;
+	return S_OK;
+}
+
 PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA) const
 {
 	PIMAGE_SECTION_HEADER pSecHdr;
@@ -979,8 +985,8 @@ HRESULT Clibpe::getSectionsHeaders()
 			//So String Table's beginning can be calculated like this:
 			//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
 			char* pEndPtr { };
-			const long lOffset = strtol((const char*)&pSecHdr->Name[1], &pEndPtr, 10);
-			if (!(lOffset == 0 && (pEndPtr == (const char*)&pSecHdr->Name[1] || *pEndPtr != '\0')))
+			const long lOffset = strtol((const char*)& pSecHdr->Name[1], &pEndPtr, 10);
+			if (!(lOffset == 0 && (pEndPtr == (const char*)& pSecHdr->Name[1] || *pEndPtr != '\0')))
 			{
 				const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase +
 					(DWORD_PTR)dwSymbolTable + (DWORD_PTR)dwNumberOfSymbols * 18 + (DWORD_PTR)lOffset);
