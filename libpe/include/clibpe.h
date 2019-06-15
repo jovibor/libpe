@@ -1,8 +1,8 @@
 /****************************************************************************************
 * Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
-* This software is available under the "MIT License modified with The Commons Clause."	*
+* This software is available under the "MIT License."									*
 * Windows library for reading PE (x86) and PE+ (x64) files inner structure information.	*
-* https://github.com/jovibor/libpe	 													*
+* Project repository: https://github.com/jovibor/libpe									*
 ****************************************************************************************/
 #pragma once
 #include "libpe.h"
@@ -19,28 +19,29 @@ namespace libpe {
 		Clibpe& operator=(const Clibpe&) = delete;
 		Clibpe& operator=(Clibpe&&) = delete;
 		HRESULT LoadPe(LPCWSTR) override;
-		HRESULT GetImageInfo(DWORD&)noexcept override;
-		HRESULT GetImageFlag(DWORD dwFlag, bool& f)noexcept override;
-		HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept override;
-		HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&)noexcept override;
-		HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&)noexcept override;
-		HRESULT GetNTHeader(PCLIBPE_NTHEADER&)noexcept override;
-		HRESULT GetFileHeader(PCLIBPE_FILEHEADER&)noexcept override;
-		HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&)noexcept override;
-		HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&)noexcept override;
-		HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&)noexcept override;
-		HRESULT GetExport(PCLIBPE_EXPORT&)noexcept override;
-		HRESULT GetImport(PCLIBPE_IMPORT_VEC&)noexcept override;
-		HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&)noexcept override;
-		HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&)noexcept override;
-		HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&)noexcept override;
-		HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&)noexcept override;
-		HRESULT GetDebug(PCLIBPE_DEBUG_VEC&)noexcept override;
-		HRESULT GetTLS(PCLIBPE_TLS&)noexcept override;
-		HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&)noexcept override;
-		HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&)noexcept override;
-		HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&)noexcept override;
-		HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&)noexcept override;
+		HRESULT GetImageInfo(DWORD&)const noexcept override;
+		HRESULT GetImageFlag(DWORD dwFlag, bool& f)const noexcept override;
+		HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)const noexcept override;
+		HRESULT GetOffsetFromVA(ULONGLONG ullVA, DWORD& dwOffset)const noexcept override;
+		HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&)const noexcept override;
+		HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&)const noexcept override;
+		HRESULT GetNTHeader(PCLIBPE_NTHEADER&)const noexcept override;
+		HRESULT GetFileHeader(PCLIBPE_FILEHEADER&)const noexcept override;
+		HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&)const noexcept override;
+		HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&)const noexcept override;
+		HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&)const noexcept override;
+		HRESULT GetExport(PCLIBPE_EXPORT&)const noexcept override;
+		HRESULT GetImport(PCLIBPE_IMPORT_VEC&)const noexcept override;
+		HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&)const noexcept override;
+		HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&)const noexcept override;
+		HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&)const noexcept override;
+		HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&)const noexcept override;
+		HRESULT GetDebug(PCLIBPE_DEBUG_VEC&)const noexcept override;
+		HRESULT GetTLS(PCLIBPE_TLS&)const noexcept override;
+		HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&)const noexcept override;
+		HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&)const noexcept override;
+		HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&)const noexcept override;
+		HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&)const noexcept override;
 		HRESULT Destroy()override;
 	private:
 		PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;

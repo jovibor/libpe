@@ -1,8 +1,8 @@
 /****************************************************************************************
 * Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
-* This software is available under the "MIT License modified with The Commons Clause."	*
+* This software is available under the "MIT License."									*
 * Windows library for reading PE (x86) and PE+ (x64) files inner structure information.	*
-* https://github.com/jovibor/libpe	 													*
+* Project repository: https://github.com/jovibor/libpe									*
 ****************************************************************************************/
 #include "stdafx.h"
 #include "clibpe.h"
@@ -130,7 +130,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageInfo(DWORD& dw)noexcept
+HRESULT Clibpe::GetImageInfo(DWORD& dw)const noexcept
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
@@ -140,7 +140,7 @@ HRESULT Clibpe::GetImageInfo(DWORD& dw)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)noexcept
+HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)const noexcept
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
@@ -150,7 +150,7 @@ HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept
+HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)const noexcept
 {
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
@@ -160,7 +160,17 @@ HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)noexcept
+HRESULT Clibpe::GetOffsetFromVA(ULONGLONG ullVA, DWORD & dwOffset)const noexcept
+{
+	if (!m_fLoaded)
+		return E_CALL_LOADPE_FIRST;
+
+	dwOffset = rVAToOffset(ullVA - m_ullImageBase);
+
+	return S_OK;
+}
+
+HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -178,7 +188,7 @@ HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)noexcept
+HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -196,7 +206,7 @@ HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)noexcept
+HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -214,7 +224,7 @@ HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)noexcept
+HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -232,7 +242,7 @@ HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)noexcept
+HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -250,7 +260,7 @@ HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)noexcept
+HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -268,7 +278,7 @@ HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)noexcept
+HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -286,7 +296,7 @@ HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)noexcept
+HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -304,7 +314,7 @@ HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)noexcept
+HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -322,7 +332,7 @@ HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)noexcept
+HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -340,7 +350,7 @@ HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)noexcept
+HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -358,7 +368,7 @@ HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)noexcept
+HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -376,7 +386,7 @@ HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)noexcept
+HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -394,7 +404,7 @@ HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)noexcept
+HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -412,7 +422,7 @@ HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)noexcept
+HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -430,7 +440,7 @@ HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)noexcept
+HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -448,7 +458,7 @@ HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)noexcept
+HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -466,7 +476,7 @@ HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)noexcept
+HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -484,7 +494,7 @@ HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)noexcept
+HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)const noexcept
 {
 	if (!m_fLoaded)
 	{
@@ -505,6 +515,7 @@ HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)noexcept
 HRESULT Clibpe::Destroy()
 {
 	delete this;
+	
 	return S_OK;
 }
 
