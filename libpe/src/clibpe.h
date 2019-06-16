@@ -1,11 +1,11 @@
 /****************************************************************************************
-* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
-* This software is available under the "MIT License."									*
-* Windows library for reading PE (x86) and PE+ (x64) files inner structure information.	*
-* Project repository: https://github.com/jovibor/libpe									*
+* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/                         *
+* Windows library for reading PE (x86) and PE+ (x64) files' inner information.	        *
+* Official git repository: https://github.com/jovibor/libpe                             *
+* This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #pragma once
-#include "libpe.h"
+#include "../libpe.h"
 
 namespace libpe {
 	//Implementation of pure virtual class Ilibpe.
@@ -56,7 +56,7 @@ namespace libpe {
 		bool mapDirSection(DWORD dwDirectory);
 		void unmapDirSection() const;
 		HRESULT getDirBySecMapping(DWORD dwDirectory);
-		void resetAll();
+		void clearAll();
 		HRESULT getMSDOSHeader();
 		HRESULT getRichHeader();
 		HRESULT getNTFileOptHeader();
@@ -178,7 +178,7 @@ namespace libpe {
 		LIBPE_RESOURCE_ROOT m_stResource { };
 
 		//Exceptions.
-		LIBPE_EXCEPTION_VEC m_vecException;
+		LIBPE_EXCEPTION_VEC m_vecException { };
 
 		//Security table.
 		LIBPE_SECURITY_VEC m_vecSecurity { };

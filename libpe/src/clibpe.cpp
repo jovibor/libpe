@@ -1,8 +1,8 @@
 /****************************************************************************************
-* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/			 				*
-* This software is available under the "MIT License."									*
-* Windows library for reading PE (x86) and PE+ (x64) files inner structure information.	*
-* Project repository: https://github.com/jovibor/libpe									*
+* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/                         *
+* Windows library for reading PE (x86) and PE+ (x64) files' inner information.	        *
+* Official git repository: https://github.com/jovibor/libpe                             *
+* This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #include "stdafx.h"
 #include "clibpe.h"
@@ -14,9 +14,6 @@ namespace libpe {
 	extern "C" HRESULT ILIBPEAPI CreateRawlibpe(Ilibpe*& plibpe)
 	{
 		plibpe = new Clibpe();
-		if (!plibpe)
-			return E_FAIL;
-
 		return S_OK;
 	}
 }
@@ -24,7 +21,7 @@ namespace libpe {
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 {
 	if (m_fLoaded) //If PE file was already previously loaded.
-		resetAll();
+		clearAll();
 
 	m_hFile = CreateFileW(lpszFileName, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE)
@@ -515,7 +512,7 @@ HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)const noexcept
 HRESULT Clibpe::Destroy()
 {
 	delete this;
-	
+
 	return S_OK;
 }
 
@@ -642,17 +639,14 @@ DWORD Clibpe::getDirEntrySize(UINT uiDirEntry) const
 	return 0;
 }
 
-/****************************************************************
-* This func checks given pointer for nullptr and, more			*
-* important, whether it fits allowed bounds.					*
-* In PE headers there are plenty of places where wrong (bogus)	*
-* values for pointers might reside, causing many runtime «fun»	*
-* if trying to dereference them.								*
-* Second arg (fCanReferenceBoundary) shows if ptr can point to	*
-* the very end of a file, it's valid for some PE structures.	*
-* Template is used just for convenience, sometimes there is a	*
-* need to check pure address DWORD_PTR instead of a pointer.	*
-****************************************************************/
+/**************************************************************************************************
+* This func checks given pointer for nullptr and, more important, whether it fits allowed bounds. *
+* In PE headers there are plenty of places where wrong (bogus) values for pointers might reside,  *
+* causing many runtime «fun» if trying to dereference them.                                       *
+* Second arg (fCanReferenceBoundary) shows if pointer can point to the very end of a file, it's   *
+* valid for some PE structures. Template is used just for convenience, sometimes there is a need  *
+* to check pure address DWORD_PTR instead of a pointer.                                           *
+**************************************************************************************************/
 template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoundary) const
 {
 	return !tPtr ? false : (fCanReferenceBoundary ?
@@ -773,35 +767,38 @@ HRESULT Clibpe::getDirBySecMapping(DWORD dwDirectory)
 	return S_OK;
 }
 
-/****************************************************
-* Clearing all vectors and nullify all private		*
-* member vars — pointers and flags.					*
-* Called if LoadPe is invoked second time by the	*
-* same Ilibpe pointer.								*
-****************************************************/
-void Clibpe::resetAll()
+/******************************************************************************
+* Clearing all internal vectors and nullify all structs, pointers and flags.  *
+* Called if LoadPe is invoked second time by the same Ilibpe pointer.         *
+******************************************************************************/
+void Clibpe::clearAll()
 {
 	m_lpBase = nullptr;
 	m_hMapObject = nullptr;
 	m_pNTHeader32 = nullptr;
 	m_pNTHeader64 = nullptr;
-	m_dwImageFlags = 0;
 	m_fLoaded = false;
+	m_dwImageFlags = 0;
 
+	m_stMSDOSHeader = { };
 	m_vecRichHeader.clear();
+	m_stNTHeader = { };
+	m_stFileHeader = { };
+	m_varOptHeader = { };
 	m_vecDataDirectories.clear();
 	m_vecSecHeaders.clear();
-	m_stExport.vecFuncs.clear();
-	m_stExport.strModuleName.clear();
+	m_stExport = { };
 	m_vecImport.clear();
-	m_stResource.vecResRoot.clear();
+	m_stResource = { };
 	m_vecException.clear();
 	m_vecSecurity.clear();
 	m_vecRelocs.clear();
 	m_vecDebug.clear();
-	m_stTLS.vecTLSCallbacks.clear();
+	m_stTLS = { };
+	m_stLCD = { };
 	m_vecBoundImport.clear();
 	m_vecDelayImport.clear();
+	m_stCOR20Desc = { };
 }
 
 HRESULT Clibpe::getMSDOSHeader()
