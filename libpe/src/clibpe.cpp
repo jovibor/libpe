@@ -16,6 +16,12 @@ namespace libpe {
 		plibpe = new Clibpe();
 		return S_OK;
 	}
+
+	//Performs checking of DWORD_PTR overflow at summing of two variables.
+	bool isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond)
+	{
+		return (dwFirst + dwSecond) < dwFirst;
+	}
 }
 
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
@@ -654,12 +660,6 @@ template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoun
 		((DWORD_PTR)tPtr < m_ullMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase));
 }
 
-//Performs checking of DWORD_PTR overflow at summing of two variables.
-bool Clibpe::isSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond)
-{
-	return (dwFirst + dwSecond) < dwFirst;
-}
-
 bool Clibpe::mapDirSection(DWORD dwDirectory)
 {
 	DWORD_PTR dwSizeToMap;
@@ -1080,7 +1080,7 @@ HRESULT Clibpe::getExport()
 	catch (const std::bad_alloc&)
 	{
 		m_pEmergencyMemory.reset();
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Export table.\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Export table.\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 
 		vecFuncs.clear();
@@ -1088,7 +1088,7 @@ HRESULT Clibpe::getExport()
 	}
 	catch (...)
 	{
-		MessageBox(nullptr, L"Unknown exception raised while trying to get Export table.\r\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"Unknown exception raised while trying to get Export table.\r\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 	}
 
@@ -1231,7 +1231,7 @@ HRESULT Clibpe::getImport()
 	catch (const std::bad_alloc&)
 	{
 		m_pEmergencyMemory.reset();
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Import table.\r\n"
+		MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Import table.\r\n"
 			L"Too many import entries!\nFile seems to be corrupted.", L"Error", MB_ICONERROR);
 
 		m_vecImport.clear();
@@ -1239,7 +1239,7 @@ HRESULT Clibpe::getImport()
 	}
 	catch (...)
 	{
-		MessageBox(nullptr, L"Unknown exception raised while trying to get Import table.\r\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"Unknown exception raised while trying to get Import table.\r\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 	}
 
@@ -1433,14 +1433,14 @@ HRESULT Clibpe::getResources()
 	catch (const std::bad_alloc&)
 	{
 		m_pEmergencyMemory.reset();
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Resource table.\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Resource table.\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 
 		m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
 	}
 	catch (...)
 	{
-		MessageBox(nullptr, L"Unknown exception raised while trying to get Resource table.\r\n\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"Unknown exception raised while trying to get Resource table.\r\n\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 	}
 
@@ -1591,14 +1591,14 @@ HRESULT Clibpe::getRelocations()
 	catch (const std::bad_alloc&)
 	{
 		m_pEmergencyMemory.reset();
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Relocation table.\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Relocation table.\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 
 		m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
 	}
 	catch (...)
 	{
-		MessageBox(nullptr, L"Unknown exception raised while trying to get Relocation table.\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"Unknown exception raised while trying to get Relocation table.\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 	}
 
@@ -1656,7 +1656,7 @@ HRESULT Clibpe::getDebug()
 	catch (const std::bad_alloc&)
 	{
 		m_pEmergencyMemory;
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get Debug info.\r\n"
+		MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Debug info.\r\n"
 			L"File seems to be corrupted.", L"Error", MB_ICONERROR);
 
 		m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
@@ -1758,14 +1758,14 @@ HRESULT Clibpe::getTLS()
 	catch (const std::bad_alloc&)
 	{
 		m_pEmergencyMemory.reset();
-		MessageBox(nullptr, L"E_OUTOFMEMORY error while trying to get TLS table.\r\n"
+		MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get TLS table.\r\n"
 			L"File seems to be corrupted.", L"Error", MB_ICONERROR);
 
 		m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
 	}
 	catch (...)
 	{
-		MessageBox(nullptr, L"Unknown exception raised while trying to get TLS table.\r\nFile seems to be corrupted.",
+		MessageBoxW(nullptr, L"Unknown exception raised while trying to get TLS table.\r\nFile seems to be corrupted.",
 			L"Error", MB_ICONERROR);
 	}
 

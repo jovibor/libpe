@@ -4,7 +4,7 @@ MSVS 2019, C++17.**
 
 ## Table of Contents
 * [Usage](#usage)
-* [Methods](#methods)
+* [Methods](#methods) <details><summary>_Expand_</summary>
   * [LoadPe](#loadpe)
   * [GetImageInfo](#getimageinfo)
   * [GetImageFlag](#getimageflag)
@@ -30,8 +30,10 @@ MSVS 2019, C++17.**
   * [GetDelayImport](#getdelayimport)
   * [GetCOMDescriptor](#getcomdescriptor)
   * [Destroy](#destroy)
+  </details>
 * [Error Codes](#error-codes)
 * [License](#license)
+* [Help Point](#help-point)
 
 ## [](#)Usage
 The usage of the library is quite simple:
@@ -564,3 +566,8 @@ if (hr != S_OK)
 
 ## [](#)**License**
 This software is available under the **MIT License**.
+
+## [](#)Help Point
+If you would like to help the author of this project in further project's development you can do it in form of donation:
+<br><br>
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=M6CX4QH8FJJDL&currency_code=USD&source=url)

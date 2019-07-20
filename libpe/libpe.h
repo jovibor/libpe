@@ -9,7 +9,7 @@
 #include <memory>     //std::shared_ptr and related.
 #include <string>     //std::string and related.
 #include <Windows.h>  //All standard Windows' typedefs.
-#include <ImageHlp.h> //LPWIN_CERTIFICATE struct.
+#include <WinTrust.h> //WIN_CERTIFICATE struct.
 
 #ifndef __cpp_lib_byte
 #define __cpp17_conformant 0
@@ -175,9 +175,8 @@ namespace libpe {
 		std::vector<LIBPE_RESOURCE_ROOT_DATA> vecResRoot;      //Array of level 1 resource entries.
 	};
 	using PCLIBPE_RESOURCE_ROOT = const LIBPE_RESOURCE_ROOT*;
-	/***************************************************************************************
-	*********************************Resources End******************************************
-	***************************************************************************************/
+	/*********************************Resources End*****************************************/
+	/////////////////////////////////////////////////////////////////////////////////////////
 
 	//Exception table.
 	struct LIBPE_EXCEPTION {
@@ -388,7 +387,15 @@ namespace libpe {
 	constexpr DWORD IMAGE_FLAG_DELAYIMPORT = 0x00400000;
 	constexpr DWORD IMAGE_FLAG_COMDESCRIPTOR = 0x00800000;
 
-
+	/********************************************************************************************
+	* Factory function Createlibpe returns IlibpeUnPtr - unique_ptr with custom deleter.        *
+	* In client code you should use libpe_ptr type which is an alias to either IlibpeUnPtr -    *
+	* a unique_ptr, or IlibpeShPtr - a shared_ptr. Uncomment what serves best for you, and      *
+	* comment out the other.                                                                    *
+	* If you, for some reason, need a raw pointer, you can directly call CreateRawlibpe         *
+	* function, which returns Ilibpe interface pointer, but in this case you will need to       *
+	* call Ilibpe::Destroy method afterwards manually - to delete Ilibpe object.                *
+	********************************************************************************************/
 #ifdef ILIBPE_EXPORT
 #define ILIBPEAPI __declspec(dllexport) __cdecl
 #else
@@ -415,15 +422,6 @@ namespace libpe {
 #pragma comment(lib, LIBNAME_PROPER("libpe"))
 #endif
 
-	/********************************************************************************************
-	* Factory function Createlibpe returns IlibpeUnPtr - unique_ptr with custom deleter.        *
-	* In client code you should use libpe_ptr type which is an alias to either IlibpeUnPtr -    *
-	* a unique_ptr, or IlibpeShPtr - a shared_ptr. Uncomment what serves best for you, and      *
-	* comment out the other.                                                                    *
-	* If you, for some reason, need a raw pointer, you can directly call CreateRawlibpe         *
-	* function, which returns Ilibpe interface pointer, but in this case you will need to       *
-	* call Ilibpe::Destroy method afterwards manually - to delete Ilibpe object.                *
-	********************************************************************************************/
 	extern "C" HRESULT ILIBPEAPI CreateRawlibpe(Ilibpe*&);
 	using IlibpeUnPtr = std::unique_ptr<Ilibpe, void(*)(Ilibpe*)>;
 	using IlibpeShPtr = std::shared_ptr<Ilibpe>;

@@ -52,7 +52,6 @@ namespace libpe {
 		DWORD getDirEntryRVA(UINT uiDirEntry) const;
 		DWORD getDirEntrySize(UINT uiDirEntry) const;
 		template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
-		static bool isSumOverflow(DWORD_PTR, DWORD_PTR);
 		bool mapDirSection(DWORD dwDirectory);
 		void unmapDirSection() const;
 		HRESULT getDirBySecMapping(DWORD dwDirectory);
