@@ -11,7 +11,7 @@
 using namespace libpe;
 
 namespace libpe {
-	extern "C" HRESULT ILIBPEAPI CreateRawlibpe(Ilibpe*& plibpe)
+	ILIBPEAPI CreateRawlibpe(Ilibpe*& plibpe)
 	{
 		plibpe = new Clibpe();
 		return S_OK;

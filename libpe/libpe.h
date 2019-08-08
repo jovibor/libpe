@@ -397,9 +397,9 @@ namespace libpe {
 	* call Ilibpe::Destroy method afterwards manually - to delete Ilibpe object.                *
 	********************************************************************************************/
 #ifdef ILIBPE_EXPORT
-#define ILIBPEAPI __declspec(dllexport) __cdecl
+#define ILIBPEAPI extern "C" HRESULT __declspec(dllexport) __cdecl
 #else
-#define ILIBPEAPI __declspec(dllimport) __cdecl
+#define ILIBPEAPI extern "C" HRESULT __declspec(dllimport) __cdecl
 	/********************************************************
 	* Platform and configuration specific .lib name macros.	*
 	********************************************************/
@@ -417,12 +417,12 @@ namespace libpe {
 #endif
 #endif
 	/********************************************************
-	* End. //////////////////////////////////////////////// *
+	* End of .lib name macros.                              *
 	********************************************************/
 #pragma comment(lib, LIBNAME_PROPER("libpe"))
 #endif
 
-	extern "C" HRESULT ILIBPEAPI CreateRawlibpe(Ilibpe*&);
+	ILIBPEAPI CreateRawlibpe(Ilibpe*&);
 	using IlibpeUnPtr = std::unique_ptr<Ilibpe, void(*)(Ilibpe*)>;
 	using IlibpeShPtr = std::shared_ptr<Ilibpe>;
 
@@ -432,7 +432,7 @@ namespace libpe {
 		if (CreateRawlibpe(ptr) == S_OK)
 			return IlibpeUnPtr(ptr, [](Ilibpe * p) { p->Destroy(); });
 		else
-			return { nullptr, nullptr };
+			return IlibpeUnPtr(nullptr, nullptr);
 	};
 
 	//using libpe_ptr = IlibpeUnPtr;

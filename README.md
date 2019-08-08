@@ -37,19 +37,21 @@ MSVS 2019, C++17.**
 
 ## [](#)Usage
 The usage of the library is quite simple:
-1. Add `libpe.h` header file into your project.
+1. Add *libpe.h* header file into your project.
 1. Add `#include "libpe.h"` where you suppose to use it.
 1. Add `using namespace libpe;` or use namespace prefix `libpe::`
 1. Declare `libpe_ptr` variable: `libpe_ptr pLibpe { Createlibpe() };`
-1. Put `libpe.lib` into your project's `lib` directory, so that linker can see it.
-1. Put `libpe.dll` next to your executable.
+1. Put *libpe.lib* into your project's folder, so that linker can see it.
+1. Put *libpe.dll* next to your executable.
 
 ## [](#)Methods
 All **libpe** methods return `HRESULT`. <br>
 When method executes successfully it returns `S_OK`, otherwise [error code](#error-codes) is returned.
 ### [](#)LoadPe
-**`HRESULT LoadPe(LPCWSTR)`**<br>
-This is the first method you call to proceed with a file.
+```cpp
+HRESULT LoadPe(LPCWSTR);
+```
+This is the first method you call to proceed with a PE file.
 ```cpp
 libpe_ptr pLibpe { Createlibpe() };
 if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
@@ -59,8 +61,10 @@ if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 ```
 After this method succeeds you can then call all the other methods to retrieve needed information. The PE file itself doesn't stay in memory any longer, so you don't have to explicitly unload it.
 ### [](#)GetImageInfo
-**`HRESULT GetImageInfo(DWORD&)`**<br>
-This method returns `DWORD` variable with currently loaded file's flags.<br>
+```cpp
+HRESULT GetImageInfo(DWORD&);
+```
+This method returns `DWORD` variable with the currently loaded file's flags.<br>
 These flags are listed below:
 
 | Flag                       | Value      | Meaning                            |
@@ -102,7 +106,9 @@ if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 }
 ```
 ### [](#)GetImageFlag
-**`HRESULT GetImageFlag(DWORD dwFlag, bool& f)`**<br>
+```cpp
+HRESULT GetImageFlag(DWORD dwFlag, bool& f);
+```
 This helper function is very similar to the [`GetImageInfo`](#getimageinfo), but, in contrast, it recieves information about just one given flar at a time.
 ```cpp
 libpe_ptr pLibpe { Createlibpe() };
@@ -113,19 +119,27 @@ if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 }
 ```
 ### [](#)GetOffsetFromRVA
-**`HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)`**<br>
+```cpp
+HRESULT GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset);
+```
 Converts file's **RVA** (Relative Virtual Address) to the raw file offset.
 ### [](#)GetOffsetFromVA
-**`HRESULT GetOffsetFromVA(ULONGLONG ullVA, DWORD& dwOffset)`**<br>
+```cpp
+HRESULT GetOffsetFromVA(ULONGLONG ullVA, DWORD& dwOffset);
+```
 Converts file's **VA**  (Virtual Address) to the raw file offset.
 ### [](#)GetMSDOSHeader
-**`HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&)`**<br>
+```cpp
+HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&);
+```
 Gets file's standard **MSDOS** header, in form of `PCLIBPE_DOSHEADER`
 ```cpp
 using PCLIBPE_DOSHEADER = const IMAGE_DOS_HEADER*;
 ```
 ### [](#)GetRichHeader
-**`HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&)`**<br>
+```cpp
+HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&);
+```
 Gets array of the unofficial and undocumented so called **«Rich»** header structures.
 ```cpp
 struct LIBPE_RICH {
@@ -138,7 +152,9 @@ using LIBPE_RICHHEADER_VEC = std::vector<LIBPE_RICH>;
 using PCLIBPE_RICHHEADER_VEC = const LIBPE_RICHHEADER_VEC*;
 ```
 ### [](#)GetNTHeader
-**`HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&)`**<br>
+```cpp
+HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&);
+```
 Gets file's **NT** header.
 ```cpp
 struct LIBPE_NTHEADER {
@@ -151,13 +167,17 @@ struct LIBPE_NTHEADER {
 using PCLIBPE_NTHEADER = const LIBPE_NTHEADER*;
 ```
 ### [](#)GetFileHeader
-**`HRESULT GetFileHeader(PCLIBPE_FILEHEADER&)`**<br>
+```cpp
+HRESULT GetFileHeader(PCLIBPE_FILEHEADER&);
+```
 Gets file's **File** header.
 ```cpp
 using PCLIBPE_FILEHEADER = const IMAGE_FILE_HEADER*;
 ```
 ### [](#)GetOptionalHeader
-**`HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&)`**<br>
+```cpp
+HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&);
+```
 Gets file's **Optional** header.
 ```cpp
 union LIBPE_OPTHEADER_VAR {
@@ -167,7 +187,9 @@ union LIBPE_OPTHEADER_VAR {
 using PCLIBPE_OPTHEADER_VAR = const LIBPE_OPTHEADER_VAR*;
 ```
 ### [](#)GetDataDirectories
-**`HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&)`**<br>
+```cpp
+HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&);
+```
 Gets array of the file's **Data directories** structs.
 ```cpp
 struct LIBPE_DATADIR {
@@ -178,7 +200,9 @@ using LIBPE_DATADIRS_VEC = std::vector<LIBPE_DATADIR>;
 using PCLIBPE_DATADIRS_VEC = const LIBPE_DATADIRS_VEC*;
 ```
 ### [](#)GetSectionsHeaders
-**`HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&)`**<br>
+```cpp
+HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&);
+```
 Gets array of the file's **Sections headers** structs.
 ```cpp
 struct LIBPE_SECHEADERS {
@@ -190,7 +214,9 @@ using LIBPE_SECHEADERS_VEC = std::vector<LIBPE_SECHEADERS>;
 using PCLIBPE_SECHEADERS_VEC = const LIBPE_SECHEADERS_VEC*;
 ```
 ### [](#)GetExport
-**`HRESULT GetExport(PCLIBPE_EXPORT&)`**<br>
+```cpp
+HRESULT GetExport(PCLIBPE_EXPORT&);
+```
 Gets file's **Export** information.
 ```cpp
 struct LIBPE_EXPORT_FUNC {
@@ -207,7 +233,7 @@ struct LIBPE_EXPORT {
 };
 using PCLIBPE_EXPORT = const LIBPE_EXPORT*;
 ```
-**Example**<br>
+**Example**  
 Getting Export information is very simple:
 ```cpp
 libpe_ptr pLibpe { Createlibpe() };
@@ -229,7 +255,9 @@ for (auto& itFuncs : pExport->vecFuncs)
 }
 ```
 ### [](#)GetImport
-**`HRESULT GetImport(PCLIBPE_IMPORT_VEC&)`**<br>
+```cpp
+HRESULT GetImport(PCLIBPE_IMPORT_VEC&);
+```
 Gets array of the file's **Import table** entries.
 ```cpp
 struct LIBPE_IMPORT_FUNC {
@@ -249,7 +277,7 @@ struct LIBPE_IMPORT_MODULE {
 using LIBPE_IMPORT_VEC = std::vector<LIBPE_IMPORT_MODULE>;
 using PCLIBPE_IMPORT_VEC = const LIBPE_IMPORT_VEC*;
 ```
-**Example** <br>
+**Example**  
 To obtain **Import table** information from the file see the following code:
 ```cpp
 libpe_ptr pLibpe { Createlibpe() };
@@ -273,7 +301,9 @@ for (auto& itModule : *pImport) //Cycle through all imports that this PE file co
 ```
 
 ### [](#)GetResources
-**`HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&)`**<br>
+```cpp
+HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&);
+```
 Retrieves all file's embedded resources.
 ```cpp
 //Level 3 (the lowest) Resources.
@@ -320,7 +350,7 @@ using PCLIBPE_RESOURCE_ROOT = const LIBPE_RESOURCE_ROOT*;
 
 ```
 ### [](#)GetExceptions
-**`HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&)`**<br>
+**`HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&);
 Gets array of the file's **Exception** entries.
 ```cpp
 struct LIBPE_EXCEPTION {
@@ -331,7 +361,9 @@ using LIBPE_EXCEPTION_VEC = std::vector<LIBPE_EXCEPTION>;
 using PCLIBPE_EXCEPTION_VEC = const LIBPE_EXCEPTION_VEC*;
 ```
 ### [](#)GetSecurity
-**`HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&)`**<br>
+```cpp
+HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&);
+```
 Gets array of the file's **Security** entries.
 ```cpp
 struct LIBPE_SECURITY {
@@ -342,7 +374,9 @@ using LIBPE_SECURITY_VEC = std::vector<LIBPE_SECURITY>;
 using PCLIBPE_SECURITY_VEC = const LIBPE_SECURITY_VEC*;
 ```
 ### [](#)GetRelocations
-**`HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&)`**<br>
+```cpp
+HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&);
+```
 Gets array of the file's relocation information.
 ```cpp
 struct LIBPE_RELOC_DATA {
@@ -359,7 +393,9 @@ using LIBPE_RELOCATION_VEC = std::vector<LIBPE_RELOCATION>;
 using PCLIBPE_RELOCATION_VEC = const LIBPE_RELOCATION_VEC*;
 ```
 ### [](#)GetDebug
-**`HRESULT GetDebug(PCLIBPE_DEBUG_VEC&)`**<br>
+```cpp
+HRESULT GetDebug(PCLIBPE_DEBUG_VEC&);
+```
 Gets array of the file's **Debug** entries.
 ```cpp
 struct LIBPE_DEBUG {
@@ -370,7 +406,9 @@ using LIBPE_DEBUG_VEC = std::vector<LIBPE_DEBUG>;
 using PCLIBPE_DEBUG_VEC = const LIBPE_DEBUG_VEC*;
 ```
 ### [](#)GetTLS
-**`HRESULT GetTLS(PCLIBPE_TLS&)`**<br>
+```cpp
+HRESULT GetTLS(PCLIBPE_TLS&);
+```
 Gets file's **Thread Local Storage** information.
 ```cpp
 struct LIBPE_TLS {
@@ -386,7 +424,9 @@ struct LIBPE_TLS {
 using PCLIBPE_TLS = const LIBPE_TLS*;
 ```
 ### [](#)GetLoadConfig
-**`HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&)`**<br>
+```cpp
+HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&);
+```
 Gets files's **LCD** info.
 ```cpp
 struct LIBPE_LOADCONFIG {
@@ -399,7 +439,9 @@ struct LIBPE_LOADCONFIG {
 using PCLIBPE_LOADCONFIG = const LIBPE_LOADCONFIG*;
 ```
 ### [](#)GetBoundImport
-**`HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&)`**<br>
+```cpp
+HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&);
+```
 Gets array of the file's **Bound Import** entries.
 ```cpp
 struct LIBPE_BOUNDFORWARDER {
@@ -417,7 +459,9 @@ using LIBPE_BOUNDIMPORT_VEC = std::vector<LIBPE_BOUNDIMPORT>;
 using PCLIBPE_BOUNDIMPORT_VEC = const LIBPE_BOUNDIMPORT_VEC*;
 ```
 ### [](#)GetDelayImport
-**`HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&)`**<br>
+```cpp
+HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&);
+```
 Gets array of the file's **Delay Import** entries.
 ```cpp
 struct LIBPE_DELAYIMPORT_FUNC {
@@ -450,7 +494,9 @@ using PCLIBPE_DELAYIMPORT_VEC = const LIBPE_DELAYIMPORT_VEC*;
 
 ```
 ### [](#)GetCOMDescriptor
-**`HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&)`**<br>
+```cpp
+HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&);
+```
 Gets file's **.NET** info.
 ```cpp
 struct LIBPE_COMDESCRIPTOR {
@@ -460,9 +506,13 @@ struct LIBPE_COMDESCRIPTOR {
 using PCLIBPE_COMDESCRIPTOR = const LIBPE_COMDESCRIPTOR*;
 ```
 ### [](#)Destroy
-**`HRESULT Destroy()`**<br>
-Destroys the **libpe** object.<br>
-You don't usally need to call this method, it will be called automatically during object destruction. <br>
+```cpp
+HRESULT Destroy();
+```
+Destroys the **libpe** object.
+
+You don't usally call this method, it will be called automatically during object destruction. 
+
 #### Lore
 Factory function `Createlibpe` returns `IlibpeUnPtr` - `unique_ptr` with custom deleter.<br>
 In the client code you should use `libpe_ptr` type which is an alias to either `IlibpeUnPtr` - a `unique_ptr`, or `IlibpeShPtr` - a `shared_ptr`.
@@ -568,6 +618,6 @@ if (hr != S_OK)
 This software is available under the **MIT License**.
 
 ## [](#)Help Point
-If you would like to help the author of this project in further project's development you can do it in form of donation:
-<br><br>
+If you would like to help the author in further project's development you can do it in form of donation:
+
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=M6CX4QH8FJJDL&currency_code=USD&source=url)
