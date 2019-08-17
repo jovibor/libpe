@@ -57,7 +57,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 			//If file is too big to fit process VirtualSize limit
 			//we try to allocate at least some memory to map file's beginning, where PE HEADER resides.
 			//Then going to MapViewOfFile/Unmap every section individually. 
-			if (!(m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, (DWORD_PTR)m_dwMinBytesToMap)))
+			if ((m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, (DWORD_PTR)m_dwMinBytesToMap)) == nullptr)
 			{
 				CloseHandle(m_hMapObject);
 				CloseHandle(m_hFile);
@@ -126,6 +126,8 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT);
 		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR);
 	}
+
+	unmapFileOffset();
 	UnmapViewOfFile(m_lpBase);
 	CloseHandle(m_hMapObject);
 	CloseHandle(m_hFile);
@@ -625,24 +627,56 @@ DWORD Clibpe::ptrToOffset(LPCVOID lp) const
 		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwFileOffsetMapped);
 }
 
-DWORD Clibpe::getDirEntryRVA(UINT uiDirEntry) const
+DWORD Clibpe::getDirEntryRVA(DWORD dwEntry) const
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
-		return m_pNTHeader32->OptionalHeader.DataDirectory[uiDirEntry].VirtualAddress;
+		return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 	else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
-		return m_pNTHeader64->OptionalHeader.DataDirectory[uiDirEntry].VirtualAddress;
+		return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 
 	return 0;
 }
 
-DWORD Clibpe::getDirEntrySize(UINT uiDirEntry) const
+DWORD Clibpe::getDirEntrySize(DWORD dwEntry) const
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
-		return m_pNTHeader32->OptionalHeader.DataDirectory[uiDirEntry].Size;
+		return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
 	else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
-		return m_pNTHeader64->OptionalHeader.DataDirectory[uiDirEntry].Size;
+		return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].Size;
 
 	return 0;
+}
+
+BYTE Clibpe::getByte(ULONGLONG ullOffset)
+{
+	//Check for file size exceeding.
+	if (ullOffset > ((ULONGLONG)m_stFileSize.QuadPart - sizeof(BYTE)))
+		return 0;
+
+	BYTE chByte;
+	if (m_fMapViewOfFileWhole)
+		chByte = *(PBYTE)((DWORD_PTR)m_lpBase + ullOffset);
+	else
+	{
+		if (ullOffset >= m_stQuery.ullStartOffsetMapped && ullOffset < m_stQuery.ullEndOffsetMapped)
+			chByte = ((PBYTE)m_stQuery.lpData)[ullOffset - m_stQuery.ullStartOffsetMapped];
+		else
+		{
+			if (mapFileOffset(ullOffset))
+				chByte = ((PBYTE)m_stQuery.lpData)[ullOffset - m_stQuery.ullStartOffsetMapped];
+			else
+				chByte = 0;
+		}
+	}
+
+	return chByte;
+}
+
+DWORD Clibpe::getDword(ULONGLONG ullOffset)
+{
+	BYTE arrByte[4] { getByte(ullOffset + 0), getByte(ullOffset + 1), getByte(ullOffset + 2), getByte(ullOffset + 3) };
+
+	return *(PDWORD)arrByte;
 }
 
 /**************************************************************************************************
@@ -660,6 +694,46 @@ template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoun
 		((DWORD_PTR)tPtr < m_ullMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase));
 }
 
+bool Clibpe::mapFileOffset(ULONGLONG ullOffset)
+{
+	unmapFileOffset();
+
+	DWORD_PTR dwSizeToMap = 0x01900000; //25MB.
+
+	ULONGLONG ullStartOffsetMapped;
+	if (ullOffset > (ULONGLONG)dwSizeToMap)
+		ullStartOffsetMapped = ullOffset - (dwSizeToMap / 2);
+	else
+		ullStartOffsetMapped = 0;
+
+	DWORD dwDelta = ullStartOffsetMapped % m_stSysInfo.dwAllocationGranularity;
+	if (dwDelta > 0)
+		ullStartOffsetMapped = (ullStartOffsetMapped < m_stSysInfo.dwAllocationGranularity) ? 0 :
+		(ullStartOffsetMapped - dwDelta);
+
+	if ((LONGLONG)(ullStartOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
+		dwSizeToMap = (DWORD)(m_stFileSize.QuadPart - (LONGLONG)ullStartOffsetMapped);
+
+	DWORD dwOffsetHigh = (ullStartOffsetMapped >> 32) & 0xFFFFFFFFul;
+	DWORD dwOffsetLow = ullStartOffsetMapped & 0xFFFFFFFFul;
+	LPVOID lpData { };
+	if ((lpData = MapViewOfFile(m_hMapObject, FILE_MAP_READ, dwOffsetHigh, dwOffsetLow, dwSizeToMap)) == nullptr)
+		return E_FILE_MAPVIEWOFFILE_SECTION_FAILED;
+
+	m_stQuery.ullStartOffsetMapped = ullStartOffsetMapped;
+	m_stQuery.ullEndOffsetMapped = ullStartOffsetMapped + dwSizeToMap;
+	m_stQuery.dwDeltaFileOffsetMapped = dwDelta;
+	m_stQuery.lpData = lpData;
+
+	return true;
+}
+
+void Clibpe::unmapFileOffset()
+{
+	if (m_stQuery.lpData)
+		UnmapViewOfFile(m_stQuery.lpData);
+}
+
 bool Clibpe::mapDirSection(DWORD dwDirectory)
 {
 	DWORD_PTR dwSizeToMap;
@@ -675,7 +749,7 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 
 		dwSizeToMap = (DWORD_PTR)getDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
 	}
-	else if ((pSecHdr = getSecHdrFromRVA(getDirEntryRVA(dwDirectory))))
+	else if ((pSecHdr = getSecHdrFromRVA(getDirEntryRVA(dwDirectory))) != nullptr)
 	{
 		m_dwFileOffsetMapped = pSecHdr->PointerToRawData;
 		dwSizeToMap = (DWORD_PTR)pSecHdr->Misc.VirtualSize;
@@ -695,7 +769,7 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 
 	if (((DWORD_PTR)m_dwFileOffsetMapped + dwSizeToMap) > (ULONGLONG)m_stFileSize.QuadPart)
 		return false;
-	if (!(m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, m_dwFileOffsetMapped, dwSizeToMap)))
+	if ((m_lpSectionBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, m_dwFileOffsetMapped, dwSizeToMap)) == nullptr)
 		return false;
 
 	m_ullMaxPointerBound = (DWORD_PTR)m_lpSectionBase + dwSizeToMap;
@@ -1104,11 +1178,11 @@ HRESULT Clibpe::getImport()
 	if (!pImpDesc)
 		return E_IMAGE_HAS_NO_IMPORT;
 
-	//Counter for import modules. If it exceeds iMaxModules we stop parsing file, it's definitely bogus.
-	//Very unlikely PE file has more than 1000 imports.
 	LIBPE_IMPORT_FUNC::LIBPE_IMPORT_THUNK_VAR varImpThunk;
 
 	try {
+		//Counter for import modules. If it exceeds iMaxModules we stop parsing file, it's definitely bogus.
+		//Very unlikely PE file has more than 1000 import modules.
 		constexpr auto iMaxModules = 1000;
 		constexpr auto iMaxFuncs = 5000;
 		int iModulesCount = 0;
@@ -1292,7 +1366,7 @@ HRESULT Clibpe::getResources()
 				if (!isPtrSafe(pResDirLvL2))
 					break;
 				if (pResDirLvL2 == pResDirRoot /*Resource loop hack*/)
-					stResLvL2 = { *pResDirLvL2, vecResLvL2 };
+					stResLvL2 = { ptrToOffset(pResDirLvL2), *pResDirLvL2, vecResLvL2 };
 				else
 				{
 					PIMAGE_RESOURCE_DIRECTORY_ENTRY pResDirEntryLvL2 = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirLvL2 + 1);
@@ -1328,7 +1402,7 @@ HRESULT Clibpe::getResources()
 							if (!isPtrSafe(pResDirLvL3))
 								break;
 							if (pResDirLvL3 == pResDirLvL2 || pResDirLvL3 == pResDirRoot)
-								stResLvL3 = { *pResDirLvL3, vecResLvL3 };
+								stResLvL3 = { ptrToOffset(pResDirLvL3), *pResDirLvL3, vecResLvL3 };
 							else
 							{
 								PIMAGE_RESOURCE_DIRECTORY_ENTRY pResDirEntryLvL3 = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirLvL3 + 1);
@@ -1378,7 +1452,7 @@ HRESULT Clibpe::getResources()
 									if (!isPtrSafe(++pResDirEntryLvL3))
 										break;
 								}
-								stResLvL3 = { *pResDirLvL3, std::move(vecResLvL3) };
+								stResLvL3 = { ptrToOffset(pResDirLvL3), *pResDirLvL3, std::move(vecResLvL3) };
 							}
 						}
 						else
@@ -1403,7 +1477,7 @@ HRESULT Clibpe::getResources()
 						if (!isPtrSafe(++pResDirEntryLvL2))
 							break;
 					}
-					stResLvL2 = { *pResDirLvL2, std::move(vecResLvL2) };
+					stResLvL2 = { ptrToOffset(pResDirLvL2), *pResDirLvL2, std::move(vecResLvL2) };
 				}
 			}
 			else
@@ -1628,10 +1702,10 @@ HRESULT Clibpe::getDebug()
 	}
 	else //Looking for the debug directory.
 	{
-		if (!(pDebugSecHdr = getSecHdrFromRVA(dwDebugDirRVA)))
+		if ((pDebugSecHdr = getSecHdrFromRVA(dwDebugDirRVA)) == nullptr)
 			return E_IMAGE_HAS_NO_DEBUG;
 
-		if (!(pDebugDir = (PIMAGE_DEBUG_DIRECTORY)rVAToPtr(dwDebugDirRVA)))
+		if ((pDebugDir = (PIMAGE_DEBUG_DIRECTORY)rVAToPtr(dwDebugDirRVA)) == nullptr)
 			return E_IMAGE_HAS_NO_DEBUG;
 
 		dwDebugDirSize = getDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG);
@@ -1646,7 +1720,32 @@ HRESULT Clibpe::getDebug()
 	try {
 		for (unsigned i = 0; i < dwDebugEntries; i++)
 		{
-			m_vecDebug.emplace_back(LIBPE_DEBUG { ptrToOffset(pDebugDir), *pDebugDir });
+			LIBPE_DEBUG_DBGHDR stDbgHdr;
+
+			for (unsigned iterDbgHdr = 0; iterDbgHdr < (sizeof(LIBPE_DEBUG_DBGHDR::dwArr) / sizeof(DWORD)); iterDbgHdr++)
+				stDbgHdr.dwArr[iterDbgHdr] = getDword(pDebugDir->PointerToRawData + (sizeof(DWORD) * iterDbgHdr));
+
+			if (pDebugDir->Type == IMAGE_DEBUG_TYPE_CODEVIEW)
+			{
+				DWORD dwOffset = 0;
+				if (stDbgHdr.dwArr[0] == 0x53445352) //"RSDS"
+					dwOffset = sizeof(DWORD) * 6;
+				else if (stDbgHdr.dwArr[0] == 0x3031424E) //"NB10"
+					dwOffset = sizeof(DWORD) * 4;
+
+				std::string strPDBName;
+				if (dwOffset > 0)
+					for (unsigned iterStr = 0; iterStr < MAX_PATH; iterStr++)
+					{
+						BYTE byte = getByte(pDebugDir->PointerToRawData + dwOffset + iterStr);
+						if (byte == 0) //End of string.
+							break;
+						strPDBName += byte;
+					}
+				stDbgHdr.strPDBName = std::move(strPDBName);
+			}
+
+			m_vecDebug.emplace_back(LIBPE_DEBUG { ptrToOffset(pDebugDir), *pDebugDir, stDbgHdr });
 			if (!isPtrSafe(++pDebugDir))
 				break;
 		}

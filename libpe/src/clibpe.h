@@ -49,9 +49,13 @@ namespace libpe {
 		LPVOID rVAToPtr(ULONGLONG ullRVA) const;
 		DWORD rVAToOffset(ULONGLONG ullRVA) const;
 		DWORD ptrToOffset(LPCVOID lp) const;
-		DWORD getDirEntryRVA(UINT uiDirEntry) const;
-		DWORD getDirEntrySize(UINT uiDirEntry) const;
+		DWORD getDirEntryRVA(DWORD dwEntry) const;
+		DWORD getDirEntrySize(DWORD dwEntry) const;
+		BYTE getByte(ULONGLONG ullOffset);
+		DWORD getDword(ULONGLONG ullOffset);
 		template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
+		bool mapFileOffset(ULONGLONG ullOffset);   //Maps file's raw offset. For big files.
+		void unmapFileOffset();
 		bool mapDirSection(DWORD dwDirectory);
 		void unmapDirSection() const;
 		HRESULT getDirBySecMapping(DWORD dwDirectory);
@@ -126,7 +130,7 @@ namespace libpe {
 		//no matter if mapped completely or section by section.
 		LPVOID m_lpBase { };
 
-		//Pointer to beginning of mapping if mapped section by section.
+		//Pointer to beginning of mapping, if mapped section by section.
 		LPVOID m_lpSectionBase { };
 
 		//DOS header pointer.
@@ -202,5 +206,14 @@ namespace libpe {
 
 		//COM table descriptor.
 		LIBPE_COMDESCRIPTOR m_stCOR20Desc { };
+
+		//Helper struct for mapping file's parts, in case of big PE files.
+		struct QUERYDATA
+		{
+			ULONGLONG ullStartOffsetMapped { };    //File is mapped starting from this raw offset.
+			ULONGLONG ullEndOffsetMapped { };      //File's raw offset where mapping ends.
+			DWORD     dwDeltaFileOffsetMapped { }; //Delta after ullStartOffsetMapped % m_stSysInfo.dwAllocationGranularity.
+			LPVOID    lpData { };                  //File's Mapped data.
+		}m_stQuery;
 	};
 }
