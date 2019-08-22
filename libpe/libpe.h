@@ -232,8 +232,6 @@ namespace libpe {
 			IMAGE_TLS_DIRECTORY32 stTLSDir32; //x86 standard TLS header.
 			IMAGE_TLS_DIRECTORY64 stTLSDir64; //x64 TLS header.
 		}varTLS;
-		DWORD              dwRawDataOffset;   //TLS raw data offset.
-		DWORD              dwRawDataSize;     //TLS raw data size.
 		std::vector<DWORD> vecTLSCallbacks;   //Array of the TLS callbacks.
 	};
 	using PCLIBPE_TLS = const LIBPE_TLS*;

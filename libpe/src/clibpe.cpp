@@ -1797,7 +1797,7 @@ HRESULT Clibpe::getTLS()
 
 	try {
 		std::vector<DWORD> vecTLSCallbacks;
-		ULONGLONG ulStartAddressOfRawData { }, ulEndAddressOfRawData { }, ulAddressOfCallBacks { };
+		ULONGLONG ullStartAddressOfRawData { }, ullEndAddressOfRawData { }, ullAddressOfCallBacks { };
 		LIBPE_TLS::LIBPE_TLS_VAR varTLSDir;
 		PDWORD pdwTLSPtr;
 
@@ -1809,9 +1809,9 @@ HRESULT Clibpe::getTLS()
 
 			varTLSDir.stTLSDir32 = *pTLSDir32;
 			pdwTLSPtr = (PDWORD)pTLSDir32;
-			ulStartAddressOfRawData = pTLSDir32->StartAddressOfRawData;
-			ulEndAddressOfRawData = pTLSDir32->EndAddressOfRawData;
-			ulAddressOfCallBacks = pTLSDir32->AddressOfCallBacks;
+			ullStartAddressOfRawData = pTLSDir32->StartAddressOfRawData;
+			ullEndAddressOfRawData = pTLSDir32->EndAddressOfRawData;
+			ullAddressOfCallBacks = pTLSDir32->AddressOfCallBacks;
 		}
 		else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64))
 		{
@@ -1821,22 +1821,14 @@ HRESULT Clibpe::getTLS()
 
 			varTLSDir.stTLSDir64 = *pTLSDir64;
 			pdwTLSPtr = (PDWORD)pTLSDir64;
-			ulStartAddressOfRawData = pTLSDir64->StartAddressOfRawData;
-			ulEndAddressOfRawData = pTLSDir64->EndAddressOfRawData;
-			ulAddressOfCallBacks = pTLSDir64->AddressOfCallBacks;
+			ullStartAddressOfRawData = pTLSDir64->StartAddressOfRawData;
+			ullEndAddressOfRawData = pTLSDir64->EndAddressOfRawData;
+			ullAddressOfCallBacks = pTLSDir64->AddressOfCallBacks;
 		}
 		else
 			return E_IMAGE_HAS_NO_TLS;
 
-		//All TLS adresses are not RVA, but actual VA.
-		//So we must subtract ImageBase before pass to rVAToPtr().
-		DWORD dwTLSRawStart = rVAToOffset(ulStartAddressOfRawData - m_ullImageBase);
-		DWORD dwTLSRawEnd = rVAToOffset(ulEndAddressOfRawData - m_ullImageBase);
-		DWORD dwTLSRawSize = dwTLSRawEnd - dwTLSRawStart;
-		if (!dwTLSRawStart || !dwTLSRawEnd || dwTLSRawEnd < dwTLSRawStart)
-			return E_IMAGE_HAS_NO_TLS;
-
-		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ulAddressOfCallBacks - m_ullImageBase);
+		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ullAddressOfCallBacks - m_ullImageBase);
 		if (pTLSCallbacks)
 		{
 			while (*pTLSCallbacks)
@@ -1850,8 +1842,7 @@ HRESULT Clibpe::getTLS()
 			}
 		}
 
-		m_stTLS = LIBPE_TLS { ptrToOffset(pdwTLSPtr), varTLSDir, dwTLSRawStart,
-			dwTLSRawSize, std::move(vecTLSCallbacks) };
+		m_stTLS = LIBPE_TLS { ptrToOffset(pdwTLSPtr), varTLSDir, std::move(vecTLSCallbacks) };
 		m_dwImageFlags |= IMAGE_FLAG_TLS;
 	}
 	catch (const std::bad_alloc&)
