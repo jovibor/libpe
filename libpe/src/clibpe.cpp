@@ -54,7 +54,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	{
 		if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY)
 		{
-			//If file is too big to fit process VirtualSize limit
+			//If file is too big to fit process' VirtualSize limit
 			//we try to allocate at least some memory to map file's beginning, where PE HEADER resides.
 			//Then going to MapViewOfFile/Unmap every section individually. 
 			if ((m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, (DWORD_PTR)m_dwMinBytesToMap)) == nullptr)
@@ -88,8 +88,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	getDataDirectories();
 	getSectionsHeaders();
 
-	//If file succeeded to fully map,
-	//then just proceed getting all structures.
+	//If file succeeded to fully map, then just proceed getting all structures.
 	if (m_fMapViewOfFileWhole)
 	{
 		getExport();
@@ -109,23 +108,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 		getCOMDescriptor();
 	}
 	else //Otherwise mapping each section separately.
-	{
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_EXPORT);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_IMPORT);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_RESOURCE);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_EXCEPTION);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_SECURITY);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_BASERELOC);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_DEBUG);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_ARCHITECTURE);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_GLOBALPTR);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_TLS);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_IAT);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT);
-		getDirBySecMapping(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR);
-	}
+		getDirBySecMapping();
 
 	unmapFileOffset();
 	UnmapViewOfFile(m_lpBase);
@@ -782,61 +765,63 @@ void Clibpe::unmapDirSection() const
 	UnmapViewOfFile(m_lpSectionBase);
 }
 
-HRESULT Clibpe::getDirBySecMapping(DWORD dwDirectory)
+HRESULT Clibpe::getDirBySecMapping()
 {
-	if (!mapDirSection(dwDirectory))
-		return E_FILE_MAPVIEWOFFILE_SECTION_FAILED;
-
-	switch (dwDirectory)
+	for (unsigned i = 0; i <= 14; i++)
 	{
-	case IMAGE_DIRECTORY_ENTRY_EXPORT:
-		getExport();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_IMPORT:
-		getImport();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_RESOURCE:
-		getResources();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_EXCEPTION:
-		getExceptions();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_SECURITY:
-		getSecurity();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_BASERELOC:
-		getRelocations();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_DEBUG:
-		getDebug();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_ARCHITECTURE:
-		getArchitecture();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_GLOBALPTR:
-		getGlobalPtr();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_TLS:
-		getTLS();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG:
-		getLCD();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT:
-		getBoundImport();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_IAT:
-		getIAT();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT:
-		getDelayImport();
-		break;
-	case IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR:
-		getCOMDescriptor();
-		break;
+		if (mapDirSection(i))
+		{
+			switch (i)
+			{
+			case IMAGE_DIRECTORY_ENTRY_EXPORT:
+				getExport();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_IMPORT:
+				getImport();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_RESOURCE:
+				getResources();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_EXCEPTION:
+				getExceptions();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_SECURITY:
+				getSecurity();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_BASERELOC:
+				getRelocations();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_DEBUG:
+				getDebug();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_ARCHITECTURE:
+				getArchitecture();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_GLOBALPTR:
+				getGlobalPtr();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_TLS:
+				getTLS();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG:
+				getLCD();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT:
+				getBoundImport();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_IAT:
+				getIAT();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT:
+				getDelayImport();
+				break;
+			case IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR:
+				getCOMDescriptor();
+				break;
+			}
+		}
+		unmapDirSection();
 	}
-
-	unmapDirSection();
 
 	return S_OK;
 }
@@ -1722,15 +1707,15 @@ HRESULT Clibpe::getDebug()
 		{
 			LIBPE_DEBUG_DBGHDR stDbgHdr;
 
-			for (unsigned iterDbgHdr = 0; iterDbgHdr < (sizeof(LIBPE_DEBUG_DBGHDR::dwArr) / sizeof(DWORD)); iterDbgHdr++)
-				stDbgHdr.dwArr[iterDbgHdr] = getDword(pDebugDir->PointerToRawData + (sizeof(DWORD) * iterDbgHdr));
+			for (unsigned iterDbgHdr = 0; iterDbgHdr < (sizeof(LIBPE_DEBUG_DBGHDR::dwHdr) / sizeof(DWORD)); iterDbgHdr++)
+				stDbgHdr.dwHdr[iterDbgHdr] = getDword(pDebugDir->PointerToRawData + (sizeof(DWORD) * iterDbgHdr));
 
 			if (pDebugDir->Type == IMAGE_DEBUG_TYPE_CODEVIEW)
 			{
 				DWORD dwOffset = 0;
-				if (stDbgHdr.dwArr[0] == 0x53445352) //"RSDS"
+				if (stDbgHdr.dwHdr[0] == 0x53445352) //"RSDS"
 					dwOffset = sizeof(DWORD) * 6;
-				else if (stDbgHdr.dwArr[0] == 0x3031424E) //"NB10"
+				else if (stDbgHdr.dwHdr[0] == 0x3031424E) //"NB10"
 					dwOffset = sizeof(DWORD) * 4;
 
 				std::string strPDBName;

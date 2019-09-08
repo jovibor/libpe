@@ -213,13 +213,18 @@ namespace libpe {
 	//Debug table.
 	struct LIBPE_DEBUG_DBGHDR
 	{
-		DWORD       dwArr[6];   //First six DWORDs of IMAGE_DEBUG_DIRECTORY::PointerToRawData data (Debug info header).
-								//Their meaning vary depending on dwArr[0] (Signature) value.
+		//dwHdr[6] is an array of the first six DWORDs of IMAGE_DEBUG_DIRECTORY::PointerToRawData data (Debug info header).
+		//Their meaning varies depending on dwHdr[0] (Signature) value.
+		//If dwHdr[0] == 0x53445352 (Ascii "RSDS") it's PDB 7.0 file:
+		// Then dwHdr[1]-dwHdr[4] is GUID (*((GUID*)&dwHdr[1])). dwHdr[5] is Counter/Age.
+		//If dwHdr[0] == 0x3031424E (Ascii "NB10") it's PDB 2.0 file:
+		// Then dwHdr[1] is Offset. dwHdr[2] is Time/Signature. dwHdr[3] is Counter/Age.
+		DWORD       dwHdr[6];   
 		std::string strPDBName; //PDB file name/path.
 	}; 
 	struct LIBPE_DEBUG {
 		DWORD                 dwOffsetDebug;  //File's raw offset of the Debug descriptor.
-		IMAGE_DEBUG_DIRECTORY stDebugDir;     //Standard IMAGE_DEBUG_DIRECTORY.
+		IMAGE_DEBUG_DIRECTORY stDebugDir;     //Standard IMAGE_DEBUG_DIRECTORY header.
 		LIBPE_DEBUG_DBGHDR    stDebugHdrInfo; //Debug info header.
 	};
 	using LIBPE_DEBUG_VEC = std::vector<LIBPE_DEBUG>;

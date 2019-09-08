@@ -58,7 +58,7 @@ namespace libpe {
 		void unmapFileOffset();
 		bool mapDirSection(DWORD dwDirectory);
 		void unmapDirSection() const;
-		HRESULT getDirBySecMapping(DWORD dwDirectory);
+		HRESULT getDirBySecMapping();
 		void clearAll();
 		HRESULT getMSDOSHeader();
 		HRESULT getRichHeader();

@@ -1,8 +1,8 @@
 ## libpe
-**Windows library for reading PE32 and PE32+ files' inner information, including all internal structures, directories, tables and resources. Works with a x86 (PE32) and x64 (PE32+) binares.<br>
-MSVS 2019, C++17.**
+**PE32** and **PE32+** binaries viewer library.
 
 ## Table of Contents
+* [Introduction](#introduction)
 * [Usage](#usage)
 * [Methods](#methods) <details><summary>_Expand_</summary>
   * [LoadPe](#loadpe)
@@ -33,19 +33,32 @@ MSVS 2019, C++17.**
   </details>
 * [Error Codes](#error-codes)
 * [License](#license)
-* [Help Point](#help-point)
+
+## [](#)Introduction
+**libpe** is a Windows library for obtaining inner information from the [Portable Executable Format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format) binaries. The library is implemented as a pure abstract virtual interface with a decent amount of methods. 
+
+The main features of the library:
+* Works with **PE32(x86)** and **PE32+(x64)** binaries
+* Works with binaries of any size (although PE format is restricted to **4GB**)
+* Fetches all binaries' inner data structures (Headers, Resources, etc...) and service info
+* Built with **/std:c++17** standard conformance
 
 ## [](#)Usage
 The usage of the library is quite simple:
 1. Add *libpe.h* header file into your project.
-1. Add `#include "libpe.h"` where you suppose to use it.
-1. Add `using namespace libpe;` or use namespace prefix `libpe::`
-1. Declare `libpe_ptr` variable: `libpe_ptr pLibpe { Createlibpe() };`
-1. Put *libpe.lib* into your project's folder, so that linker can see it.
-1. Put *libpe.dll* next to your executable.
+2. Add `#include "libpe.h"` where you suppose to use it.
+3. Declare `libpe_ptr` variable: `libpe_ptr pLibpe { Createlibpe() };`
+4. Put *libpe.lib* into your project's folder, so that linker can see it.
+5. Put *libpe.dll* next to your executable.
+
+**libpe** uses its own namespace, so you either add the:
+```cpp
+using namespace libpe;
+```
+or use namespace prefix `libpe::`
 
 ## [](#)Methods
-All **libpe** methods return `HRESULT`. <br>
+All **libpe** methods return `HRESULT`.  
 When method executes successfully it returns `S_OK`, otherwise [error code](#error-codes) is returned.
 ### [](#)LoadPe
 ```cpp
@@ -64,7 +77,7 @@ After this method succeeds you can then call all the other methods to retrieve n
 ```cpp
 HRESULT GetImageInfo(DWORD&);
 ```
-This method returns `DWORD` variable with the currently loaded file's flags.<br>
+This method returns `DWORD` variable with the currently loaded file's flags.  
 These flags are listed below:
 
 | Flag                       | Value      | Meaning                            |
@@ -94,7 +107,7 @@ These flags are listed below:
 | IMAGE_FLAG_DELAYIMPORT     | 0x00400000 | Image has Delay import table.      |
 | IMAGE_FLAG_COMDESCRIPTOR   | 0x00800000 | Image has .NET related stuff.      |
 
-There can be any combination of these flags, they all can be **OR**'ed.<br>
+There can be any combination of these flags, they all can be **OR**'ed.  
 You can also use a standalone tiny helper function `ImageHasFlag` to find out if the given flag is set in a variable.
 ```cpp
 libpe_ptr pLibpe { Createlibpe() };
@@ -102,7 +115,8 @@ if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 {
     DWORD dwFlags;
     pLibpe->GetImageInfo(dwFlags);
-    bool fIsDebugData = ImageHasFlag(dwFlags, IMAGE_FLAG_DEBUG); //Now we know if loaded image has embeded Debug info.
+    bool fIs32 = ImageHasFlag(dwFlags, IMAGE_FLAG_PE32); //Now we know if the binary is x32 or not.
+    bool fIsDebugData = ImageHasFlag(dwFlags, IMAGE_FLAG_DEBUG); //Now we know if binary has embeded Debug info.
 }
 ```
 ### [](#)GetImageFlag
@@ -284,18 +298,27 @@ libpe_ptr pLibpe { Createlibpe() };
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
 PCLIBPE_IMPORT_VEC pImport;
-pLibpe->GetImport(pImport);
+if(pLibpe->GetImport(pImport) != S_OK)
+    return;
+
+bool fx32;
+pLibpe->GetImageFlag(IMAGE_FLAG_PE32, fx32);
 
 for (auto& itModule : *pImport) //Cycle through all imports that this PE file contains.
 {
-    const IMAGE_IMPORT_DESCRIPTOR* pImpDesc = &itModule.stImportDesc; //IMAGE_IMPORT_DESCRIPTOR struct.
-    const std::string& str = itModule.strModuleName;                  //Name of the import module.
+    auto pImpDesc = &itModule.stImportDesc; //IMAGE_IMPORT_DESCRIPTOR struct.
+    auto& str = itModule.strModuleName;     //Name of the import module.
 	
     for (auto& itFuncs : itModule.vecImportFunc) //Cycle through all the functions imported from itModule module.
     {
     	itFuncs.strFuncName;        //Imported function name (std::string).
         itFuncs.stImpByName;        //IMAGE_IMPORT_BY_NAME struct for this function.
-        itFuncs.varThunk.stThunk32; //Union of IMAGE_THUNK_DATA32 or IMAGE_THUNK_DATA64 (depending on the file type).
+       
+        itFuncs.varThunk.stThunk32; //Union of IMAGE_THUNK_DATA32 or IMAGE_THUNK_DATA64 (depending on the binary type).
+        if(fx32)
+            itFuncs.varThunk.stThunk32 //We process stThunk32 data
+        else
+            itFuncs.varThunk.stThunk64 //We process stThunk64 data
     }
 }
 ```
@@ -304,7 +327,7 @@ for (auto& itModule : *pImport) //Cycle through all imports that this PE file co
 ```cpp
 HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&);
 ```
-Retrieves all file's embedded resources.
+Retrieves all the binary's resources.
 ```cpp
 //Level 3 (the lowest) Resources.
 struct LIBPE_RESOURCE_LVL3_DATA {
@@ -349,6 +372,132 @@ struct LIBPE_RESOURCE_ROOT {
 	std::vector<LIBPE_RESOURCE_ROOT_DATA> vecResRoot;      //Array of level 1 resource entries.
 };
 using PCLIBPE_RESOURCE_ROOT = const LIBPE_RESOURCE_ROOT*;
+```
+##### Example:
+The next code excerpt populates `std::wstring` with all resources' types and names, that PE binary possesses, and prints it to the standard `std::wcout`.
+```cpp
+#include <iostream>
+#include <map>
+#include "libpe.h"
+
+using namespace libpe;
+
+//Helper map
+const std::map<WORD, std::wstring> g_mapResType {
+{ 1, L"RT_CURSOR" },
+{ 2, L"RT_BITMAP" },
+{ 3, L"RT_ICON" },
+{ 4, L"RT_MENU" },
+{ 5, L"RT_DIALOG" },
+{ 6, L"RT_STRING" },
+{ 7, L"RT_FONTDIR" },
+{ 8, L"RT_FONT" },
+{ 9, L"RT_ACCELERATOR" },
+{ 10, L"RT_RCDATA" },
+{ 11, L"RT_MESSAGETABLE" },
+{ 12, L"RT_GROUP_CURSOR" },
+{ 14, L"RT_GROUP_ICON" },
+{ 16, L"RT_VERSION" },
+{ 17, L"RT_DLGINCLUDE" },
+{ 19, L"RT_PLUGPLAY" },
+{ 20, L"RT_VXD" },
+{ 21, L"RT_ANICURSOR" },
+{ 22, L"RT_ANIICON" },
+{ 23, L"RT_HTML" },
+{ 24, L"RT_MANIFEST" },
+{ 28, L"RT_RIBBON_XML" },
+{ 240, L"RT_DLGINIT" },
+{ 241, L"RT_TOOLBAR" }
+};
+
+libpe_ptr pLibpe { Createlibpe() };
+if (pLibpe->LoadPe(L"C:\\PATH_TO_PE_FILE") != S_OK)
+    return;
+
+PCLIBPE_RESOURCE_ROOT pResRoot;
+if (pLibpe->GetResources(pResRoot) != S_OK)
+    return;
+
+WCHAR wstr[MAX_PATH];
+long ilvlRoot = 0, ilvl2 = 0, ilvl3 = 0;
+std::wstring wstring; // This wstring will contain all resources by name.
+
+//Main loop to extract Resources.
+for (auto& iterRoot : pResRoot->vecResRoot)
+{
+    auto pResDirEntry = &iterRoot.stResDirEntryRoot; //ROOT IMAGE_RESOURCE_DIRECTORY_ENTRY
+    if (pResDirEntry->DataIsDirectory)
+    {
+    	if (pResDirEntry->NameIsString)
+            swprintf(wstr, MAX_PATH, L"Entry: %li [Name: %s]", ilvlRoot, iterRoot.wstrResNameRoot.data());
+    	else
+    	{
+            auto iter = g_mapResType.find(pResDirEntry->Id);
+            if (iter != g_mapResType.end())
+                swprintf(wstr, MAX_PATH, L"Entry: %li [Id: %u, %s]", ilvlRoot, pResDirEntry->Id, iter->second.data());
+            else
+                swprintf(wstr, MAX_PATH, L"Entry: %li [Id: %u]", ilvlRoot, pResDirEntry->Id);
+        }
+
+        wstring += wstr;
+        wstring += L"\r\n";
+        ilvl2 = 0;
+
+        auto pstResLvL2 = &iterRoot.stResLvL2;
+        for (auto& iterLvL2 : pstResLvL2->vecResLvL2)
+        {
+            pResDirEntry = &iterLvL2.stResDirEntryLvL2; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
+            if (pResDirEntry->DataIsDirectory)
+            {
+                if (pResDirEntry->NameIsString)
+                    swprintf(wstr, MAX_PATH, L"Entry: %li, Name: %s", ilvl2, iterLvL2.wstrResNameLvL2.data());
+                else
+                    swprintf(wstr, MAX_PATH, L"Entry: %li, Id: %u", ilvl2, pResDirEntry->Id);
+
+                wstring += L"    ";
+                wstring += wstr;
+                wstring += L"\r\n";
+                ilvl3 = 0;
+
+                auto pstResLvL3 = &iterLvL2.stResLvL3;
+                for (auto& iterLvL3 : pstResLvL3->vecResLvL3)
+                {
+                    pResDirEntry = &iterLvL3.stResDirEntryLvL3; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
+                    if (pResDirEntry->NameIsString)
+                        swprintf(wstr, MAX_PATH, L"Entry: %li, Name: %s", ilvl3, iterLvL3.wstrResNameLvL3.data());
+                    else
+                        swprintf(wstr, MAX_PATH, L"Entry: %li, lang: %u", ilvl3, pResDirEntry->Id);
+
+                    wstring += L"        ";
+                    wstring += wstr;
+                    wstring += L"\r\n";
+                    ilvl3++;
+                }
+            }
+            else
+            {	//DATA Level 2, if any.
+                pResDirEntry = &iterLvL2.stResDirEntryLvL2;
+
+                if (pResDirEntry->NameIsString)
+                    swprintf(wstr, MAX_PATH, L"Entry: %li, Name: %s", ilvl2, iterLvL2.wstrResNameLvL2.data());
+                else
+                    swprintf(wstr, MAX_PATH, L"Entry: %li, lang: %u", ilvl2, pResDirEntry->Id);
+            }
+            ilvl2++;
+        }
+    }
+    else
+    {	//DATA Level Root, if any.
+        pResDirEntry = &iterRoot.stResDirEntryRoot;
+
+        if (pResDirEntry->NameIsString)
+            swprintf(wstr, MAX_PATH, L"Entry: %li, Name: %s", ilvlRoot, iterRoot.wstrResNameRoot.data());
+        else
+            swprintf(wstr, MAX_PATH, L"Entry: %li, lang: %u", ilvlRoot, pResDirEntry->Id);
+    }
+    ilvlRoot++;
+}
+std::wcout << wstring; //Print to wcout;
 ```
 
 ### [](#)GetExceptions
@@ -403,18 +552,23 @@ HRESULT GetDebug(PCLIBPE_DEBUG_VEC&);
 Gets array of the file's **Debug** entries.
 ```cpp
 struct LIBPE_DEBUG_DBGHDR
-    {
-    	DWORD       dwArr[6];   //First six DWORDs of IMAGE_DEBUG_DIRECTORY::PointerToRawData data (Debug info header).
-                                //Their meaning vary depending on dwArr[0] (Signature) value.
-    	std::string strPDBName; //PDB file name/path.
-	}; 
-	struct LIBPE_DEBUG {
-		DWORD                 dwOffsetDebug;  //File's raw offset of the Debug descriptor.
-		IMAGE_DEBUG_DIRECTORY stDebugDir;     //Standard IMAGE_DEBUG_DIRECTORY.
-		LIBPE_DEBUG_DBGHDR    stDebugHdrInfo; //Debug info header.
-	};
-	using LIBPE_DEBUG_VEC = std::vector<LIBPE_DEBUG>;
-	using PCLIBPE_DEBUG_VEC = const LIBPE_DEBUG_VEC*;
+{
+    //dwHdr[6] is an array of the first six DWORDs of IMAGE_DEBUG_DIRECTORY::PointerToRawData data (Debug info header).
+    //Their meaning varies depending on dwHdr[0] (Signature) value.
+    //If dwHdr[0] == 0x53445352 (Ascii "RSDS") it's PDB 7.0 file:
+    // Then dwHdr[1]-dwHdr[4] is GUID (*((GUID*)&dwHdr[1])). dwHdr[5] is Counter/Age.
+    //If dwHdr[0] == 0x3031424E (Ascii "NB10") it's PDB 2.0 file:
+    // Then dwHdr[1] is Offset. dwHdr[2] is Time/Signature. dwHdr[3] is Counter/Age.
+    DWORD       dwHdr[6];
+    std::string strPDBName; //PDB file name/path.
+}; 
+struct LIBPE_DEBUG {
+    DWORD                 dwOffsetDebug;  //File's raw offset of the Debug descriptor.
+    IMAGE_DEBUG_DIRECTORY stDebugDir;     //Standard IMAGE_DEBUG_DIRECTORY header.
+    LIBPE_DEBUG_DBGHDR    stDebugHdrInfo; //Debug info header.
+};
+using LIBPE_DEBUG_VEC = std::vector<LIBPE_DEBUG>;
+using PCLIBPE_DEBUG_VEC = const LIBPE_DEBUG_VEC*;
 ```
 ### [](#)GetTLS
 ```cpp
@@ -523,18 +677,18 @@ Destroys the **libpe** object.
 You don't usally call this method, it will be called automatically during object destruction. 
 
 #### Lore
-Factory function `Createlibpe` returns `IlibpeUnPtr` - `unique_ptr` with custom deleter.<br>
+Factory function `Createlibpe` returns `IlibpeUnPtr` - `unique_ptr` with custom deleter.  
 In the client code you should use `libpe_ptr` type which is an alias to either `IlibpeUnPtr` - a `unique_ptr`, or `IlibpeShPtr` - a `shared_ptr`.
 ```cpp
 //using libpe_ptr = IlibpeUnPtr;
 using libpe_ptr = IlibpeShPtr;
 ```
-Uncomment what serves best for you, and comment out the other.<br>
+Uncomment what serves best for you, and comment out the other.  
 If you, for some reason, need a raw pointer, you can directly call `CreateRawlibpe` function, which returns `Ilibpe` interface pointer, but in this case you will need to call `Ilibpe::Destroy` method manually afterwards - to destroy `Ilibpe` object.			
 
 ## [](#)Error Codes
-All **libpe** methods return `S_OK` code when they executed successfully.<br>
-Although, if something goes wrong the error codes come onto the scene.<br>
+All **libpe** methods return `S_OK` code when they executed successfully.  
+Although, if something goes wrong the error codes come onto the scene.  
 
 | Error code                          | Value  |
 |-------------------------------------|--------|
@@ -625,8 +779,3 @@ if (hr != S_OK)
 
 ## [](#)**License**
 This software is available under the **MIT License**.
-
-## [](#)Help Point
-If you would like to help the author in further project's development you can do it in form of donation:
-
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=M6CX4QH8FJJDL&currency_code=USD&source=url)

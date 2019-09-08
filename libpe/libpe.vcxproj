@@ -115,6 +115,9 @@
     <PostBuildEvent>
       <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
     </PostBuildEvent>
+    <BuildLog>
+      <Path>$(IntDir)$(MSBuildProjectName).log</Path>
+    </BuildLog>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -134,6 +137,9 @@
     <PostBuildEvent>
       <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
     </PostBuildEvent>
+    <BuildLog>
+      <Path>$(IntDir)$(MSBuildProjectName).log</Path>
+    </BuildLog>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -174,7 +180,7 @@
       <AdditionalOptions>/NOCOFFGRPINFO /pdbaltpath:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <BuildLog>
-      <Path />
+      <Path>$(IntDir)$(MSBuildProjectName).log</Path>
     </BuildLog>
     <PostBuildEvent>
       <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
@@ -222,12 +228,13 @@
     <Manifest>
       <OutputManifestFile />
     </Manifest>
-    <BuildLog>
-      <Path />
-    </BuildLog>
+    <BuildLog />
     <PostBuildEvent>
       <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
     </PostBuildEvent>
+    <BuildLog>
+      <Path>$(IntDir)$(MSBuildProjectName).log</Path>
+    </BuildLog>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="libpe.h" />
