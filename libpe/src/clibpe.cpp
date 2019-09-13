@@ -6,15 +6,38 @@
 ****************************************************************************************/
 #include "stdafx.h"
 #include "clibpe.h"
+#include "../verinfo/version.h"
 #include <strsafe.h>
 
 using namespace libpe;
 
 namespace libpe {
-	ILIBPEAPI CreateRawlibpe(Ilibpe*& plibpe)
+	/********************************************
+	* CreateRawlibpe function implementation.   *
+	********************************************/
+	extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe*& plibpe)
 	{
 		plibpe = new Clibpe();
 		return S_OK;
+	}
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#ifdef _WIN64
+	constexpr auto LIBPE_VERSION_WSTR = L"" STR(MAJOR_VERSION) "." STR(MINOR_VERSION) "." STR(MAINTENANCE_VERSION) " (x64)";
+#else
+	constexpr auto LIBPE_VERSION_WSTR = L"" STR(MAJOR_VERSION) "." STR(MINOR_VERSION) "." STR(MAINTENANCE_VERSION);
+#endif
+	constexpr auto LIBPE_VERSION_ULONGLONG = ULONGLONG(((ULONGLONG)MAJOR_VERSION << 48) | ((ULONGLONG)MINOR_VERSION << 32) | ((ULONGLONG)MAINTENANCE_VERSION << 16) | (ULONGLONG)REVISION_VERSION);
+
+	/********************************************
+	* libpeInfo function implementation.        *
+	********************************************/
+	extern "C" ILIBPEAPI PCLIBPE_INFO __cdecl libpeInfo()
+	{	
+		static const LIBPE_INFO stVersion { LIBPE_VERSION_WSTR, LIBPE_VERSION_ULONGLONG };
+
+		return &stVersion;
 	}
 
 	//Performs checking of DWORD_PTR overflow at summing of two variables.

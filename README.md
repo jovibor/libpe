@@ -1,5 +1,5 @@
 ## libpe
-**PE32** and **PE32+** binaries viewer library.
+**PE32**/**PE32+** binaries viewer library.
 
 ## Table of Contents
 * [Introduction](#introduction)
@@ -31,17 +31,22 @@
   * [GetCOMDescriptor](#getcomdescriptor)
   * [Destroy](#destroy)
   </details>
+* [Exported Functions](#exported-functions)
+  * [CreateRawlibpe](#createrawlibpe)
+  * [libpeInfo](#libpeinfo)
 * [Error Codes](#error-codes)
 * [License](#license)
 
 ## [](#)Introduction
 **libpe** is a Windows library for obtaining inner information from the [Portable Executable Format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format) binaries. The library is implemented as a pure abstract virtual interface with a decent amount of methods. 
 
-The main features of the library:
+The main library's features:
 * Works with **PE32(x86)** and **PE32+(x64)** binaries
 * Works with binaries of any size (although PE format is restricted to **4GB**)
 * Fetches all binaries' inner data structures (Headers, Resources, etc...) and service info
 * Built with **/std:c++17** standard conformance
+
+[Pepper](https://github.com/jovibor/Pepper) is one of the gui apps that is built on top of the **libpe**, and using it extensively.
 
 ## [](#)Usage
 The usage of the library is quite simple:
@@ -51,7 +56,18 @@ The usage of the library is quite simple:
 4. Put *libpe.lib* into your project's folder, so that linker can see it.
 5. Put *libpe.dll* next to your executable.
 
-**libpe** uses its own namespace, so you either add the:
+Factory function `Createlibpe` returns `IlibpeUnPtr` - `unique_ptr` with custom deleter.  
+In the client code you should use `libpe_ptr` type which is an alias to either `IlibpeUnPtr` - a `unique_ptr`, or `IlibpeShPtr` - a `shared_ptr`.
+```cpp
+//using libpe_ptr = IlibpeUnPtr;
+using libpe_ptr = IlibpeShPtr;
+```
+
+Uncomment what serves best for you, and comment out the other.
+
+If you, for some reason, need a raw interface pointer, you can directly call [`CreateRawlibpe`](#createrawlibpe) function, which returns `Ilibpe` interface pointer, but in this case you will need to call [`Destroy`](#destroy) method manually afterwards, to destroy `Ilibpe` object.
+
+The **libpe** uses its own namespace, so you either add the:
 ```cpp
 using namespace libpe;
 ```
@@ -672,19 +688,40 @@ using PCLIBPE_COMDESCRIPTOR = const LIBPE_COMDESCRIPTOR*;
 ```cpp
 HRESULT Destroy();
 ```
-Destroys the **libpe** object.
-
+Destroys the **libpe** object.  
 You don't usally call this method, it will be called automatically during object destruction. 
 
-#### Lore
-Factory function `Createlibpe` returns `IlibpeUnPtr` - `unique_ptr` with custom deleter.  
-In the client code you should use `libpe_ptr` type which is an alias to either `IlibpeUnPtr` - a `unique_ptr`, or `IlibpeShPtr` - a `shared_ptr`.
+## [](#)Exported Functions
+**libpe** has few "C" interface functions which it exports.
+
+### [](#)CreateRawlibpe
 ```cpp
-//using libpe_ptr = IlibpeUnPtr;
-using libpe_ptr = IlibpeShPtr;
+extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe*&);
 ```
-Uncomment what serves best for you, and comment out the other.  
-If you, for some reason, need a raw pointer, you can directly call `CreateRawlibpe` function, which returns `Ilibpe` interface pointer, but in this case you will need to call `Ilibpe::Destroy` method manually afterwards - to destroy `Ilibpe` object.			
+It's the main function that creates raw `Ilibpe` interface pointer, but you barely need to use it in your code.  
+See the [**Usage**](#usage) section for more info.
+
+### [](#)libpeInfo
+```cpp
+extern "C" ILIBPEAPI PCLIBPE_INFO __cdecl libpeInfo();
+```
+Returns pointer to `LIBPE_INFO`, which is **libpe** service information structure.
+```cpp
+struct LIBPE_INFO
+{
+    const wchar_t* pwszVersion { };        //WCHAR version string.
+    union {
+        unsigned long long ullVersion { }; //ULONGLONG version number.
+        struct {
+            short wMajor;
+            short wMinor;
+            short wMaintenance;
+            short wRevision;
+        }stVersion;
+    };
+};
+using PCLIBPE_INFO = const LIBPE_INFO*;
+```
 
 ## [](#)Error Codes
 All **libpe** methods return `S_OK` code when they executed successfully.  
