@@ -40,10 +40,26 @@
 ## [](#)Introduction
 **libpe** is a Windows library for obtaining inner information from the [Portable Executable Format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format) binaries. The library is implemented as a pure abstract virtual interface with a decent amount of methods. 
 
-The main library's features:
-* Works with **PE32(x86)** and **PE32+(x64)** binaries
-* Works with binaries of any size (although PE format is restricted to **4GB**)
-* Fetches all binaries' inner data structures (Headers, Resources, etc...) and service info
+* Works with PE32(x86) and PE32+(x64) binaries
+* Supports PE/PE+ binaries of any size (although PE format is restricted to **4GB**)
+* All inner PE/PE+ data structures, headers and layouts
+    * MSDOS Header
+    * «Rich» Header
+    * NT/File/Optional Headers
+    * Data Directories
+    * Sections
+    * Export Table
+    * Import Table
+    * Resource Table
+    * Exceptions Table
+    * Security Table
+    * Relocations Table
+    * Debug Table
+    * TLS Table
+    * Load Config Directory
+    * Bound Import Table
+    * Delay Import Table
+    * COM Table
 * Built with **/std:c++17** standard conformance
 
 [Pepper](https://github.com/jovibor/Pepper) is one of the gui apps that is built on top of the **libpe**, and using it extensively.
