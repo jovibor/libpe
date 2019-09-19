@@ -8,6 +8,7 @@
 #include "clibpe.h"
 #include "../verinfo/version.h"
 #include <strsafe.h>
+#include <cassert> //assert macro.
 
 using namespace libpe;
 
@@ -49,6 +50,8 @@ namespace libpe {
 
 HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 {
+	assert(lpszFileName); //File name is nullptr.
+
 	if (m_fLoaded) //If PE file was already previously loaded.
 		clearAll();
 
@@ -143,6 +146,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 
 HRESULT Clibpe::GetImageInfo(DWORD& dw)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
 
@@ -153,6 +157,7 @@ HRESULT Clibpe::GetImageInfo(DWORD& dw)const noexcept
 
 HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
 
@@ -163,6 +168,7 @@ HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)const noexcept
 
 HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
 
@@ -173,6 +179,7 @@ HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)const noexcep
 
 HRESULT Clibpe::GetOffsetFromVA(ULONGLONG ullVA, DWORD & dwOffset)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
 
@@ -183,6 +190,7 @@ HRESULT Clibpe::GetOffsetFromVA(ULONGLONG ullVA, DWORD & dwOffset)const noexcept
 
 HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pDosHeader = nullptr;
@@ -201,6 +209,7 @@ HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)const noexcept
 
 HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecRich = nullptr;
@@ -219,6 +228,7 @@ HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)const noexcept
 
 HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVarNTHdr = nullptr;
@@ -237,6 +247,7 @@ HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)const noexcept
 
 HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pFileHeader = nullptr;
@@ -255,6 +266,7 @@ HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)const noexcept
 
 HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVarOptHeader = nullptr;
@@ -273,6 +285,7 @@ HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)const noe
 
 HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecDataDir = nullptr;
@@ -291,6 +304,7 @@ HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)const noexc
 
 HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecSections = nullptr;
@@ -309,6 +323,7 @@ HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)const no
 
 HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pExport = nullptr;
@@ -327,6 +342,7 @@ HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)const noexcept
 
 HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecImport = nullptr;
@@ -345,6 +361,7 @@ HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)const noexcept
 
 HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pResRoot = nullptr;
@@ -363,6 +380,7 @@ HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)const noexcept
 
 HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecException = nullptr;
@@ -381,6 +399,7 @@ HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)const noexcep
 
 HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecSecurity = nullptr;
@@ -399,6 +418,7 @@ HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)const noexcept
 
 HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecRelocs = nullptr;
@@ -417,6 +437,7 @@ HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)const noexcept
 
 HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecDebug = nullptr;
@@ -435,6 +456,7 @@ HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)const noexcept
 
 HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pTLS = nullptr;
@@ -453,6 +475,7 @@ HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)const noexcept
 
 HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pLCD = nullptr;
@@ -471,6 +494,7 @@ HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)const noexcept
 
 HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecBoundImport = nullptr;
@@ -489,6 +513,7 @@ HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)const no
 
 HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pVecDelayImport = nullptr;
@@ -507,6 +532,7 @@ HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)const no
 
 HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)const noexcept
 {
+	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
 		pCOMDesc = nullptr;
@@ -718,7 +744,7 @@ bool Clibpe::mapFileOffset(ULONGLONG ullOffset)
 		(ullStartOffsetMapped - dwDelta);
 
 	if ((LONGLONG)(ullStartOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
-		dwSizeToMap = (DWORD)(m_stFileSize.QuadPart - (LONGLONG)ullStartOffsetMapped);
+		dwSizeToMap = (DWORD_PTR)(m_stFileSize.QuadPart - (LONGLONG)ullStartOffsetMapped);
 
 	DWORD dwOffsetHigh = (ullStartOffsetMapped >> 32) & 0xFFFFFFFFul;
 	DWORD dwOffsetLow = ullStartOffsetMapped & 0xFFFFFFFFul;
@@ -1731,7 +1757,7 @@ HRESULT Clibpe::getDebug()
 			LIBPE_DEBUG_DBGHDR stDbgHdr;
 
 			for (unsigned iterDbgHdr = 0; iterDbgHdr < (sizeof(LIBPE_DEBUG_DBGHDR::dwHdr) / sizeof(DWORD)); iterDbgHdr++)
-				stDbgHdr.dwHdr[iterDbgHdr] = getDword(pDebugDir->PointerToRawData + (sizeof(DWORD) * iterDbgHdr));
+				stDbgHdr.dwHdr[iterDbgHdr] = getDword((size_t)pDebugDir->PointerToRawData + (sizeof(DWORD) * iterDbgHdr));
 
 			if (pDebugDir->Type == IMAGE_DEBUG_TYPE_CODEVIEW)
 			{
