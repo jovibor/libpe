@@ -34,7 +34,7 @@ namespace libpe {
 	/********************************************
 	* libpeInfo function implementation.        *
 	********************************************/
-	extern "C" ILIBPEAPI PCLIBPE_INFO __cdecl libpeInfo()
+	extern "C" ILIBPEAPI PLIBPE_INFO __cdecl libpeInfo()
 	{	
 		static const LIBPE_INFO stVersion { LIBPE_VERSION_WSTR, LIBPE_VERSION_ULONGLONG };
 
@@ -144,7 +144,7 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageInfo(DWORD& dw)const noexcept
+HRESULT Clibpe::GetImageInfo(DWORD& dw)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -155,7 +155,7 @@ HRESULT Clibpe::GetImageInfo(DWORD& dw)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)const noexcept
+HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -166,7 +166,7 @@ HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)const noexcept
+HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -177,7 +177,7 @@ HRESULT Clibpe::GetOffsetFromRVA(ULONGLONG ullRVA, DWORD& dwOffset)const noexcep
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOffsetFromVA(ULONGLONG ullVA, DWORD & dwOffset)const noexcept
+HRESULT Clibpe::GetOffsetFromVA(ULONGLONG ullVA, DWORD & dwOffset)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -188,7 +188,7 @@ HRESULT Clibpe::GetOffsetFromVA(ULONGLONG ullVA, DWORD & dwOffset)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)const noexcept
+HRESULT Clibpe::GetMSDOSHeader(PLIBPE_DOSHEADER& pDosHeader)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -207,7 +207,7 @@ HRESULT Clibpe::GetMSDOSHeader(PCLIBPE_DOSHEADER& pDosHeader)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)const noexcept
+HRESULT Clibpe::GetRichHeader(PLIBPE_RICHHEADER_VEC& pVecRich)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -226,7 +226,7 @@ HRESULT Clibpe::GetRichHeader(PCLIBPE_RICHHEADER_VEC& pVecRich)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)const noexcept
+HRESULT Clibpe::GetNTHeader(PLIBPE_NTHEADER& pVarNTHdr)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -245,7 +245,7 @@ HRESULT Clibpe::GetNTHeader(PCLIBPE_NTHEADER& pVarNTHdr)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)const noexcept
+HRESULT Clibpe::GetFileHeader(PLIBPE_FILEHEADER& pFileHeader)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -264,7 +264,7 @@ HRESULT Clibpe::GetFileHeader(PCLIBPE_FILEHEADER& pFileHeader)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)const noexcept
+HRESULT Clibpe::GetOptionalHeader(PLIBPE_OPTHEADER_VAR& pVarOptHeader)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -283,7 +283,7 @@ HRESULT Clibpe::GetOptionalHeader(PCLIBPE_OPTHEADER_VAR& pVarOptHeader)const noe
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)const noexcept
+HRESULT Clibpe::GetDataDirectories(PLIBPE_DATADIRS_VEC& pVecDataDir)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -302,7 +302,7 @@ HRESULT Clibpe::GetDataDirectories(PCLIBPE_DATADIRS_VEC& pVecDataDir)const noexc
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)const noexcept
+HRESULT Clibpe::GetSectionsHeaders(PLIBPE_SECHEADERS_VEC& pVecSections)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -321,7 +321,7 @@ HRESULT Clibpe::GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC& pVecSections)const no
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)const noexcept
+HRESULT Clibpe::GetExport(PLIBPE_EXPORT& pExport)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -340,7 +340,7 @@ HRESULT Clibpe::GetExport(PCLIBPE_EXPORT& pExport)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)const noexcept
+HRESULT Clibpe::GetImport(PLIBPE_IMPORT_VEC& pVecImport)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -359,7 +359,7 @@ HRESULT Clibpe::GetImport(PCLIBPE_IMPORT_VEC& pVecImport)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)const noexcept
+HRESULT Clibpe::GetResources(PLIBPE_RESOURCE_ROOT& pResRoot)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -378,7 +378,7 @@ HRESULT Clibpe::GetResources(PCLIBPE_RESOURCE_ROOT& pResRoot)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)const noexcept
+HRESULT Clibpe::GetExceptions(PLIBPE_EXCEPTION_VEC& pVecException)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -397,7 +397,7 @@ HRESULT Clibpe::GetExceptions(PCLIBPE_EXCEPTION_VEC& pVecException)const noexcep
 	return S_OK;
 }
 
-HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)const noexcept
+HRESULT Clibpe::GetSecurity(PLIBPE_SECURITY_VEC& pVecSecurity)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -416,7 +416,7 @@ HRESULT Clibpe::GetSecurity(PCLIBPE_SECURITY_VEC& pVecSecurity)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)const noexcept
+HRESULT Clibpe::GetRelocations(PLIBPE_RELOCATION_VEC& pVecRelocs)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -435,7 +435,7 @@ HRESULT Clibpe::GetRelocations(PCLIBPE_RELOCATION_VEC& pVecRelocs)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)const noexcept
+HRESULT Clibpe::GetDebug(PLIBPE_DEBUG_VEC& pVecDebug)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -454,7 +454,7 @@ HRESULT Clibpe::GetDebug(PCLIBPE_DEBUG_VEC& pVecDebug)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)const noexcept
+HRESULT Clibpe::GetTLS(PLIBPE_TLS& pTLS)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -473,7 +473,7 @@ HRESULT Clibpe::GetTLS(PCLIBPE_TLS& pTLS)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)const noexcept
+HRESULT Clibpe::GetLoadConfig(PLIBPE_LOADCONFIG& pLCD)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -492,7 +492,7 @@ HRESULT Clibpe::GetLoadConfig(PCLIBPE_LOADCONFIG& pLCD)const noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)const noexcept
+HRESULT Clibpe::GetBoundImport(PLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -511,7 +511,7 @@ HRESULT Clibpe::GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)const no
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)const noexcept
+HRESULT Clibpe::GetDelayImport(PLIBPE_DELAYIMPORT_VEC& pVecDelayImport)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -530,7 +530,7 @@ HRESULT Clibpe::GetDelayImport(PCLIBPE_DELAYIMPORT_VEC& pVecDelayImport)const no
 	return S_OK;
 }
 
-HRESULT Clibpe::GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR& pCOMDesc)const noexcept
+HRESULT Clibpe::GetCOMDescriptor(PLIBPE_COMDESCRIPTOR& pCOMDesc)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -1091,7 +1091,7 @@ HRESULT Clibpe::getSectionsHeaders()
 
 		if (pSecHdr->Name[0] == '/')
 		{	//Deprecated, but still used "feature" of section name.
-			//https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_section_header#members
+			//https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_section_header
 			//«An 8-byte, null-padded UTF-8 string. There is no terminating null character 
 			//if the string is exactly eight characters long.
 			//For longer names, this member contains a forward slash (/) followed by an ASCII representation 

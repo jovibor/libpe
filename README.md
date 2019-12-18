@@ -176,15 +176,15 @@ HRESULT GetOffsetFromVA(ULONGLONG ullVA, DWORD& dwOffset);
 Converts file's **VA**  (Virtual Address) to the raw file offset.
 ### [](#)GetMSDOSHeader
 ```cpp
-HRESULT GetMSDOSHeader(PCLIBPE_DOSHEADER&);
+HRESULT GetMSDOSHeader(PLIBPE_DOSHEADER&);
 ```
-Gets file's standard **MSDOS** header, in form of `PCLIBPE_DOSHEADER`
+Gets file's standard **MSDOS** header, in form of `PLIBPE_DOSHEADER`
 ```cpp
-using PCLIBPE_DOSHEADER = const IMAGE_DOS_HEADER*;
+using PLIBPE_DOSHEADER = const IMAGE_DOS_HEADER*;
 ```
 ### [](#)GetRichHeader
 ```cpp
-HRESULT GetRichHeader(PCLIBPE_RICHHEADER_VEC&);
+HRESULT GetRichHeader(PLIBPE_RICHHEADER_VEC&);
 ```
 Gets array of the unofficial and undocumented so called **«Rich»** header structures.
 ```cpp
@@ -195,11 +195,11 @@ struct LIBPE_RICH {
     DWORD dwCount;      //Amount of occurrences.
 };
 using LIBPE_RICHHEADER_VEC = std::vector<LIBPE_RICH>;
-using PCLIBPE_RICHHEADER_VEC = const LIBPE_RICHHEADER_VEC*;
+using PLIBPE_RICHHEADER_VEC = const LIBPE_RICHHEADER_VEC*;
 ```
 ### [](#)GetNTHeader
 ```cpp
-HRESULT GetNTHeader(PCLIBPE_NTHEADER_VAR&);
+HRESULT GetNTHeader(PLIBPE_NTHEADER_VAR&);
 ```
 Gets file's **NT** header.
 ```cpp
@@ -210,19 +210,19 @@ struct LIBPE_NTHEADER {
     	IMAGE_NT_HEADERS64 stNTHdr64; //x64 Header.
     }varHdr;
 };
-using PCLIBPE_NTHEADER = const LIBPE_NTHEADER*;
+using PLIBPE_NTHEADER = const LIBPE_NTHEADER*;
 ```
 ### [](#)GetFileHeader
 ```cpp
-HRESULT GetFileHeader(PCLIBPE_FILEHEADER&);
+HRESULT GetFileHeader(PLIBPE_FILEHEADER&);
 ```
 Gets file's **File** header.
 ```cpp
-using PCLIBPE_FILEHEADER = const IMAGE_FILE_HEADER*;
+using PLIBPE_FILEHEADER = const IMAGE_FILE_HEADER*;
 ```
 ### [](#)GetOptionalHeader
 ```cpp
-HRESULT GetOptionalHeader(PCLIBPE_OPTHEADER_VAR&);
+HRESULT GetOptionalHeader(PLIBPE_OPTHEADER_VAR&);
 ```
 Gets file's **Optional** header.
 ```cpp
@@ -230,11 +230,11 @@ union LIBPE_OPTHEADER_VAR {
     IMAGE_OPTIONAL_HEADER32 stOptHdr32; //x86 header.
     IMAGE_OPTIONAL_HEADER64 stOptHdr64; //x64 header.
 };
-using PCLIBPE_OPTHEADER_VAR = const LIBPE_OPTHEADER_VAR*;
+using PLIBPE_OPTHEADER_VAR = const LIBPE_OPTHEADER_VAR*;
 ```
 ### [](#)GetDataDirectories
 ```cpp
-HRESULT GetDataDirectories(PCLIBPE_DATADIRS_VEC&);
+HRESULT GetDataDirectories(PLIBPE_DATADIRS_VEC&);
 ```
 Gets array of the file's **Data directories** structs.
 ```cpp
@@ -243,11 +243,11 @@ struct LIBPE_DATADIR {
     std::string          strSecResidesIn; //Name of the section this directory resides in (points to).
 };
 using LIBPE_DATADIRS_VEC = std::vector<LIBPE_DATADIR>;
-using PCLIBPE_DATADIRS_VEC = const LIBPE_DATADIRS_VEC*;
+using PLIBPE_DATADIRS_VEC = const LIBPE_DATADIRS_VEC*;
 ```
 ### [](#)GetSectionsHeaders
 ```cpp
-HRESULT GetSectionsHeaders(PCLIBPE_SECHEADERS_VEC&);
+HRESULT GetSectionsHeaders(PLIBPE_SECHEADERS_VEC&);
 ```
 Gets array of the file's **Sections headers** structs.
 ```cpp
@@ -257,11 +257,11 @@ struct LIBPE_SECHEADERS {
     std::string           strSecName;         //Section full name.
 };
 using LIBPE_SECHEADERS_VEC = std::vector<LIBPE_SECHEADERS>;
-using PCLIBPE_SECHEADERS_VEC = const LIBPE_SECHEADERS_VEC*;
+using PLIBPE_SECHEADERS_VEC = const LIBPE_SECHEADERS_VEC*;
 ```
 ### [](#)GetExport
 ```cpp
-HRESULT GetExport(PCLIBPE_EXPORT&);
+HRESULT GetExport(PLIBPE_EXPORT&);
 ```
 Gets file's **Export** information.
 ```cpp
@@ -277,7 +277,7 @@ struct LIBPE_EXPORT {
     std::string			strModuleName;	    //Actual module name.
     std::vector<LIBPE_EXPORT_FUNC>	vecFuncs;   	    //Array of the exported functions struct.
 };
-using PCLIBPE_EXPORT = const LIBPE_EXPORT*;
+using PLIBPE_EXPORT = const LIBPE_EXPORT*;
 ```
 **Example**  
 Getting Export information is very simple:
@@ -285,7 +285,7 @@ Getting Export information is very simple:
 libpe_ptr pLibpe { Createlibpe() };
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
-PCLIBPE_EXPORT pExport;
+PLIBPE_EXPORT pExport;
 pLibpe->GetExport(pExport)
 
 pExport->stExportDesc;  //IMAGE_EXPORT_DIRECTORY struct.
@@ -302,7 +302,7 @@ for (auto& itFuncs : pExport->vecFuncs)
 ```
 ### [](#)GetImport
 ```cpp
-HRESULT GetImport(PCLIBPE_IMPORT_VEC&);
+HRESULT GetImport(PLIBPE_IMPORT_VEC&);
 ```
 Gets array of the file's **Import table** entries.
 ```cpp
@@ -321,7 +321,7 @@ struct LIBPE_IMPORT_MODULE {
     std::vector<LIBPE_IMPORT_FUNC> vecImportFunc;   //Array of imported functions.
 };
 using LIBPE_IMPORT_VEC = std::vector<LIBPE_IMPORT_MODULE>;
-using PCLIBPE_IMPORT_VEC = const LIBPE_IMPORT_VEC*;
+using PLIBPE_IMPORT_VEC = const LIBPE_IMPORT_VEC*;
 ```
 **Example**  
 To obtain **Import table** information from the file see the following code:
@@ -329,7 +329,7 @@ To obtain **Import table** information from the file see the following code:
 libpe_ptr pLibpe { Createlibpe() };
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
-PCLIBPE_IMPORT_VEC pImport;
+PLIBPE_IMPORT_VEC pImport;
 if(pLibpe->GetImport(pImport) != S_OK)
     return;
 
@@ -357,7 +357,7 @@ for (auto& itModule : *pImport) //Cycle through all imports that this PE file co
 
 ### [](#)GetResources
 ```cpp
-HRESULT GetResources(PCLIBPE_RESOURCE_ROOT&);
+HRESULT GetResources(PLIBPE_RESOURCE_ROOT&);
 ```
 Retrieves all the binary's resources.
 ```cpp
@@ -373,7 +373,7 @@ struct LIBPE_RESOURCE_LVL3 {
     IMAGE_RESOURCE_DIRECTORY              stResDirLvL3;    //Level 3 standard IMAGE_RESOURCE_DIRECTORY header.
     std::vector<LIBPE_RESOURCE_LVL3_DATA> vecResLvL3;      //Array of level 3 resource entries.
 };
-using PCLIBPE_RESOURCE_LVL3 = const LIBPE_RESOURCE_LVL3*;
+using PLIBPE_RESOURCE_LVL3 = const LIBPE_RESOURCE_LVL3*;
 
 //Level 2 Resources — Includes LVL3 Resourses.
 struct LIBPE_RESOURCE_LVL2_DATA {
@@ -388,7 +388,7 @@ struct LIBPE_RESOURCE_LVL2 {
     IMAGE_RESOURCE_DIRECTORY              stResDirLvL2;    //Level 2 standard IMAGE_RESOURCE_DIRECTORY header.
     std::vector<LIBPE_RESOURCE_LVL2_DATA> vecResLvL2;      //Array of level 2 resource entries.
 };
-using PCLIBPE_RESOURCE_LVL2 = const LIBPE_RESOURCE_LVL2*;
+using PLIBPE_RESOURCE_LVL2 = const LIBPE_RESOURCE_LVL2*;
 
 //Level 1 (Root) Resources — Includes LVL2 Resources.
 struct LIBPE_RESOURCE_ROOT_DATA {
@@ -403,7 +403,7 @@ struct LIBPE_RESOURCE_ROOT {
 	IMAGE_RESOURCE_DIRECTORY              stResDirRoot;    //Level 1 standard IMAGE_RESOURCE_DIRECTORY header.
 	std::vector<LIBPE_RESOURCE_ROOT_DATA> vecResRoot;      //Array of level 1 resource entries.
 };
-using PCLIBPE_RESOURCE_ROOT = const LIBPE_RESOURCE_ROOT*;
+using PLIBPE_RESOURCE_ROOT = const LIBPE_RESOURCE_ROOT*;
 ```
 ##### Example:
 The next code excerpt populates `std::wstring` with all resources' types and names, that PE binary possesses, and prints it to the standard `std::wcout`.
@@ -446,7 +446,7 @@ libpe_ptr pLibpe { Createlibpe() };
 if (pLibpe->LoadPe(L"C:\\PATH_TO_PE_FILE") != S_OK)
     return;
 
-PCLIBPE_RESOURCE_ROOT pResRoot;
+PLIBPE_RESOURCE_ROOT pResRoot;
 if (pLibpe->GetResources(pResRoot) != S_OK)
     return;
 
@@ -534,7 +534,7 @@ std::wcout << wstring; //Print to wcout;
 
 ### [](#)GetExceptions
 ```cpp
-HRESULT GetExceptions(PCLIBPE_EXCEPTION_VEC&);
+HRESULT GetExceptions(PLIBPE_EXCEPTION_VEC&);
 ```
 Gets array of the file's **Exception** entries.
 ```cpp
@@ -543,11 +543,11 @@ struct LIBPE_EXCEPTION {
     _IMAGE_RUNTIME_FUNCTION_ENTRY stRuntimeFuncEntry;      //Standard _IMAGE_RUNTIME_FUNCTION_ENTRY header.
 };
 using LIBPE_EXCEPTION_VEC = std::vector<LIBPE_EXCEPTION>;
-using PCLIBPE_EXCEPTION_VEC = const LIBPE_EXCEPTION_VEC*;
+using PLIBPE_EXCEPTION_VEC = const LIBPE_EXCEPTION_VEC*;
 ```
 ### [](#)GetSecurity
 ```cpp
-HRESULT GetSecurity(PCLIBPE_SECURITY_VEC&);
+HRESULT GetSecurity(PLIBPE_SECURITY_VEC&);
 ```
 Gets array of the file's **Security** entries.
 ```cpp
@@ -556,11 +556,11 @@ struct LIBPE_SECURITY {
     WIN_CERTIFICATE stWinSert;           //Standard WIN_CERTIFICATE header.
 };
 using LIBPE_SECURITY_VEC = std::vector<LIBPE_SECURITY>;
-using PCLIBPE_SECURITY_VEC = const LIBPE_SECURITY_VEC*;
+using PLIBPE_SECURITY_VEC = const LIBPE_SECURITY_VEC*;
 ```
 ### [](#)GetRelocations
 ```cpp
-HRESULT GetRelocations(PCLIBPE_RELOCATION_VEC&);
+HRESULT GetRelocations(PLIBPE_RELOCATION_VEC&);
 ```
 Gets array of the file's relocation information.
 ```cpp
@@ -575,11 +575,11 @@ struct LIBPE_RELOCATION {
     std::vector<LIBPE_RELOC_DATA> vecRelocData;  //Array of the Relocation data struct.
 };
 using LIBPE_RELOCATION_VEC = std::vector<LIBPE_RELOCATION>;
-using PCLIBPE_RELOCATION_VEC = const LIBPE_RELOCATION_VEC*;
+using PLIBPE_RELOCATION_VEC = const LIBPE_RELOCATION_VEC*;
 ```
 ### [](#)GetDebug
 ```cpp
-HRESULT GetDebug(PCLIBPE_DEBUG_VEC&);
+HRESULT GetDebug(PLIBPE_DEBUG_VEC&);
 ```
 Gets array of the file's **Debug** entries.
 ```cpp
@@ -600,11 +600,11 @@ struct LIBPE_DEBUG {
     LIBPE_DEBUG_DBGHDR    stDebugHdrInfo; //Debug info header.
 };
 using LIBPE_DEBUG_VEC = std::vector<LIBPE_DEBUG>;
-using PCLIBPE_DEBUG_VEC = const LIBPE_DEBUG_VEC*;
+using PLIBPE_DEBUG_VEC = const LIBPE_DEBUG_VEC*;
 ```
 ### [](#)GetTLS
 ```cpp
-HRESULT GetTLS(PCLIBPE_TLS&);
+HRESULT GetTLS(PLIBPE_TLS&);
 ```
 Gets file's **Thread Local Storage** information.
 ```cpp
@@ -616,11 +616,11 @@ struct LIBPE_TLS {
     }varTLS;
     std::vector<DWORD> vecTLSCallbacks;   //Array of the TLS callbacks.
 };
-using PCLIBPE_TLS = const LIBPE_TLS*;
+using PLIBPE_TLS = const LIBPE_TLS*;
 ```
 ### [](#)GetLoadConfig
 ```cpp
-HRESULT GetLoadConfig(PCLIBPE_LOADCONFIG&);
+HRESULT GetLoadConfig(PLIBPE_LOADCONFIG&);
 ```
 Gets files's **LCD** info.
 ```cpp
@@ -631,11 +631,11 @@ struct LIBPE_LOADCONFIG {
     	IMAGE_LOAD_CONFIG_DIRECTORY64 stLCD64; //x64 LCD descriptor.
     }varLCD;
 };
-using PCLIBPE_LOADCONFIG = const LIBPE_LOADCONFIG*;
+using PLIBPE_LOADCONFIG = const LIBPE_LOADCONFIG*;
 ```
 ### [](#)GetBoundImport
 ```cpp
-HRESULT GetBoundImport(PCLIBPE_BOUNDIMPORT_VEC&);
+HRESULT GetBoundImport(PLIBPE_BOUNDIMPORT_VEC&);
 ```
 Gets array of the file's **Bound Import** entries.
 ```cpp
@@ -651,11 +651,11 @@ struct LIBPE_BOUNDIMPORT {
     std::vector<LIBPE_BOUNDFORWARDER> vecBoundForwarder;    //Array of the Bound Forwarder structs.
 };
 using LIBPE_BOUNDIMPORT_VEC = std::vector<LIBPE_BOUNDIMPORT>;
-using PCLIBPE_BOUNDIMPORT_VEC = const LIBPE_BOUNDIMPORT_VEC*;
+using PLIBPE_BOUNDIMPORT_VEC = const LIBPE_BOUNDIMPORT_VEC*;
 ```
 ### [](#)GetDelayImport
 ```cpp
-HRESULT GetDelayImport(PCLIBPE_DELAYIMPORT_VEC&);
+HRESULT GetDelayImport(PLIBPE_DELAYIMPORT_VEC&);
 ```
 Gets array of the file's **Delay Import** entries.
 ```cpp
@@ -685,12 +685,12 @@ struct LIBPE_DELAYIMPORT {
     std::vector<LIBPE_DELAYIMPORT_FUNC> vecDelayImpFunc;      //Array of the Delay Import module functions.
 };
 using LIBPE_DELAYIMPORT_VEC = std::vector<LIBPE_DELAYIMPORT>;
-using PCLIBPE_DELAYIMPORT_VEC = const LIBPE_DELAYIMPORT_VEC*;
+using PLIBPE_DELAYIMPORT_VEC = const LIBPE_DELAYIMPORT_VEC*;
 
 ```
 ### [](#)GetCOMDescriptor
 ```cpp
-HRESULT GetCOMDescriptor(PCLIBPE_COMDESCRIPTOR&);
+HRESULT GetCOMDescriptor(PLIBPE_COMDESCRIPTOR&);
 ```
 Gets file's **.NET** info.
 ```cpp
@@ -698,7 +698,7 @@ struct LIBPE_COMDESCRIPTOR {
     DWORD              dwOffsetComDesc; //File's raw offset of the IMAGE_COR20_HEADER descriptor.
     IMAGE_COR20_HEADER stCorHdr;        //Standard IMAGE_COR20_HEADER struct.
 };
-using PCLIBPE_COMDESCRIPTOR = const LIBPE_COMDESCRIPTOR*;
+using PLIBPE_COMDESCRIPTOR = const LIBPE_COMDESCRIPTOR*;
 ```
 ### [](#)Destroy
 ```cpp
@@ -719,7 +719,7 @@ See the [**Usage**](#usage) section for more info.
 
 ### [](#)libpeInfo
 ```cpp
-extern "C" ILIBPEAPI PCLIBPE_INFO __cdecl libpeInfo();
+extern "C" ILIBPEAPI PLIBPE_INFO __cdecl libpeInfo();
 ```
 Returns pointer to `LIBPE_INFO`, which is **libpe** service information structure.
 ```cpp
@@ -736,7 +736,7 @@ struct LIBPE_INFO
         }stVersion;
     };
 };
-using PCLIBPE_INFO = const LIBPE_INFO*;
+using PLIBPE_INFO = const LIBPE_INFO*;
 ```
 
 ## [](#)Error Codes
