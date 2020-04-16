@@ -5,10 +5,10 @@
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #include "stdafx.h"
-#include "clibpe.h"
 #include "../verinfo/version.h"
-#include <strsafe.h>
+#include "clibpe.h"
 #include <cassert> //assert macro.
+#include <strsafe.h>
 
 using namespace libpe;
 
@@ -16,7 +16,7 @@ namespace libpe {
 	/********************************************
 	* CreateRawlibpe function implementation.   *
 	********************************************/
-	extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe*& plibpe)
+	extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe * &plibpe)
 	{
 		plibpe = new Clibpe();
 		return S_OK;
@@ -35,7 +35,7 @@ namespace libpe {
 	* libpeInfo function implementation.        *
 	********************************************/
 	extern "C" ILIBPEAPI PLIBPE_INFO __cdecl libpeInfo()
-	{	
+	{
 		static const LIBPE_INFO stVersion { LIBPE_VERSION_WSTR, LIBPE_VERSION_ULONGLONG };
 
 		return &stVersion;
@@ -634,9 +634,9 @@ LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA) const
 DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA) const
 {
 	DWORD dwOffset { };
-	for (size_t i = 0; i < m_vecSecHeaders.size(); i++)
+	for (const auto& iter : m_vecSecHeaders)
 	{
-		auto& pSecHdr = m_vecSecHeaders[i].stSecHdr;
+		auto& pSecHdr = iter.stSecHdr;
 		//Is RVA within this section?
 		if ((ullRVA >= pSecHdr.VirtualAddress) && (ullRVA < (pSecHdr.VirtualAddress + pSecHdr.Misc.VirtualSize)))
 		{
@@ -655,15 +655,16 @@ DWORD Clibpe::ptrToOffset(LPCVOID lp) const
 		return 0;
 	if (m_fMapViewOfFileWhole)
 		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpBase);
-	else
-		return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwFileOffsetMapped);
+
+	return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwFileOffsetMapped);
 }
 
 DWORD Clibpe::getDirEntryRVA(DWORD dwEntry) const
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
-	else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
+	
+	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 
 	return 0;
@@ -673,7 +674,8 @@ DWORD Clibpe::getDirEntrySize(DWORD dwEntry) const
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
-	else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
+	
+	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].Size;
 
 	return 0;
@@ -1101,8 +1103,8 @@ HRESULT Clibpe::getSectionsHeaders()
 			//So String Table's beginning can be calculated like this:
 			//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
 			char* pEndPtr { };
-			const long lOffset = strtol((const char*)& pSecHdr->Name[1], &pEndPtr, 10);
-			if (!(lOffset == 0 && (pEndPtr == (const char*)& pSecHdr->Name[1] || *pEndPtr != '\0')))
+			const long lOffset = strtol((const char*)&pSecHdr->Name[1], &pEndPtr, 10);
+			if (!(lOffset == 0 && (pEndPtr == (const char*)&pSecHdr->Name[1] || *pEndPtr != '\0')))
 			{
 				const char* lpszSecRealName = (const char*)((DWORD_PTR)m_lpBase +
 					(DWORD_PTR)dwSymbolTable + (DWORD_PTR)dwNumberOfSymbols * 18 + (DWORD_PTR)lOffset);

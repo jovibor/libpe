@@ -5,11 +5,11 @@
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #pragma once
-#include <vector>     //std::vector and related.
-#include <memory>     //std::shared_ptr and related.
-#include <string>     //std::string and related.
 #include <Windows.h>  //All standard Windows' typedefs.
 #include <WinTrust.h> //WIN_CERTIFICATE struct.
+#include <memory>     //std::shared_ptr and related.
+#include <string>     //std::string and related.
+#include <vector>     //std::vector and related.
 
 #ifndef __cpp_lib_byte
 #define __cpp17_conformant 0
@@ -306,7 +306,6 @@ namespace libpe {
 	class Ilibpe
 	{
 	public:
-		virtual ~Ilibpe() = default;
 		virtual HRESULT LoadPe(LPCWSTR) = 0;
 		virtual HRESULT GetImageInfo(DWORD&)noexcept = 0;
 		virtual HRESULT GetImageFlag(DWORD dwFlag, bool& f)noexcept = 0;
@@ -443,8 +442,8 @@ namespace libpe {
 		Ilibpe* ptr { };
 		if (CreateRawlibpe(ptr) == S_OK)
 			return IlibpeUnPtr(ptr, [](Ilibpe * p) { p->Destroy(); });
-		else
-			return IlibpeUnPtr(nullptr, nullptr);
+
+		return IlibpeUnPtr(nullptr, nullptr);
 	};
 
 	//using libpe_ptr = IlibpeUnPtr;

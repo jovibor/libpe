@@ -44,17 +44,17 @@ namespace libpe {
 		HRESULT GetCOMDescriptor(PLIBPE_COMDESCRIPTOR&)noexcept override;
 		HRESULT Destroy()override;
 	private:
-		PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA) const;
-		PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName) const;
-		LPVOID rVAToPtr(ULONGLONG ullRVA) const;
-		DWORD rVAToOffset(ULONGLONG ullRVA) const;
-		DWORD ptrToOffset(LPCVOID lp) const;
-		DWORD getDirEntryRVA(DWORD dwEntry) const;
-		DWORD getDirEntrySize(DWORD dwEntry) const;
-		BYTE getByte(ULONGLONG ullOffset);
-		DWORD getDword(ULONGLONG ullOffset);
-		template<typename T> bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false) const;
-		bool mapFileOffset(ULONGLONG ullOffset);   //Maps file's raw offset. For big files.
+		[[nodiscard]] PIMAGE_SECTION_HEADER getSecHdrFromRVA(ULONGLONG ullRVA)const;
+		[[nodiscard]] PIMAGE_SECTION_HEADER getSecHdrFromName(LPCSTR lpszName)const;
+		[[nodiscard]] LPVOID rVAToPtr(ULONGLONG ullRVA)const;
+		[[nodiscard]] DWORD rVAToOffset(ULONGLONG ullRVA)const;
+		[[nodiscard]] DWORD ptrToOffset(LPCVOID lp)const;
+		[[nodiscard]] DWORD getDirEntryRVA(DWORD dwEntry)const;
+		[[nodiscard]] DWORD getDirEntrySize(DWORD dwEntry)const;
+		[[nodiscard]] BYTE getByte(ULONGLONG ullOffset);
+		[[nodiscard]] DWORD getDword(ULONGLONG ullOffset);
+		template<typename T> [[nodiscard]] bool isPtrSafe(const T tPtr, bool fCanReferenceBoundary = false)const;
+		bool mapFileOffset(ULONGLONG ullOffset); //Maps file's raw offset. For big files.
 		void unmapFileOffset();
 		bool mapDirSection(DWORD dwDirectory);
 		void unmapDirSection() const;
