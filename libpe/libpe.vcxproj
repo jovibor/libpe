@@ -86,7 +86,6 @@
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
     <EmbedManifest>false</EmbedManifest>
-    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
     <IntDir>$(SolutionDir)obj\$(Configuration)\$(Platform)\</IntDir>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
@@ -115,7 +114,8 @@
       <AdditionalOptions>/NOCOFFGRPINFO /pdbaltpath:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)$(MSBuildProjectName).log</Path>
@@ -137,7 +137,8 @@
       <AdditionalOptions>/NOCOFFGRPINFO /pdbaltpath:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)$(MSBuildProjectName).log</Path>
@@ -185,7 +186,8 @@
       <Path>$(IntDir)$(MSBuildProjectName).log</Path>
     </BuildLog>
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <Manifest>
       <OutputManifestFile />
@@ -232,7 +234,8 @@
     </Manifest>
     <BuildLog />
     <PostBuildEvent>
-      <Command>powershell.exe $(ProjectDir)verinfo\VerInfoRun.ps1 -versionFile  $(ProjectDir)verinfo\version.h -patchFile $(TargetDir)$(TargetName)$(TargetExt)</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)$(MSBuildProjectName).log</Path>
@@ -242,7 +245,6 @@
     <ClInclude Include="libpe.h" />
     <ClInclude Include="src\clibpe.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="verinfo\version.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\clibpe.cpp" />

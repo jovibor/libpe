@@ -5,9 +5,9 @@
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #include "stdafx.h"
-#include "../verinfo/version.h"
 #include "clibpe.h"
-#include <cassert> //assert macro.
+#include "version.h"
+#include <cassert>
 #include <strsafe.h>
 
 using namespace libpe;
@@ -48,14 +48,14 @@ namespace libpe {
 	}
 }
 
-HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
+HRESULT Clibpe::LoadPe(LPCWSTR pwszFilePath)
 {
-	assert(lpszFileName); //File name is nullptr.
+	assert(pwszFilePath); //File name is nullptr.
 
 	if (m_fLoaded) //If PE file was already previously loaded.
 		clearAll();
 
-	m_hFile = CreateFileW(lpszFileName, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	m_hFile = CreateFileW(pwszFilePath, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE)
 		return E_FILE_CREATEFILE_FAILED;
 
@@ -82,8 +82,8 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 		{
 			//If file is too big to fit process' VirtualSize limit
 			//we try to allocate at least some memory to map file's beginning, where PE HEADER resides.
-			//Then going to MapViewOfFile/Unmap every section individually. 
-			if ((m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, (DWORD_PTR)m_dwMinBytesToMap)) == nullptr)
+			//Then going to MapViewOfFile/Unmap every section individually.
+			if ((m_lpBase = MapViewOfFile(m_hMapObject, FILE_MAP_READ, 0, 0, static_cast<DWORD_PTR>(m_dwMinBytesToMap))) == nullptr)
 			{
 				CloseHandle(m_hMapObject);
 				CloseHandle(m_hFile);
@@ -144,18 +144,18 @@ HRESULT Clibpe::LoadPe(LPCWSTR lpszFileName)
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageInfo(DWORD& dw)noexcept
+HRESULT Clibpe::GetImageInfo(DWORD& dwInfo)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 		return E_CALL_LOADPE_FIRST;
 
-	dw = m_dwImageFlags;
+	dwInfo = m_dwImageFlags;
 
 	return S_OK;
 }
 
-HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool & f)noexcept
+HRESULT Clibpe::GetImageFlag(DWORD dwFlag, bool& f)const noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
@@ -492,40 +492,40 @@ HRESULT Clibpe::GetLoadConfig(PLIBPE_LOADCONFIG& pLCD)noexcept
 	return S_OK;
 }
 
-HRESULT Clibpe::GetBoundImport(PLIBPE_BOUNDIMPORT_VEC& pVecBoundImport)noexcept
+HRESULT Clibpe::GetBoundImport(PLIBPE_BOUNDIMPORT_VEC& pVecBoundImp)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
-		pVecBoundImport = nullptr;
+		pVecBoundImp = nullptr;
 		return E_CALL_LOADPE_FIRST;
 	}
 	if (!ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_BOUNDIMPORT))
 	{
-		pVecBoundImport = nullptr;
+		pVecBoundImp = nullptr;
 		return E_IMAGE_HAS_NO_BOUNDIMPORT;
 	}
 
-	pVecBoundImport = &m_vecBoundImport;
+	pVecBoundImp = &m_vecBoundImport;
 
 	return S_OK;
 }
 
-HRESULT Clibpe::GetDelayImport(PLIBPE_DELAYIMPORT_VEC& pVecDelayImport)noexcept
+HRESULT Clibpe::GetDelayImport(PLIBPE_DELAYIMPORT_VEC& pVecDelayImp)noexcept
 {
 	assert(m_fLoaded); //Is loaded?
 	if (!m_fLoaded)
 	{
-		pVecDelayImport = nullptr;
+		pVecDelayImp = nullptr;
 		return E_CALL_LOADPE_FIRST;
 	}
 	if (!ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_DELAYIMPORT))
 	{
-		pVecDelayImport = nullptr;
+		pVecDelayImp = nullptr;
 		return 	E_IMAGE_HAS_NO_DELAYIMPORT;
 	}
 
-	pVecDelayImport = &m_vecDelayImport;
+	pVecDelayImp = &m_vecDelayImport;
 
 	return S_OK;
 }
@@ -556,7 +556,7 @@ HRESULT Clibpe::Destroy()
 	return S_OK;
 }
 
-PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA) const
+PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA)const
 {
 	PIMAGE_SECTION_HEADER pSecHdr;
 	WORD wNumOfSections;
@@ -586,7 +586,7 @@ PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromRVA(ULONGLONG ullRVA) const
 	return nullptr;
 }
 
-PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromName(LPCSTR lpszName) const
+PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromName(LPCSTR lpszName)const
 {
 	PIMAGE_SECTION_HEADER pSecHdr;
 	WORD wNumberOfSections;
@@ -615,9 +615,9 @@ PIMAGE_SECTION_HEADER Clibpe::getSecHdrFromName(LPCSTR lpszName) const
 	return nullptr;
 }
 
-LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA) const
+LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA)const
 {
-	const PIMAGE_SECTION_HEADER pSecHdr = getSecHdrFromRVA(ullRVA);
+	const auto pSecHdr = getSecHdrFromRVA(ullRVA);
 	if (!pSecHdr)
 		return nullptr;
 
@@ -631,7 +631,7 @@ LPVOID Clibpe::rVAToPtr(ULONGLONG ullRVA) const
 	return isPtrSafe(ptr, true) ? ptr : nullptr;
 }
 
-DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA) const
+DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA)const
 {
 	DWORD dwOffset { };
 	for (const auto& iter : m_vecSecHeaders)
@@ -649,7 +649,7 @@ DWORD Clibpe::rVAToOffset(ULONGLONG ullRVA) const
 	return dwOffset;
 }
 
-DWORD Clibpe::ptrToOffset(LPCVOID lp) const
+DWORD Clibpe::ptrToOffset(LPCVOID lp)const
 {
 	if (!lp)
 		return 0;
@@ -659,22 +659,22 @@ DWORD Clibpe::ptrToOffset(LPCVOID lp) const
 	return DWORD((DWORD_PTR)lp - (DWORD_PTR)m_lpSectionBase + (DWORD_PTR)m_dwFileOffsetMapped);
 }
 
-DWORD Clibpe::getDirEntryRVA(DWORD dwEntry) const
+DWORD Clibpe::getDirEntryRVA(DWORD dwEntry)const
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
-	
+
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 
 	return 0;
 }
 
-DWORD Clibpe::getDirEntrySize(DWORD dwEntry) const
+DWORD Clibpe::getDirEntrySize(DWORD dwEntry)const
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
-	
+
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64) && ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_OPTHEADER))
 		return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].Size;
 
@@ -721,7 +721,7 @@ DWORD Clibpe::getDword(ULONGLONG ullOffset)
 * valid for some PE structures. Template is used just for convenience, sometimes there is a need  *
 * to check pure address DWORD_PTR instead of a pointer.                                           *
 **************************************************************************************************/
-template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoundary) const
+template<typename T> bool Clibpe::isPtrSafe(const T tPtr, bool fCanReferenceBoundary)const
 {
 	return !tPtr ? false : (fCanReferenceBoundary ?
 		((DWORD_PTR)tPtr <= m_ullMaxPointerBound && (DWORD_PTR)tPtr >= (DWORD_PTR)m_lpBase) :
@@ -748,8 +748,8 @@ bool Clibpe::mapFileOffset(ULONGLONG ullOffset)
 	if ((LONGLONG)(ullStartOffsetMapped + dwSizeToMap) > m_stFileSize.QuadPart)
 		dwSizeToMap = (DWORD_PTR)(m_stFileSize.QuadPart - (LONGLONG)ullStartOffsetMapped);
 
-	DWORD dwOffsetHigh = (ullStartOffsetMapped >> 32) & 0xFFFFFFFFul;
-	DWORD dwOffsetLow = ullStartOffsetMapped & 0xFFFFFFFFul;
+	DWORD dwOffsetHigh = (ullStartOffsetMapped >> 32) & 0xFFFFFFFFUL;
+	DWORD dwOffsetLow = ullStartOffsetMapped & 0xFFFFFFFFUL;
 	LPVOID lpData { };
 	if ((lpData = MapViewOfFile(m_hMapObject, FILE_MAP_READ, dwOffsetHigh, dwOffsetLow, dwSizeToMap)) == nullptr)
 		return E_FILE_MAPVIEWOFFILE_SECTION_FAILED;
@@ -762,7 +762,7 @@ bool Clibpe::mapFileOffset(ULONGLONG ullOffset)
 	return true;
 }
 
-void Clibpe::unmapFileOffset()
+void Clibpe::unmapFileOffset()const
 {
 	if (m_stQuery.lpData)
 		UnmapViewOfFile(m_stQuery.lpData);
@@ -811,7 +811,7 @@ bool Clibpe::mapDirSection(DWORD dwDirectory)
 	return true;
 }
 
-void Clibpe::unmapDirSection() const
+void Clibpe::unmapDirSection()const
 {
 	UnmapViewOfFile(m_lpSectionBase);
 }
@@ -939,7 +939,7 @@ HRESULT Clibpe::getRichHeader()
 	if (m_pDosHeader->e_lfanew <= 0x80 || !isPtrSafe((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew))
 		return E_IMAGE_HAS_NO_RICHHEADER;
 
-	const PDWORD pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
+	const auto pRichStartVA = (PDWORD)((DWORD_PTR)m_pDosHeader + 0x80);
 	PDWORD pRichIter = pRichStartVA;
 
 	for (int i = 0; i < ((m_pDosHeader->e_lfanew - 0x80) / 4); i++, pRichIter++)
@@ -981,7 +981,7 @@ HRESULT Clibpe::getRichHeader()
 
 HRESULT Clibpe::getNTFileOptHeader()
 {
-	PIMAGE_NT_HEADERS32 pNTHeader = (PIMAGE_NT_HEADERS32)((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew);
+	auto pNTHeader = (PIMAGE_NT_HEADERS32)((DWORD_PTR)m_pDosHeader + (DWORD_PTR)m_pDosHeader->e_lfanew);
 	if (!isPtrSafe((DWORD_PTR)pNTHeader + sizeof(IMAGE_NT_HEADERS32)))
 		return E_IMAGE_HAS_NO_NTHEADER;
 
@@ -1130,18 +1130,18 @@ HRESULT Clibpe::getExport()
 	const DWORD dwExportStartRVA = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT);
 	const DWORD dwExportEndRVA = dwExportStartRVA + getDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXPORT);
 
-	const PIMAGE_EXPORT_DIRECTORY pExportDir = (PIMAGE_EXPORT_DIRECTORY)rVAToPtr(dwExportStartRVA);
+	const auto pExportDir = (PIMAGE_EXPORT_DIRECTORY)rVAToPtr(dwExportStartRVA);
 	if (!pExportDir)
 		return E_IMAGE_HAS_NO_EXPORT;
 
-	const PDWORD pdwFuncs = (PDWORD)rVAToPtr(pExportDir->AddressOfFunctions);
+	const auto pdwFuncs = (PDWORD)rVAToPtr(pExportDir->AddressOfFunctions);
 	if (!pdwFuncs)
 		return E_IMAGE_HAS_NO_EXPORT;
 
 	std::vector<LIBPE_EXPORT_FUNC> vecFuncs;
 	std::string strModuleName;
-	const PWORD pwOrdinals = (PWORD)rVAToPtr(pExportDir->AddressOfNameOrdinals);
-	LPCSTR* ppszNames = (LPCSTR*)rVAToPtr(pExportDir->AddressOfNames);
+	const auto pwOrdinals = (PWORD)rVAToPtr(pExportDir->AddressOfNameOrdinals);
+	auto* ppszNames = (LPCSTR*)rVAToPtr(pExportDir->AddressOfNames);
 
 	try {
 		for (size_t iterFuncs = 0; iterFuncs < (size_t)pExportDir->NumberOfFunctions; iterFuncs++)
@@ -1162,7 +1162,7 @@ HRESULT Clibpe::getExport()
 						//Cycling through ordinals table to get func name.
 						if (pwOrdinals[iterFuncNames] == iterFuncs)
 						{
-							const LPCSTR pszFuncName = (LPCSTR)rVAToPtr((DWORD_PTR)ppszNames[iterFuncNames]);
+							const auto pszFuncName = (LPCSTR)rVAToPtr((DWORD_PTR)ppszNames[iterFuncNames]);
 							//Checking func name for length correctness.
 							if (pszFuncName && (StringCchLengthA(pszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 								strFuncName = pszFuncName;
@@ -1171,7 +1171,7 @@ HRESULT Clibpe::getExport()
 					}
 				if ((pdwFuncs[iterFuncs] >= dwExportStartRVA) && (pdwFuncs[iterFuncs] <= dwExportEndRVA))
 				{
-					const LPCSTR pszForwarderName = (LPCSTR)rVAToPtr(pdwFuncs[iterFuncs]);
+					const auto pszForwarderName = (LPCSTR)rVAToPtr(pdwFuncs[iterFuncs]);
 					//Checking forwarder name for length correctness.
 					if (pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strForwarderName = pszForwarderName;
@@ -1180,7 +1180,7 @@ HRESULT Clibpe::getExport()
 					{ pdwFuncs[iterFuncs], (DWORD)iterFuncs/*Ordinal*/, std::move(strFuncName), std::move(strForwarderName) });
 			}
 		}
-		const LPCSTR szExportName = (LPCSTR)rVAToPtr(pExportDir->Name);
+		const auto szExportName = (LPCSTR)rVAToPtr(pExportDir->Name);
 		//Checking Export name for length correctness.
 		if (szExportName && (StringCchLengthA(szExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 			strModuleName = szExportName;
@@ -1209,7 +1209,7 @@ HRESULT Clibpe::getExport()
 
 HRESULT Clibpe::getImport()
 {
-	PIMAGE_IMPORT_DESCRIPTOR pImpDesc = (PIMAGE_IMPORT_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT));
+	auto pImpDesc = (PIMAGE_IMPORT_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT));
 
 	if (!pImpDesc)
 		return E_IMAGE_HAS_NO_IMPORT;
@@ -1227,7 +1227,7 @@ HRESULT Clibpe::getImport()
 		{
 			while (pImpDesc->Name)
 			{
-				PIMAGE_THUNK_DATA32 pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
+				auto pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
 				if (!pThunk32)
 					pThunk32 = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pImpDesc->FirstThunk;
 
@@ -1249,7 +1249,7 @@ HRESULT Clibpe::getImport()
 						std::string strFuncName { };
 						if (!(pThunk32->u1.Ordinal & IMAGE_ORDINAL_FLAG32))
 						{
-							const PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk32->u1.AddressOfData);
+							const auto pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk32->u1.AddressOfData);
 							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 								stImpByName = *pName;
 								strFuncName = pName->Name;
@@ -1263,7 +1263,7 @@ HRESULT Clibpe::getImport()
 							break;
 					}
 
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
+					const auto szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
@@ -1284,7 +1284,7 @@ HRESULT Clibpe::getImport()
 		{
 			while (pImpDesc->Name)
 			{
-				PIMAGE_THUNK_DATA64 pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
+				auto pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->OriginalFirstThunk;
 				if (!pThunk64)
 					pThunk64 = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pImpDesc->FirstThunk;
 
@@ -1305,7 +1305,7 @@ HRESULT Clibpe::getImport()
 						std::string strFuncName { };
 						if (!(pThunk64->u1.Ordinal & IMAGE_ORDINAL_FLAG32))
 						{
-							const PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk64->u1.AddressOfData);
+							const auto pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk64->u1.AddressOfData);
 							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 								stImpByName = *pName;
 								strFuncName = pName->Name;
@@ -1320,7 +1320,7 @@ HRESULT Clibpe::getImport()
 							break;
 					}
 
-					const LPCSTR szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
+					const auto szName = (LPCSTR)rVAToPtr(pImpDesc->Name);
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
@@ -1360,11 +1360,11 @@ HRESULT Clibpe::getImport()
 
 HRESULT Clibpe::getResources()
 {
-	PIMAGE_RESOURCE_DIRECTORY pResDirRoot = (PIMAGE_RESOURCE_DIRECTORY)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE));
+	auto pResDirRoot = (PIMAGE_RESOURCE_DIRECTORY)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE));
 	if (!pResDirRoot)
 		return E_IMAGE_HAS_NO_RESOURCE;
 
-	PIMAGE_RESOURCE_DIRECTORY_ENTRY pResDirEntryRoot = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirRoot + 1);
+	auto pResDirEntryRoot = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirRoot + 1);
 	if (!isPtrSafe(pResDirEntryRoot))
 		return E_IMAGE_HAS_NO_RESOURCE;
 
@@ -1396,7 +1396,7 @@ HRESULT Clibpe::getResources()
 			}
 			if (pResDirEntryRoot->DataIsDirectory)
 			{
-				const PIMAGE_RESOURCE_DIRECTORY pResDirLvL2 = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pResDirRoot + (DWORD_PTR)pResDirEntryRoot->OffsetToDirectory);
+				const auto pResDirLvL2 = (PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pResDirRoot + (DWORD_PTR)pResDirEntryRoot->OffsetToDirectory);
 				std::vector<LIBPE_RESOURCE_LVL2_DATA> vecResLvL2;
 
 				if (!isPtrSafe(pResDirLvL2))
@@ -1405,7 +1405,7 @@ HRESULT Clibpe::getResources()
 					stResLvL2 = { ptrToOffset(pResDirLvL2), *pResDirLvL2, vecResLvL2 };
 				else
 				{
-					PIMAGE_RESOURCE_DIRECTORY_ENTRY pResDirEntryLvL2 = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirLvL2 + 1);
+					auto pResDirEntryLvL2 = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirLvL2 + 1);
 					DWORD dwNumOfEntriesLvL2 = pResDirLvL2->NumberOfNamedEntries + pResDirLvL2->NumberOfIdEntries;
 					if (!isPtrSafe(pResDirEntryLvL2 + dwNumOfEntriesLvL2))
 						break;
@@ -1431,7 +1431,7 @@ HRESULT Clibpe::getResources()
 
 						if (pResDirEntryLvL2->DataIsDirectory)
 						{
-							const PIMAGE_RESOURCE_DIRECTORY pResDirLvL3 =
+							const auto pResDirLvL3 =
 								(PIMAGE_RESOURCE_DIRECTORY)((DWORD_PTR)pResDirRoot + (DWORD_PTR)pResDirEntryLvL2->OffsetToDirectory);
 							std::vector<LIBPE_RESOURCE_LVL3_DATA> vecResLvL3;
 
@@ -1441,7 +1441,7 @@ HRESULT Clibpe::getResources()
 								stResLvL3 = { ptrToOffset(pResDirLvL3), *pResDirLvL3, vecResLvL3 };
 							else
 							{
-								PIMAGE_RESOURCE_DIRECTORY_ENTRY pResDirEntryLvL3 = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirLvL3 + 1);
+								auto pResDirEntryLvL3 = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(pResDirLvL3 + 1);
 								DWORD dwNumOfEntriesLvL3 = pResDirLvL3->NumberOfNamedEntries + pResDirLvL3->NumberOfIdEntries;
 								if (!isPtrSafe(pResDirEntryLvL3 + dwNumOfEntriesLvL3))
 									break;
@@ -1462,7 +1462,7 @@ HRESULT Clibpe::getResources()
 											wstrResNameLvL3.assign(pResDirStr->NameString, pResDirStr->Length < MAX_PATH ? pResDirStr->Length : MAX_PATH);
 									}
 
-									const PIMAGE_RESOURCE_DATA_ENTRY pResDataEntryLvL3 =
+									const auto pResDataEntryLvL3 =
 										(PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pResDirRoot + (DWORD_PTR)pResDirEntryLvL3->OffsetToData);
 									if (isPtrSafe(pResDataEntryLvL3))
 									{	//Resource LvL 3 RAW Data.
@@ -1471,7 +1471,7 @@ HRESULT Clibpe::getResources()
 										//like IMAGE_RESOURCE_DIRECTORY_ENTRY::OffsetToData.
 										//MS doesn't tend to make things simpler.
 
-										std::byte* pThirdResRawDataBegin = (std::byte*)rVAToPtr(pResDataEntryLvL3->OffsetToData);
+										auto pThirdResRawDataBegin = (std::byte*)rVAToPtr(pResDataEntryLvL3->OffsetToData);
 										//Checking RAW Resource data pointer out of bounds.
 										if (pThirdResRawDataBegin && isPtrSafe((DWORD_PTR)pThirdResRawDataBegin + (DWORD_PTR)pResDataEntryLvL3->Size, true))
 										{
@@ -1496,7 +1496,7 @@ HRESULT Clibpe::getResources()
 							pResDataEntryLvL2 = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pResDirRoot + (DWORD_PTR)pResDirEntryLvL2->OffsetToData);
 							if (isPtrSafe(pResDataEntryLvL2))
 							{
-								std::byte* pSecondResRawDataBegin = (std::byte*)rVAToPtr(pResDataEntryLvL2->OffsetToData);
+								auto pSecondResRawDataBegin = (std::byte*)rVAToPtr(pResDataEntryLvL2->OffsetToData);
 								//Checking RAW Resource data pointer out of bounds.
 								if (pSecondResRawDataBegin && isPtrSafe((DWORD_PTR)pSecondResRawDataBegin + (DWORD_PTR)pResDataEntryLvL2->Size, true))
 								{
@@ -1521,7 +1521,7 @@ HRESULT Clibpe::getResources()
 				pResDataEntryRoot = (PIMAGE_RESOURCE_DATA_ENTRY)((DWORD_PTR)pResDirRoot + (DWORD_PTR)pResDirEntryRoot->OffsetToData);
 				if (isPtrSafe(pResDataEntryRoot))
 				{
-					std::byte* pRootResRawDataBegin = (std::byte*)rVAToPtr(pResDataEntryRoot->OffsetToData);
+					auto pRootResRawDataBegin = (std::byte*)rVAToPtr(pResDataEntryRoot->OffsetToData);
 					//Checking RAW Resource data pointer out of bounds.
 					if (pRootResRawDataBegin && isPtrSafe((DWORD_PTR)pRootResRawDataBegin + (DWORD_PTR)pResDataEntryRoot->Size, true))
 					{
@@ -1563,7 +1563,7 @@ HRESULT Clibpe::getExceptions()
 {
 	//IMAGE_RUNTIME_FUNCTION_ENTRY (without leading underscore) 
 	//might have different typedef depending on defined platform, see winnt.h
-	_PIMAGE_RUNTIME_FUNCTION_ENTRY pRuntimeFuncsEntry = (_PIMAGE_RUNTIME_FUNCTION_ENTRY)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION));
+	auto pRuntimeFuncsEntry = (_PIMAGE_RUNTIME_FUNCTION_ENTRY)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION));
 	if (!pRuntimeFuncsEntry)
 		return E_IMAGE_HAS_NO_EXCEPTION;
 
@@ -1620,7 +1620,7 @@ HRESULT Clibpe::getSecurity()
 
 	while (dwSecurityDirStartVA < dwSecurityDirEndVA)
 	{
-		LPWIN_CERTIFICATE pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
+		auto pCertificate = (LPWIN_CERTIFICATE)dwSecurityDirStartVA;
 		DWORD dwCertSize = pCertificate->dwLength - (DWORD)offsetof(WIN_CERTIFICATE, bCertificate);
 		if (!isPtrSafe(dwSecurityDirStartVA + (DWORD_PTR)dwCertSize))
 			break;
@@ -1642,7 +1642,7 @@ HRESULT Clibpe::getSecurity()
 
 HRESULT Clibpe::getRelocations()
 {
-	PIMAGE_BASE_RELOCATION pBaseRelocDesc = (PIMAGE_BASE_RELOCATION)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC));
+	auto pBaseRelocDesc = (PIMAGE_BASE_RELOCATION)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC));
 
 	if (!pBaseRelocDesc)
 		return E_IMAGE_HAS_NO_BASERELOC;
@@ -1662,7 +1662,7 @@ HRESULT Clibpe::getRelocations()
 
 			//Amount of Reloc entries.
 			DWORD dwNumRelocEntries = (pBaseRelocDesc->SizeOfBlock - (DWORD)sizeof(IMAGE_BASE_RELOCATION)) / (DWORD)sizeof(WORD);
-			PWORD pwRelocEntry = PWORD((DWORD_PTR)pBaseRelocDesc + sizeof(IMAGE_BASE_RELOCATION));
+			auto pwRelocEntry = PWORD((DWORD_PTR)pBaseRelocDesc + sizeof(IMAGE_BASE_RELOCATION));
 			std::vector<LIBPE_RELOC_DATA> vecRelocs;
 			for (DWORD i = 0; i < dwNumRelocEntries; i++, pwRelocEntry++)
 			{
@@ -1805,7 +1805,7 @@ HRESULT Clibpe::getArchitecture()
 	if (!dwArchDirRVA)
 		return E_IMAGE_HAS_NO_ARCHITECTURE;
 
-	const PIMAGE_ARCHITECTURE_ENTRY pArchEntry = (PIMAGE_ARCHITECTURE_ENTRY)rVAToPtr(dwArchDirRVA);
+	const auto pArchEntry = (PIMAGE_ARCHITECTURE_ENTRY)rVAToPtr(dwArchDirRVA);
 	if (!pArchEntry)
 		return E_IMAGE_HAS_NO_ARCHITECTURE;
 
@@ -1816,7 +1816,7 @@ HRESULT Clibpe::getArchitecture()
 
 HRESULT Clibpe::getGlobalPtr()
 {
-	const DWORD_PTR dwGlobalPTRDirRVA = (DWORD_PTR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_GLOBALPTR));
+	const auto dwGlobalPTRDirRVA = (DWORD_PTR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_GLOBALPTR));
 	if (!dwGlobalPTRDirRVA)
 		return E_IMAGE_HAS_NO_GLOBALPTR;
 
@@ -1827,7 +1827,7 @@ HRESULT Clibpe::getGlobalPtr()
 
 HRESULT Clibpe::getTLS()
 {
-	const DWORD dwTLSDirRVA = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
+	const auto dwTLSDirRVA = getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_TLS);
 	if (!dwTLSDirRVA)
 		return E_IMAGE_HAS_NO_TLS;
 
@@ -1839,7 +1839,7 @@ HRESULT Clibpe::getTLS()
 
 		if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32))
 		{
-			const PIMAGE_TLS_DIRECTORY32 pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
+			const auto pTLSDir32 = (PIMAGE_TLS_DIRECTORY32)rVAToPtr(dwTLSDirRVA);
 			if (!pTLSDir32)
 				return E_IMAGE_HAS_NO_TLS;
 
@@ -1851,7 +1851,7 @@ HRESULT Clibpe::getTLS()
 		}
 		else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64))
 		{
-			const PIMAGE_TLS_DIRECTORY64 pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)rVAToPtr(dwTLSDirRVA);
+			const auto pTLSDir64 = (PIMAGE_TLS_DIRECTORY64)rVAToPtr(dwTLSDirRVA);
 			if (!pTLSDir64)
 				return E_IMAGE_HAS_NO_TLS;
 
@@ -1864,7 +1864,7 @@ HRESULT Clibpe::getTLS()
 		else
 			return E_IMAGE_HAS_NO_TLS;
 
-		PDWORD pTLSCallbacks = (PDWORD)rVAToPtr(ullAddressOfCallBacks - m_ullImageBase);
+		auto pTLSCallbacks = (PDWORD)rVAToPtr(ullAddressOfCallBacks - m_ullImageBase);
 		if (pTLSCallbacks)
 		{
 			while (*pTLSCallbacks)
@@ -1902,8 +1902,7 @@ HRESULT Clibpe::getLCD()
 {
 	if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE32))
 	{
-		const PIMAGE_LOAD_CONFIG_DIRECTORY32 pLCD32 =
-			(PIMAGE_LOAD_CONFIG_DIRECTORY32)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
+		const auto pLCD32 = (PIMAGE_LOAD_CONFIG_DIRECTORY32)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
 		if (!pLCD32 || !isPtrSafe((DWORD_PTR)pLCD32 + sizeof(IMAGE_LOAD_CONFIG_DIRECTORY32)))
 			return E_IMAGE_HAS_NO_LOADCONFIG;
 
@@ -1912,8 +1911,7 @@ HRESULT Clibpe::getLCD()
 	}
 	else if (ImageHasFlag(m_dwImageFlags, IMAGE_FLAG_PE64))
 	{
-		const PIMAGE_LOAD_CONFIG_DIRECTORY64 pLCD64 =
-			(PIMAGE_LOAD_CONFIG_DIRECTORY64)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
+		const auto pLCD64 = (PIMAGE_LOAD_CONFIG_DIRECTORY64)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG));
 		if (!pLCD64 || !isPtrSafe((DWORD_PTR)pLCD64 + sizeof(PIMAGE_LOAD_CONFIG_DIRECTORY64)))
 			return E_IMAGE_HAS_NO_LOADCONFIG;
 
@@ -1930,8 +1928,7 @@ HRESULT Clibpe::getLCD()
 
 HRESULT Clibpe::getBoundImport()
 {
-	PIMAGE_BOUND_IMPORT_DESCRIPTOR pBoundImpDesc =
-		(PIMAGE_BOUND_IMPORT_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT));
+	auto pBoundImpDesc = (PIMAGE_BOUND_IMPORT_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT));
 
 	if (!pBoundImpDesc)
 		return E_IMAGE_HAS_NO_BOUNDIMPORT;
@@ -1941,7 +1938,7 @@ HRESULT Clibpe::getBoundImport()
 		std::string strModuleName;
 		std::vector<LIBPE_BOUNDFORWARDER> vecBoundForwarders;
 
-		PIMAGE_BOUND_FORWARDER_REF pBoundImpForwarder = (PIMAGE_BOUND_FORWARDER_REF)(pBoundImpDesc + 1);
+		auto pBoundImpForwarder = (PIMAGE_BOUND_FORWARDER_REF)(pBoundImpDesc + 1);
 		if (!isPtrSafe(pBoundImpForwarder))
 			break;
 
@@ -1949,7 +1946,7 @@ HRESULT Clibpe::getBoundImport()
 		{
 			std::string strForwarderModuleName { };
 
-			const LPCSTR szName = (LPCSTR)((DWORD_PTR)pBoundImpDesc + pBoundImpForwarder->OffsetModuleName);
+			const auto szName = (LPCSTR)((DWORD_PTR)pBoundImpDesc + pBoundImpForwarder->OffsetModuleName);
 			if (isPtrSafe(szName))
 				if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 					strForwarderModuleName = szName;
@@ -1964,7 +1961,7 @@ HRESULT Clibpe::getBoundImport()
 				break;
 		}
 
-		const LPCSTR szName = (LPCSTR)((DWORD_PTR)pBoundImpDesc + pBoundImpDesc->OffsetModuleName);
+		const auto szName = (LPCSTR)((DWORD_PTR)pBoundImpDesc + pBoundImpDesc->OffsetModuleName);
 		if (isPtrSafe(szName))
 			if (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)
 				strModuleName = szName;
@@ -1982,7 +1979,7 @@ HRESULT Clibpe::getBoundImport()
 
 HRESULT Clibpe::getIAT()
 {
-	const DWORD_PTR dwIATDirRVA = (DWORD_PTR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IAT));
+	const auto dwIATDirRVA = (DWORD_PTR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IAT));
 	if (!dwIATDirRVA)
 		return E_IMAGE_HAS_NO_IAT;
 
@@ -1993,7 +1990,7 @@ HRESULT Clibpe::getIAT()
 
 HRESULT Clibpe::getDelayImport()
 {
-	PIMAGE_DELAYLOAD_DESCRIPTOR pDelayImpDescr = (PIMAGE_DELAYLOAD_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT));
+	auto pDelayImpDescr = (PIMAGE_DELAYLOAD_DESCRIPTOR)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT));
 	if (!pDelayImpDescr)
 		return E_IMAGE_HAS_NO_DELAYIMPORT;
 
@@ -2003,7 +2000,7 @@ HRESULT Clibpe::getDelayImport()
 	{
 		while (pDelayImpDescr->DllNameRVA)
 		{
-			PIMAGE_THUNK_DATA32 pThunk32Name = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pDelayImpDescr->ImportNameTableRVA;
+			auto pThunk32Name = (PIMAGE_THUNK_DATA32)(DWORD_PTR)pDelayImpDescr->ImportNameTableRVA;
 
 			if (!pThunk32Name) {
 				if (!isPtrSafe(++pDelayImpDescr))
@@ -2015,11 +2012,9 @@ HRESULT Clibpe::getDelayImport()
 				std::vector<LIBPE_DELAYIMPORT_FUNC> vecFunc;
 
 				pThunk32Name = (PIMAGE_THUNK_DATA32)rVAToPtr((DWORD_PTR)pThunk32Name);
-				PIMAGE_THUNK_DATA32 pThunk32IAT = (PIMAGE_THUNK_DATA32)rVAToPtr(pDelayImpDescr->ImportAddressTableRVA);
-				PIMAGE_THUNK_DATA32 pThunk32BoundIAT = (PIMAGE_THUNK_DATA32)rVAToPtr(
-					pDelayImpDescr->BoundImportAddressTableRVA);
-				PIMAGE_THUNK_DATA32 pThunk32UnloadInfoTable = (PIMAGE_THUNK_DATA32)rVAToPtr(
-					pDelayImpDescr->UnloadInformationTableRVA);
+				auto pThunk32IAT = (PIMAGE_THUNK_DATA32)rVAToPtr(pDelayImpDescr->ImportAddressTableRVA);
+				auto pThunk32BoundIAT = (PIMAGE_THUNK_DATA32)rVAToPtr(pDelayImpDescr->BoundImportAddressTableRVA);
+				auto pThunk32UnloadInfoTable = (PIMAGE_THUNK_DATA32)rVAToPtr(pDelayImpDescr->UnloadInformationTableRVA);
 
 				if (!pThunk32Name)
 					break;
@@ -2035,7 +2030,7 @@ HRESULT Clibpe::getDelayImport()
 					IMAGE_IMPORT_BY_NAME stImpByName { };
 					if (!(pThunk32Name->u1.Ordinal & IMAGE_ORDINAL_FLAG32))
 					{
-						const PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk32Name->u1.AddressOfData);
+						const auto pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk32Name->u1.AddressOfData);
 						if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						{
 							stImpByName = *pName;
@@ -2057,7 +2052,7 @@ HRESULT Clibpe::getDelayImport()
 							break;
 				}
 
-				const LPCSTR szName = (LPCSTR)rVAToPtr(pDelayImpDescr->DllNameRVA);
+				const auto szName = (LPCSTR)rVAToPtr(pDelayImpDescr->DllNameRVA);
 				if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 					strDllName = szName;
 
@@ -2072,7 +2067,7 @@ HRESULT Clibpe::getDelayImport()
 	{
 		while (pDelayImpDescr->DllNameRVA)
 		{
-			PIMAGE_THUNK_DATA64 pThunk64Name = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pDelayImpDescr->ImportNameTableRVA;
+			auto pThunk64Name = (PIMAGE_THUNK_DATA64)(DWORD_PTR)pDelayImpDescr->ImportNameTableRVA;
 
 			if (!pThunk64Name) {
 				if (!isPtrSafe(++pDelayImpDescr))
@@ -2084,11 +2079,9 @@ HRESULT Clibpe::getDelayImport()
 				std::vector<LIBPE_DELAYIMPORT_FUNC> vecFunc;
 
 				pThunk64Name = (PIMAGE_THUNK_DATA64)rVAToPtr((DWORD_PTR)pThunk64Name);
-				PIMAGE_THUNK_DATA64 pThunk64IAT = (PIMAGE_THUNK_DATA64)rVAToPtr(pDelayImpDescr->ImportAddressTableRVA);
-				PIMAGE_THUNK_DATA64 pThunk64BoundIAT = (PIMAGE_THUNK_DATA64)rVAToPtr(
-					pDelayImpDescr->BoundImportAddressTableRVA);
-				PIMAGE_THUNK_DATA64 pThunk64UnloadInfoTable = (PIMAGE_THUNK_DATA64)rVAToPtr(
-					pDelayImpDescr->UnloadInformationTableRVA);
+				auto pThunk64IAT = (PIMAGE_THUNK_DATA64)rVAToPtr(pDelayImpDescr->ImportAddressTableRVA);
+				auto pThunk64BoundIAT = (PIMAGE_THUNK_DATA64)rVAToPtr(pDelayImpDescr->BoundImportAddressTableRVA);
+				auto pThunk64UnloadInfoTable = (PIMAGE_THUNK_DATA64)rVAToPtr(pDelayImpDescr->UnloadInformationTableRVA);
 
 				if (!pThunk64Name)
 					break;
@@ -2104,7 +2097,7 @@ HRESULT Clibpe::getDelayImport()
 					IMAGE_IMPORT_BY_NAME stImpByName { };
 					if (!(pThunk64Name->u1.Ordinal & IMAGE_ORDINAL_FLAG64))
 					{
-						const PIMAGE_IMPORT_BY_NAME pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk64Name->u1.AddressOfData);
+						const auto pName = (PIMAGE_IMPORT_BY_NAME)rVAToPtr(pThunk64Name->u1.AddressOfData);
 						if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						{
 							stImpByName = *pName;
@@ -2126,7 +2119,7 @@ HRESULT Clibpe::getDelayImport()
 							break;
 				}
 
-				const LPCSTR szName = (LPCSTR)rVAToPtr(pDelayImpDescr->DllNameRVA);
+				const auto szName = (LPCSTR)rVAToPtr(pDelayImpDescr->DllNameRVA);
 				if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 					strDllName = szName;
 
@@ -2144,7 +2137,7 @@ HRESULT Clibpe::getDelayImport()
 
 HRESULT Clibpe::getCOMDescriptor()
 {
-	const PIMAGE_COR20_HEADER pCOMDescHeader = (PIMAGE_COR20_HEADER)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR));
+	const auto pCOMDescHeader = (PIMAGE_COR20_HEADER)rVAToPtr(getDirEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR));
 	if (!pCOMDescHeader)
 		return E_IMAGE_HAS_NO_COMDESCRIPTOR;
 
