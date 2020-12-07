@@ -20,8 +20,9 @@
 #endif
 static_assert(__cpp17_conformant, "C++17 conformant compiler is required (MSVS 15.7 with /std:c++17, or higher).");
 
-namespace libpe {
-	//Standard DOS header struct.
+namespace libpe
+{
+//Standard DOS header struct.
 	using PLIBPE_DOSHEADER = IMAGE_DOS_HEADER*;
 
 	//Rich.
@@ -433,7 +434,7 @@ namespace libpe {
 #pragma comment(lib, LIBNAME_PROPER("libpe"))
 #endif
 
-	extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe*& pLibpe);
+	extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe * &plibpe);
 	using IlibpeUnPtr = std::unique_ptr<Ilibpe, void(*)(Ilibpe*)>;
 	using IlibpeShPtr = std::shared_ptr<Ilibpe>;
 

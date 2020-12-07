@@ -7,7 +7,8 @@
 #pragma once
 #include "../libpe.h"
 
-namespace libpe {
+namespace libpe
+{
 	//Implementation of pure virtual class Ilibpe.
 	class Clibpe : public Ilibpe
 	{
