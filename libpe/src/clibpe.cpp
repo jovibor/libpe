@@ -52,6 +52,45 @@ namespace libpe
 	}
 }
 
+typedef int (WINAPI* UnDecorateSymbolNameFn_t) (LPCSTR, LPSTR, DWORD, DWORD);
+static UnDecorateSymbolNameFn_t getUnDecorateSymbolNameFn()
+{
+	static UnDecorateSymbolNameFn_t UnDecorateSymbolName = nullptr;
+	HMODULE module = LoadLibraryA("dbghelp.dll");
+	if (module != nullptr)
+		UnDecorateSymbolName = (UnDecorateSymbolNameFn_t)GetProcAddress(module, "UnDecorateSymbolName");
+
+	if (UnDecorateSymbolName == nullptr)
+	{
+		module = LoadLibraryA("imagehlp.dll");
+		if (module != nullptr)
+			UnDecorateSymbolName = (UnDecorateSymbolNameFn_t)GetProcAddress(module, "UnDecorateSymbolName");
+	}
+
+	return UnDecorateSymbolName;
+}
+
+static std::string getUndecoratedFunctionName(const std::string& mangledName)
+{
+
+	UnDecorateSymbolNameFn_t unDecFn = getUnDecorateSymbolNameFn();
+
+	if (unDecFn != nullptr)
+	{
+		constexpr int BUFFER_LEN = 4096;
+		char buffer[BUFFER_LEN];
+		int errCode = unDecFn(mangledName.c_str(), buffer, BUFFER_LEN,
+			UNDNAME_COMPLETE | UNDNAME_32_BIT_DECODE | UNDNAME_NO_FUNCTION_RETURNS |
+			UNDNAME_NO_ACCESS_SPECIFIERS | UNDNAME_NO_MEMBER_TYPE | UNDNAME_NO_MS_KEYWORDS);
+
+		if (errCode != 0)
+			return std::string(buffer);
+	}
+
+	return mangledName;
+}
+
+
 HRESULT Clibpe::LoadPe(LPCWSTR pwszFilePath)
 {
 	assert(pwszFilePath); //File name is nullptr.
@@ -1169,7 +1208,7 @@ HRESULT Clibpe::getExport()
 							const auto pszFuncName = static_cast<LPCSTR>(rVAToPtr((DWORD_PTR)ppszNames[iterFuncNames]));
 							//Checking func name for length correctness.
 							if (pszFuncName && (StringCchLengthA(pszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
-								strFuncName = pszFuncName;
+								strFuncName = getUndecoratedFunctionName(pszFuncName);
 							break;
 						}
 					}
@@ -1256,7 +1295,7 @@ HRESULT Clibpe::getImport()
 							const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(rVAToPtr(pThunk32->u1.AddressOfData));
 							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 								stImpByName = *pName;
-								strFuncName = pName->Name;
+								strFuncName = getUndecoratedFunctionName(pName->Name);
 							}
 						}
 						vecFunc.emplace_back(LIBPE_IMPORT_FUNC { varImpThunk, stImpByName, std::move(strFuncName) });
@@ -1312,7 +1351,7 @@ HRESULT Clibpe::getImport()
 							const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(rVAToPtr(pThunk64->u1.AddressOfData));
 							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 								stImpByName = *pName;
-								strFuncName = pName->Name;
+								strFuncName = getUndecoratedFunctionName(pName->Name);
 							}
 						}
 						vecFunc.emplace_back(LIBPE_IMPORT_FUNC { varImpThunk, stImpByName, std::move(strFuncName) });
@@ -2038,7 +2077,7 @@ HRESULT Clibpe::getDelayImport()
 						if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						{
 							stImpByName = *pName;
-							strFuncName = pName->Name;
+							strFuncName = getUndecoratedFunctionName(pName->Name);
 						}
 					}
 					vecFunc.emplace_back(LIBPE_DELAYIMPORT_FUNC { varDelayImpThunk, stImpByName, std::move(strFuncName) });
@@ -2105,7 +2144,7 @@ HRESULT Clibpe::getDelayImport()
 						if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						{
 							stImpByName = *pName;
-							strFuncName = pName->Name;
+							strFuncName = getUndecoratedFunctionName(pName->Name);
 						}
 					}
 					vecFunc.emplace_back(LIBPE_DELAYIMPORT_FUNC { varDelayImpThunk, stImpByName, std::move(strFuncName) });
