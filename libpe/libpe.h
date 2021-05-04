@@ -1,5 +1,5 @@
 /****************************************************************************************
-* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/                         *
+* Copyright (C) 2018-2021, Jovibor: https://github.com/jovibor/                         *
 * Windows library for reading PE (x86) and PE+ (x64) files' inner information.	        *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
@@ -22,7 +22,7 @@ static_assert(__cpp17_conformant, "C++17 conformant compiler is required (MSVS 1
 
 namespace libpe
 {
-//Standard DOS header struct.
+	//Standard DOS header struct.
 	using PLIBPE_DOSHEADER = IMAGE_DOS_HEADER*;
 
 	//Rich.

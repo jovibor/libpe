@@ -1,5 +1,5 @@
 /****************************************************************************************
-* Copyright (C) 2018-2019, Jovibor: https://github.com/jovibor/                         *
+* Copyright (C) 2018-2021, Jovibor: https://github.com/jovibor/                         *
 * Windows library for reading PE (x86) and PE+ (x64) files' inner information.	        *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
@@ -10,7 +10,7 @@
 namespace libpe
 {
 	//Implementation of pure virtual class Ilibpe.
-	class Clibpe : public Ilibpe
+	class Clibpe final : public Ilibpe
 	{
 	public:
 		Clibpe() = default;
@@ -55,7 +55,7 @@ namespace libpe
 		[[nodiscard]] BYTE getByte(ULONGLONG ullOffset);
 		[[nodiscard]] DWORD getDword(ULONGLONG ullOffset);
 		template<typename T>
-		[[nodiscard]] bool isPtrSafe(T tPtr, bool fCanReferenceBoundary = false)const;
+		[[nodiscard]] bool isPtrSafe(T tAddr, bool fCanReferenceBoundary = false)const;
 		bool mapFileOffset(ULONGLONG ullOffset); //Maps file's raw offset. For big files.
 		void unmapFileOffset()const;
 		bool mapDirSection(DWORD dwDirectory);
