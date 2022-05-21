@@ -66,22 +66,16 @@
 
 ## [](#)Usage
 The usage of the library is quite simple:
-1. Add *libpe.h* header file into your project.
-2. Add `#include "libpe.h"` where you suppose to use it.
-3. Declare `libpe_ptr` variable: `libpe_ptr pLibpe { Createlibpe() };`
-4. Put *libpe.lib* into your project's folder, so that linker can see it.
-5. Put *libpe.dll* next to your executable.
+1. Add *libpe.h/libpe.cpp* into your project
+2. Declare `IlibpePtr` variable as: `IlibpePtr m_pLibpe { Createlibpe() };`
 
-Factory function `Createlibpe` returns `IlibpeUnPtr` - `unique_ptr` with custom deleter.  
-In the client code you should use `libpe_ptr` type which is an alias to either `IlibpeUnPtr` - a `unique_ptr`, or `IlibpeShPtr` - a `shared_ptr`.
-```cpp
-//using libpe_ptr = IlibpeUnPtr;
-using libpe_ptr = IlibpeShPtr;
-```
+Factory function `Createlibpe` returns `IlibpePtr` - a `std::unique_ptr` with custom deleter.  
 
-Uncomment what serves best for you, and comment out the other.
+If you, for some reason, need a raw interface pointer, you can directly call [`CreateRawlibpe`](#createrawlibpe) function, which returns `Ilibpe*` interface pointer, but in this case you will need to call [`Destroy`](#destroy) method manually afterwards, to destroy `Ilibpe` object.
 
-If you, for some reason, need a raw interface pointer, you can directly call [`CreateRawlibpe`](#createrawlibpe) function, which returns `Ilibpe` interface pointer, but in this case you will need to call [`Destroy`](#destroy) method manually afterwards, to destroy `Ilibpe` object.
+To use `libpe` as a shared `.dll`:
+1. Compile `libpe` as a `.dll` from the MSVS solution
+2. Put the `#define LIBPE_SHARED_DLL` macro into your project, before `#include "libpe.h"`.
 
 The **libpe** uses its own namespace, so you either add the:
 ```cpp
@@ -98,7 +92,7 @@ HRESULT LoadPe(LPCWSTR);
 ```
 This is the first method you call to proceed with a PE file.
 ```cpp
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 {
     ...
@@ -142,7 +136,7 @@ These flags are listed below:
 There can be any combination of these flags, they all can be **OR**'ed.  
 You can also use a standalone tiny helper function `ImageHasFlag` to find out if the given flag is set in a variable.
 ```cpp
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 {
     DWORD dwFlags;
@@ -157,7 +151,7 @@ HRESULT GetImageFlag(DWORD dwFlag, bool& f);
 ```
 This helper function is very similar to the [`GetImageInfo`](#getimageinfo), but, in contrast, it recieves information about just one given flar at a time.
 ```cpp
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 if(pLibpe->LoadPe(L"C:\\MyFile.exe") == S_OK)
 {
     bool fIsDebugData;
@@ -282,7 +276,7 @@ using PLIBPE_EXPORT = const LIBPE_EXPORT*;
 **Example**  
 Getting Export information is very simple:
 ```cpp
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
 PLIBPE_EXPORT pExport;
@@ -326,7 +320,7 @@ using PLIBPE_IMPORT_VEC = const LIBPE_IMPORT_VEC*;
 **Example**  
 To obtain **Import table** information from the file see the following code:
 ```cpp
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 pLibpe->LoadPe(L"PATH_TO_PE_FILE")
 
 PLIBPE_IMPORT_VEC pImport;
@@ -442,7 +436,7 @@ const std::map<WORD, std::wstring> g_mapResType {
 { 241, L"RT_TOOLBAR" }
 };
 
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 if (pLibpe->LoadPe(L"C:\\PATH_TO_PE_FILE") != S_OK)
     return;
 
@@ -814,7 +808,7 @@ inline const std::map<DWORD, std::wstring> g_mapLibpeErrors {
 ```
 You can use it as follows:
 ```cpp
-libpe_ptr pLibpe { Createlibpe() };
+IlibpePtr pLibpe { Createlibpe() };
 
 HRESULT hr = pLibpe->LoadPe(L"C:\\MyFile.exe");
 if (hr != S_OK)

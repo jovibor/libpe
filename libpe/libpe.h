@@ -1,15 +1,15 @@
 /****************************************************************************************
-* Copyright (C) 2018-2021, Jovibor: https://github.com/jovibor/                         *
+* Copyright © 2018-2022, Jovibor: https://github.com/jovibor/                           *
 * Windows library for reading PE (x86) and PE+ (x64) files' inner information.	        *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #pragma once
+#include <Windows.h>
 #include <WinTrust.h> //WIN_CERTIFICATE struct.
-#include <Windows.h>  //All standard Windows' typedefs.
-#include <memory>     //std::shared_ptr and related.
-#include <string>     //std::string and related.
-#include <vector>     //std::vector and related.
+#include <memory>
+#include <string>
+#include <vector>
 
 #ifndef __cpp_lib_byte
 #define __cpp17_conformant 0
@@ -399,16 +399,8 @@ namespace libpe
 	constexpr auto IMAGE_FLAG_DELAYIMPORT = 0x00400000UL;
 	constexpr auto IMAGE_FLAG_COMDESCRIPTOR = 0x00800000UL;
 
-	/********************************************************************************************
-	* Factory function Createlibpe returns IlibpeUnPtr - unique_ptr with custom deleter.        *
-	* In client code you should use libpe_ptr type which is an alias to either IlibpeUnPtr -    *
-	* a unique_ptr, or IlibpeShPtr - a shared_ptr. Uncomment what serves best for you, and      *
-	* comment out the other.                                                                    *
-	* If you, for some reason, need a raw pointer, you can directly call CreateRawlibpe         *
-	* function, which returns Ilibpe interface pointer, but in this case you will need to       *
-	* call Ilibpe::Destroy method afterwards manually - to delete Ilibpe object.                *
-	********************************************************************************************/
-#ifdef ILIBPE_EXPORT
+#ifdef LIBPE_SHARED_DLL
+#ifdef LIBPE_SHARED_DLL_EXPORT
 #define ILIBPEAPI __declspec(dllexport)
 #else
 #define ILIBPEAPI __declspec(dllimport)
@@ -417,38 +409,38 @@ namespace libpe
 	********************************************************/
 #ifdef _WIN64
 #ifdef _DEBUG
-#define LIBNAME_PROPER(x) x"64d.lib"
+#define LIBPE_LIB_NAME(x) x"64d.lib"
 #else
-#define LIBNAME_PROPER(x) x"64.lib"
+#define LIBPE_LIB_NAME(x) x"64.lib"
 #endif
 #else
 #ifdef _DEBUG
-#define LIBNAME_PROPER(x) x"d.lib"
+#define LIBPE_LIB_NAME(x) x"d.lib"
 #else
-#define LIBNAME_PROPER(x) x".lib"
+#define LIBPE_LIB_NAME(x) x".lib"
 #endif
 #endif
 	/********************************************************
 	* End of .lib name macros.                              *
 	********************************************************/
-#pragma comment(lib, LIBNAME_PROPER("libpe"))
+#pragma comment(lib, LIBPE_LIB_NAME("libpe"))
+#endif
+#else
+#define	ILIBPEAPI
 #endif
 
-	extern "C" ILIBPEAPI HRESULT __cdecl CreateRawlibpe(Ilibpe * &plibpe);
-	using IlibpeUnPtr = std::unique_ptr<Ilibpe, void(*)(Ilibpe*)>;
-	using IlibpeShPtr = std::shared_ptr<Ilibpe>;
+	/********************************************************************************************
+	* Factory function Createlibpe, returns IlibpePtr - unique_ptr with custom deleter.         *
+	* If you, for some reason, need a raw pointer, you can directly call CreateRawlibpe         *
+	* function, which returns Ilibpe interface pointer, but in this case you will need to       *
+	* call Ilibpe::Destroy method afterwards manually - to delete Ilibpe object.                *
+	********************************************************************************************/
+	extern "C" ILIBPEAPI Ilibpe * __cdecl CreateRawlibpe();
+	using IlibpePtr = std::unique_ptr<Ilibpe, void(*)(Ilibpe*)>;
 
-	inline IlibpeUnPtr Createlibpe()
-	{
-		Ilibpe* pLibpe { };
-		if (CreateRawlibpe(pLibpe) == S_OK)
-			return IlibpeUnPtr(pLibpe, [](Ilibpe * p) { p->Destroy(); });
-
-		return { nullptr, nullptr };
+	inline IlibpePtr Createlibpe() {
+		return IlibpePtr(CreateRawlibpe(), [](Ilibpe* p) { p->Destroy(); });
 	};
-
-	//using libpe_ptr = IlibpeUnPtr;
-	using libpe_ptr = IlibpeShPtr;
 
 	/********************************************
 	* LIBPE_INFO: service info structure.       *
@@ -466,7 +458,7 @@ namespace libpe
 			}stVersion;
 		};
 	};
-	using PLIBPE_INFO = const LIBPE_INFO*;
+	using PLIBPE_INFO = LIBPE_INFO*;
 
 	/*********************************************
 	* Service info export/import function.       *
