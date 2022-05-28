@@ -36,7 +36,6 @@ namespace libpe
 		return (dwFirst + dwSecond) < dwFirst;
 	}
 
-
 	//Class Clibpe.
 	class Clibpe final : public Ilibpe
 	{
@@ -130,9 +129,7 @@ namespace libpe
 		PECOMDESCRIPTOR m_stCOR20Desc { };     //COM table descriptor.
 	};
 
-	/********************************************
-	* CreateRawlibpe function implementation.   *
-	********************************************/
+	//CreateRawlibpe implementation.
 	extern "C" ILIBPEAPI Ilibpe * __cdecl CreateRawlibpe() {
 		return new Clibpe();
 	}
@@ -530,7 +527,7 @@ namespace libpe
 	LPVOID Clibpe::RVAToPtr(ULONGLONG ullRVA)const
 	{
 		const auto pSecHdr = GetSecHdrFromRVA(ullRVA);
-		if (!pSecHdr)
+		if (pSecHdr == nullptr)
 			return nullptr;
 
 		const auto ptr = reinterpret_cast<LPVOID>(reinterpret_cast<DWORD_PTR>(m_lpBase)
@@ -635,7 +632,6 @@ namespace libpe
 		m_pNTHeader32 = nullptr;
 		m_pNTHeader64 = nullptr;
 		m_stFileInfo = { };
-
 		m_stMSDOSHeader = { };
 		m_vecRichHeader.clear();
 		m_stNTHeader = { };
@@ -690,13 +686,12 @@ namespace libpe
 		{
 			//Check "Rich" (ANSI) sign, it's always at the end of the «Rich» header.
 			//Then take DWORD right after the "Rich" sign — it's a xor mask.
-			//Apply this mask to the first DWORD of «Rich» header,
-			//it must be "DanS" (ANSI) after xoring.
+			//Apply this mask to the first DWORD of «Rich» header, it must be "DanS" (ANSI) after xoring.
 			if ((*pRichIter == 0x68636952/*"Rich"*/) && ((*pRichStartVA ^ *(pRichIter + 1)) == 0x536E6144/*"Dans"*/)
-				&& (reinterpret_cast<DWORD_PTR>(pRichIter) >= reinterpret_cast<DWORD_PTR>(m_pDosHeader) + 0x90 /*To avoid too small (bogus) «Rich» header*/))
+				&& (reinterpret_cast<DWORD_PTR>(pRichIter) >= reinterpret_cast<DWORD_PTR>(m_pDosHeader) + 0x90)) //To avoid too small (bogus) «Rich» header.
 			{
 				//Amount of all «Rich» DOUBLE_DWORD structs.
-				//First 16 bytes in «Rich» header are irrelevant. It's "DansS" itself and 12 more zeroed bytes.
+				//First 16 bytes in «Rich» header are irrelevant. It's "DanS" itself and 12 more zeroed bytes.
 				//That's why we subtracting 0x90 to find out amount of all «Rich» structures:
 				//0x80 («Rich» start) + 16 (0xF) = 0x90.
 				const DWORD dwRichSize = static_cast<DWORD>((reinterpret_cast<DWORD_PTR>(pRichIter) - reinterpret_cast<DWORD_PTR>(m_pDosHeader)) - 0x90) / 8;
@@ -707,10 +702,8 @@ namespace libpe
 				{
 					//Pushing double DWORD of «Rich» structure.
 					//Disassembling first DWORD by two WORDs.
-					m_vecRichHeader.emplace_back(PERICHHDR { static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(pRichIter) - reinterpret_cast<DWORD_PTR>(m_lpBase)),
-						HIWORD(dwRichXORMask ^ *pRichIter),
-						LOWORD(dwRichXORMask ^ *pRichIter),
-						dwRichXORMask ^ *(pRichIter + 1) });
+					m_vecRichHeader.emplace_back(static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(pRichIter) - reinterpret_cast<DWORD_PTR>(m_lpBase)),
+						HIWORD(dwRichXORMask ^ *pRichIter), LOWORD(dwRichXORMask ^ *pRichIter), dwRichXORMask ^ *(pRichIter + 1));
 					pRichIter += 2; //Jump to the next DOUBLE_DWORD.
 				}
 
@@ -787,7 +780,7 @@ namespace libpe
 			if (pSecHdr && (i != IMAGE_DIRECTORY_ENTRY_SECURITY))
 				strSecName.assign(reinterpret_cast<char* const>(pSecHdr->Name), 8);
 
-			m_vecDataDirs.emplace_back(PEDATADIR { *pDataDir, std::move(strSecName) });
+			m_vecDataDirs.emplace_back(*pDataDir, std::move(strSecName));
 		}
 
 		if (m_vecDataDirs.empty())
@@ -853,7 +846,7 @@ namespace libpe
 				}
 			}
 
-			m_vecSecHeaders.emplace_back(PESECHDR { PtrToOffset(pSecHdr), *pSecHdr, std::move(strSecRealName) });
+			m_vecSecHeaders.emplace_back(PtrToOffset(pSecHdr), *pSecHdr, std::move(strSecRealName));
 		}
 
 		if (m_vecSecHeaders.empty())
@@ -868,13 +861,12 @@ namespace libpe
 	{
 		const auto dwExportStartRVA = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXPORT);
 		const auto dwExportEndRVA = dwExportStartRVA + GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXPORT);
-
 		const auto pExportDir = static_cast<PIMAGE_EXPORT_DIRECTORY>(RVAToPtr(dwExportStartRVA));
-		if (!pExportDir)
+		if (pExportDir == nullptr)
 			return false;
 
 		const auto pdwFuncs = static_cast<PDWORD>(RVAToPtr(pExportDir->AddressOfFunctions));
-		if (!pdwFuncs)
+		if (pdwFuncs == nullptr)
 			return false;
 
 		std::vector<PEEXPORTFUNC> vecFuncs;
@@ -915,8 +907,8 @@ namespace libpe
 						if (pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 							strForwarderName = pszForwarderName;
 					}
-					vecFuncs.emplace_back(PEEXPORTFUNC
-						{ pdwFuncs[iterFuncs], static_cast<DWORD>(iterFuncs)/*Ordinal*/, std::move(strFuncName), std::move(strForwarderName) });
+					vecFuncs.emplace_back(pdwFuncs[iterFuncs], static_cast<DWORD>(iterFuncs)/*Ordinal*/,
+						std::move(strFuncName), std::move(strForwarderName));
 				}
 			}
 			const auto szExportName = static_cast<LPCSTR>(RVAToPtr(pExportDir->Name));
@@ -949,11 +941,8 @@ namespace libpe
 	bool Clibpe::ParseImport()
 	{
 		auto pImpDesc = static_cast<PIMAGE_IMPORT_DESCRIPTOR>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_IMPORT)));
-
-		if (!pImpDesc)
+		if (pImpDesc == nullptr)
 			return false;
-
-		PEIMPORTFUNC::UNPEIMPORTTHUNK varImpThunk;
 
 		try {
 			//Counter for import modules. If it exceeds iMaxModules we stop parsing file, it's definitely bogus.
@@ -983,7 +972,8 @@ namespace libpe
 
 						while (pThunk32->u1.AddressOfData)
 						{
-							varImpThunk.stThunk32 = *pThunk32;
+							PEIMPORTFUNC::UNPEIMPORTTHUNK unImpThunk32;
+							unImpThunk32.stThunk32 = *pThunk32;
 							IMAGE_IMPORT_BY_NAME stImpByName { };
 							std::string strFuncName { };
 							if (!(pThunk32->u1.Ordinal & IMAGE_ORDINAL_FLAG32))
@@ -994,7 +984,7 @@ namespace libpe
 									strFuncName = pName->Name;
 								}
 							}
-							vecFunc.emplace_back(PEIMPORTFUNC { varImpThunk, stImpByName, std::move(strFuncName) });
+							vecFunc.emplace_back(unImpThunk32, stImpByName, std::move(strFuncName));
 
 							if (!IsPtrSafe(++pThunk32))
 								break;
@@ -1006,7 +996,7 @@ namespace libpe
 						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 							strDllName = szName;
 
-						m_vecImport.emplace_back(PEIMPORT { PtrToOffset(pImpDesc), *pImpDesc, std::move(strDllName), std::move(vecFunc) });
+						m_vecImport.emplace_back(PtrToOffset(pImpDesc), *pImpDesc, std::move(strDllName), std::move(vecFunc));
 
 						if (!IsPtrSafe(++pImpDesc))
 							break;
@@ -1039,7 +1029,8 @@ namespace libpe
 
 						while (pThunk64->u1.AddressOfData)
 						{
-							varImpThunk.stThunk64 = *pThunk64;
+							PEIMPORTFUNC::UNPEIMPORTTHUNK unImpThunk64;
+							unImpThunk64.stThunk64 = *pThunk64;
 							IMAGE_IMPORT_BY_NAME stImpByName { };
 							std::string strFuncName { };
 							if (!(pThunk64->u1.Ordinal & IMAGE_ORDINAL_FLAG32))
@@ -1050,7 +1041,7 @@ namespace libpe
 									strFuncName = pName->Name;
 								}
 							}
-							vecFunc.emplace_back(PEIMPORTFUNC { varImpThunk, stImpByName, std::move(strFuncName) });
+							vecFunc.emplace_back(unImpThunk64, stImpByName, std::move(strFuncName));
 
 							pThunk64++;
 							if (++iFuncsCount == iMaxFuncs)
@@ -1063,7 +1054,7 @@ namespace libpe
 						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 							strDllName = szName;
 
-						m_vecImport.emplace_back(PEIMPORT { PtrToOffset(pImpDesc), *pImpDesc, std::move(strDllName), std::move(vecFunc) });
+						m_vecImport.emplace_back(PtrToOffset(pImpDesc), *pImpDesc, std::move(strDllName), std::move(vecFunc));
 
 						if (!IsPtrSafe(++pImpDesc))
 							break;
@@ -1100,7 +1091,7 @@ namespace libpe
 	bool Clibpe::ParseResources()
 	{
 		auto pResDirRoot = static_cast<PIMAGE_RESOURCE_DIRECTORY>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE)));
-		if (!pResDirRoot)
+		if (pResDirRoot == nullptr)
 			return false;
 
 		auto pResDirEntryRoot = reinterpret_cast<PIMAGE_RESOURCE_DIRECTORY_ENTRY>(pResDirRoot + 1);
@@ -1243,9 +1234,8 @@ namespace libpe
 									}
 								}
 							}
-							vecResDataLvL2.emplace_back(PERESLVL2DATA { *pResDirEntryLvL2, std::move(wstrResNameLvL2),
-								IsPtrSafe(pResDataEntryLvL2) ? *pResDataEntryLvL2 : IMAGE_RESOURCE_DATA_ENTRY { },
-								std::move(vecRawResDataLvL2), stResLvL3 });
+							vecResDataLvL2.emplace_back(*pResDirEntryLvL2, std::move(wstrResNameLvL2),
+								IsPtrSafe(pResDataEntryLvL2) ? *pResDataEntryLvL2 : IMAGE_RESOURCE_DATA_ENTRY { }, std::move(vecRawResDataLvL2), stResLvL3);
 
 							if (!IsPtrSafe(++pResDirEntryLvL2))
 								break;
@@ -1267,9 +1257,8 @@ namespace libpe
 						}
 					}
 				}
-				vecResDataRoot.emplace_back(PERESROOTDATA { *pResDirEntryRoot, std::move(wstrResNameRoot),
-					IsPtrSafe(pResDataEntryRoot) ? *pResDataEntryRoot : IMAGE_RESOURCE_DATA_ENTRY { },
-					std::move(vecRawResDataRoot), stResLvL2 });
+				vecResDataRoot.emplace_back(*pResDirEntryRoot, std::move(wstrResNameRoot),
+					IsPtrSafe(pResDataEntryRoot) ? *pResDataEntryRoot : IMAGE_RESOURCE_DATA_ENTRY { }, std::move(vecRawResDataRoot), stResLvL2);
 
 				if (!IsPtrSafe(++pResDirEntryRoot))
 					break;
@@ -1300,10 +1289,10 @@ namespace libpe
 		//IMAGE_RUNTIME_FUNCTION_ENTRY (without leading underscore) 
 		//might have different typedef depending on defined platform, see winnt.h
 		auto pRuntimeFuncsEntry = static_cast<_PIMAGE_RUNTIME_FUNCTION_ENTRY>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION)));
-		if (!pRuntimeFuncsEntry)
+		if (pRuntimeFuncsEntry == nullptr)
 			return false;
 
-		const DWORD dwEntries = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXCEPTION) / static_cast<DWORD>(sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY));
+		const auto dwEntries = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_EXCEPTION) / static_cast<DWORD>(sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY));
 		if (!dwEntries || !IsPtrSafe(reinterpret_cast<DWORD_PTR>(pRuntimeFuncsEntry) + static_cast<DWORD_PTR>(dwEntries)))
 			return false;
 
@@ -1312,7 +1301,7 @@ namespace libpe
 			if (!IsPtrSafe(pRuntimeFuncsEntry))
 				break;
 
-			m_vecException.emplace_back(PEEXCEPTION { PtrToOffset(pRuntimeFuncsEntry), *pRuntimeFuncsEntry });
+			m_vecException.emplace_back(PtrToOffset(pRuntimeFuncsEntry), *pRuntimeFuncsEntry);
 		}
 
 		m_stFileInfo.fHasException = true;
@@ -1322,20 +1311,16 @@ namespace libpe
 
 	bool Clibpe::ParseSecurity()
 	{
-		const DWORD dwSecurityDirOffset = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
-		const DWORD dwSecurityDirSize = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
-
+		const auto dwSecurityDirOffset = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
+		const auto dwSecurityDirSize = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
 		if (!dwSecurityDirOffset || !dwSecurityDirSize)
 			return false;
-
-		DWORD_PTR dwSecurityDirStartVA;
 
 		//Checks for bogus file offsets that can cause DWORD_PTR overflow.
 		if (IsSumOverflow(static_cast<DWORD_PTR>(dwSecurityDirOffset), reinterpret_cast<DWORD_PTR>(m_lpBase)))
 			return false;
 
-		dwSecurityDirStartVA = reinterpret_cast<DWORD_PTR>(m_lpBase) + static_cast<DWORD_PTR>(dwSecurityDirOffset);
-
+		auto dwSecurityDirStartVA = reinterpret_cast<DWORD_PTR>(m_lpBase) + static_cast<DWORD_PTR>(dwSecurityDirOffset);
 		if (IsSumOverflow(dwSecurityDirStartVA, static_cast<DWORD_PTR>(dwSecurityDirSize)))
 			return false;
 
@@ -1351,7 +1336,7 @@ namespace libpe
 			if (!IsPtrSafe(dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwCertSize)))
 				break;
 
-			m_vecSecurity.emplace_back(PESECURITY { PtrToOffset(pCertificate), *pCertificate });
+			m_vecSecurity.emplace_back(PtrToOffset(pCertificate), *pCertificate);
 
 			//Get next certificate entry, all entries start at 8 aligned address.
 			DWORD dwLength = pCertificate->dwLength;
@@ -1369,20 +1354,18 @@ namespace libpe
 	bool Clibpe::ParseRelocations()
 	{
 		auto pBaseRelocDesc = static_cast<PIMAGE_BASE_RELOCATION>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BASERELOC)));
-
-		if (!pBaseRelocDesc)
+		if (pBaseRelocDesc == nullptr)
 			return false;
 
 		try
 		{
 			if (!pBaseRelocDesc->SizeOfBlock || !pBaseRelocDesc->VirtualAddress)
-				m_vecRelocs.emplace_back(PERELOC { PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, { } });
+				m_vecRelocs.emplace_back(PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, std::vector<PERELOCDATA> { });
 
 			while ((pBaseRelocDesc->SizeOfBlock) && (pBaseRelocDesc->VirtualAddress))
 			{
-				if (pBaseRelocDesc->SizeOfBlock < sizeof(IMAGE_BASE_RELOCATION))
-				{
-					m_vecRelocs.emplace_back(PERELOC { PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, { } });
+				if (pBaseRelocDesc->SizeOfBlock < sizeof(IMAGE_BASE_RELOCATION)) {
+					m_vecRelocs.emplace_back(PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, std::vector<PERELOCDATA>{ });
 					break;
 				}
 
@@ -1396,7 +1379,7 @@ namespace libpe
 						break;
 					//Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
 					WORD wRelocType = (*pwRelocEntry & 0xF000) >> 12;
-					vecRelocs.emplace_back(PERELOCDATA { PtrToOffset(pwRelocEntry), wRelocType, static_cast<WORD>((*pwRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/ });
+					vecRelocs.emplace_back(PtrToOffset(pwRelocEntry), wRelocType, static_cast<WORD>((*pwRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/);
 					if (wRelocType == IMAGE_REL_BASED_HIGHADJ)
 					{	//The base relocation adds the high 16 bits of the difference to the 16-bit field at offset.
 						//The 16-bit field represents the high value of a 32-bit word. 
@@ -1408,18 +1391,19 @@ namespace libpe
 							break;
 						}
 
-						vecRelocs.emplace_back(PERELOCDATA { PtrToOffset(pwRelocEntry), wRelocType, *pwRelocEntry /*The low 16-bit field.*/ });
+						vecRelocs.emplace_back(PtrToOffset(pwRelocEntry), wRelocType, *pwRelocEntry /*The low 16-bit field.*/);
 						dwNumRelocEntries--; //to compensate pwRelocEntry++.
 					}
 				}
 
-				m_vecRelocs.emplace_back(PERELOC { PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, std::move(vecRelocs) });
+				m_vecRelocs.emplace_back(PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, std::move(vecRelocs));
 
 				//Too big (bogus) SizeOfBlock may cause DWORD_PTR overflow. Checking to prevent.
 				if (IsSumOverflow(reinterpret_cast<DWORD_PTR>(pBaseRelocDesc), static_cast<DWORD_PTR>(pBaseRelocDesc->SizeOfBlock)))
 					break;
 
-				pBaseRelocDesc = reinterpret_cast<PIMAGE_BASE_RELOCATION>(reinterpret_cast<DWORD_PTR>(pBaseRelocDesc) + static_cast<DWORD_PTR>(pBaseRelocDesc->SizeOfBlock));
+				pBaseRelocDesc = reinterpret_cast<PIMAGE_BASE_RELOCATION>(reinterpret_cast<DWORD_PTR>(pBaseRelocDesc)
+					+ static_cast<DWORD_PTR>(pBaseRelocDesc->SizeOfBlock));
 				if (!IsPtrSafe(pBaseRelocDesc))
 					break;
 			}
@@ -1446,7 +1430,6 @@ namespace libpe
 	bool Clibpe::ParseDebug()
 	{
 		const DWORD dwDebugDirRVA = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG);
-
 		if (!dwDebugDirRVA)
 			return false;
 
@@ -1479,9 +1462,9 @@ namespace libpe
 			for (unsigned i = 0; i < dwDebugEntries; ++i)
 			{
 				PEDEBUGDBGHDR stDbgHdr;
-
-				for (unsigned iterDbgHdr = 0; iterDbgHdr < (sizeof(PEDEBUGDBGHDR::dwHdr) / sizeof(DWORD)); iterDbgHdr++)
+				for (unsigned iterDbgHdr = 0; iterDbgHdr < (sizeof(PEDEBUGDBGHDR::dwHdr) / sizeof(DWORD)); iterDbgHdr++) {
 					stDbgHdr.dwHdr[iterDbgHdr] = GetTData<DWORD>(static_cast<size_t>(pDebugDir->PointerToRawData) + (sizeof(DWORD) * iterDbgHdr));
+				}
 
 				if (pDebugDir->Type == IMAGE_DEBUG_TYPE_CODEVIEW)
 				{
@@ -1503,7 +1486,7 @@ namespace libpe
 					stDbgHdr.strPDBName = std::move(strPDBName);
 				}
 
-				m_vecDebug.emplace_back(PEDEBUG { PtrToOffset(pDebugDir), *pDebugDir, stDbgHdr });
+				m_vecDebug.emplace_back(PtrToOffset(pDebugDir), *pDebugDir, stDbgHdr);
 				if (!IsPtrSafe(++pDebugDir))
 					break;
 			}
@@ -1556,7 +1539,9 @@ namespace libpe
 
 		try {
 			std::vector<DWORD> vecTLSCallbacks;
-			ULONGLONG ullStartAddressOfRawData { }, ullEndAddressOfRawData { }, ullAddressOfCallBacks { };
+			ULONGLONG ullStartAddressOfRawData { };
+			ULONGLONG ullEndAddressOfRawData { };
+			ULONGLONG ullAddressOfCallBacks { };
 			PETLS::UNPETLS varTLSDir;
 			PDWORD pdwTLSPtr;
 
@@ -1652,8 +1637,7 @@ namespace libpe
 	bool Clibpe::ParseBoundImport()
 	{
 		auto pBoundImpDesc = static_cast<PIMAGE_BOUND_IMPORT_DESCRIPTOR>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT)));
-
-		if (!pBoundImpDesc)
+		if (pBoundImpDesc == nullptr)
 			return false;
 
 		while (pBoundImpDesc->TimeDateStamp)
@@ -1674,7 +1658,7 @@ namespace libpe
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strForwarderModuleName = szName;
 
-				vecBoundForwarders.emplace_back(PEBOUNDFORWARDER { PtrToOffset(pBoundImpForwarder), *pBoundImpForwarder, std::move(strForwarderModuleName) });
+				vecBoundForwarders.emplace_back(PtrToOffset(pBoundImpForwarder), *pBoundImpForwarder, std::move(strForwarderModuleName));
 
 				if (!IsPtrSafe(++pBoundImpForwarder))
 					break;
@@ -1689,7 +1673,7 @@ namespace libpe
 				if (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)
 					strModuleName = szName;
 
-			m_vecBoundImp.emplace_back(PEBOUNDIMPORT { PtrToOffset(pBoundImpDesc), *pBoundImpDesc, std::move(strModuleName), std::move(vecBoundForwarders) });
+			m_vecBoundImp.emplace_back(PtrToOffset(pBoundImpDesc), *pBoundImpDesc, std::move(strModuleName), std::move(vecBoundForwarders));
 
 			if (!IsPtrSafe(++pBoundImpDesc))
 				break;
@@ -1714,10 +1698,8 @@ namespace libpe
 	bool Clibpe::ParseDelayImport()
 	{
 		auto pDelayImpDescr = static_cast<PIMAGE_DELAYLOAD_DESCRIPTOR>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT)));
-		if (!pDelayImpDescr)
+		if (pDelayImpDescr == nullptr)
 			return false;
-
-		PEDELAYIMPORTFUNC::UNPEDELAYIMPORTTHUNK varDelayImpThunk { };
 
 		if (m_stFileInfo.fIsx86)
 		{
@@ -1744,10 +1726,11 @@ namespace libpe
 
 					while (pThunk32Name->u1.AddressOfData)
 					{
-						varDelayImpThunk.st32.stImportAddressTable = *pThunk32Name;
-						varDelayImpThunk.st32.stImportNameTable = pThunk32IAT ? *pThunk32IAT : IMAGE_THUNK_DATA32 { };
-						varDelayImpThunk.st32.stBoundImportAddressTable = pThunk32BoundIAT ? *pThunk32BoundIAT : IMAGE_THUNK_DATA32 { };
-						varDelayImpThunk.st32.stUnloadInformationTable = pThunk32UnloadInfoTable ? *pThunk32UnloadInfoTable : IMAGE_THUNK_DATA32 { };
+						PEDELAYIMPORTFUNC::UNPEDELAYIMPORTTHUNK unDelayImpThunk32 { };
+						unDelayImpThunk32.st32.stImportAddressTable = *pThunk32Name;
+						unDelayImpThunk32.st32.stImportNameTable = pThunk32IAT ? *pThunk32IAT : IMAGE_THUNK_DATA32 { };
+						unDelayImpThunk32.st32.stBoundImportAddressTable = pThunk32BoundIAT ? *pThunk32BoundIAT : IMAGE_THUNK_DATA32 { };
+						unDelayImpThunk32.st32.stUnloadInformationTable = pThunk32UnloadInfoTable ? *pThunk32UnloadInfoTable : IMAGE_THUNK_DATA32 { };
 
 						std::string strFuncName { };
 						IMAGE_IMPORT_BY_NAME stImpByName { };
@@ -1760,7 +1743,7 @@ namespace libpe
 								strFuncName = pName->Name;
 							}
 						}
-						vecFunc.emplace_back(PEDELAYIMPORTFUNC { varDelayImpThunk, stImpByName, std::move(strFuncName) });
+						vecFunc.emplace_back(unDelayImpThunk32, stImpByName, std::move(strFuncName));
 
 						if (!IsPtrSafe(++pThunk32Name))
 							break;
@@ -1779,7 +1762,7 @@ namespace libpe
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
-					m_vecDelayImp.emplace_back(PEDELAYIMPORT { PtrToOffset(pDelayImpDescr), *pDelayImpDescr, std::move(strDllName), std::move(vecFunc) });
+					m_vecDelayImp.emplace_back(PtrToOffset(pDelayImpDescr), *pDelayImpDescr, std::move(strDllName), std::move(vecFunc));
 
 					if (!IsPtrSafe(++pDelayImpDescr))
 						break;
@@ -1811,10 +1794,11 @@ namespace libpe
 
 					while (pThunk64Name->u1.AddressOfData)
 					{
-						varDelayImpThunk.st64.stImportAddressTable = *pThunk64Name;
-						varDelayImpThunk.st64.stImportNameTable = pThunk64IAT ? *pThunk64IAT : IMAGE_THUNK_DATA64 { };
-						varDelayImpThunk.st64.stBoundImportAddressTable = pThunk64BoundIAT ? *pThunk64BoundIAT : IMAGE_THUNK_DATA64 { };
-						varDelayImpThunk.st64.stUnloadInformationTable = pThunk64UnloadInfoTable ? *pThunk64UnloadInfoTable : IMAGE_THUNK_DATA64 { };
+						PEDELAYIMPORTFUNC::UNPEDELAYIMPORTTHUNK unDelayImpThunk64 { };
+						unDelayImpThunk64.st64.stImportAddressTable = *pThunk64Name;
+						unDelayImpThunk64.st64.stImportNameTable = pThunk64IAT ? *pThunk64IAT : IMAGE_THUNK_DATA64 { };
+						unDelayImpThunk64.st64.stBoundImportAddressTable = pThunk64BoundIAT ? *pThunk64BoundIAT : IMAGE_THUNK_DATA64 { };
+						unDelayImpThunk64.st64.stUnloadInformationTable = pThunk64UnloadInfoTable ? *pThunk64UnloadInfoTable : IMAGE_THUNK_DATA64 { };
 
 						std::string strFuncName { };
 						IMAGE_IMPORT_BY_NAME stImpByName { };
@@ -1827,7 +1811,7 @@ namespace libpe
 								strFuncName = pName->Name;
 							}
 						}
-						vecFunc.emplace_back(PEDELAYIMPORTFUNC { varDelayImpThunk, stImpByName, std::move(strFuncName) });
+						vecFunc.emplace_back(unDelayImpThunk64, stImpByName, std::move(strFuncName));
 
 						if (!IsPtrSafe(++pThunk64Name))
 							break;
@@ -1846,7 +1830,7 @@ namespace libpe
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 						strDllName = szName;
 
-					m_vecDelayImp.emplace_back(PEDELAYIMPORT { PtrToOffset(pDelayImpDescr), *pDelayImpDescr, std::move(strDllName), std::move(vecFunc) });
+					m_vecDelayImp.emplace_back(PtrToOffset(pDelayImpDescr), *pDelayImpDescr, std::move(strDllName), std::move(vecFunc));
 
 					if (!IsPtrSafe(++pDelayImpDescr))
 						break;
@@ -1862,7 +1846,7 @@ namespace libpe
 	bool Clibpe::ParseCOMDescriptor()
 	{
 		const auto pCOMDescHeader = static_cast<PIMAGE_COR20_HEADER>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR)));
-		if (!pCOMDescHeader)
+		if (pCOMDescHeader == nullptr)
 			return false;
 
 		m_stCOR20Desc = { PtrToOffset(pCOMDescHeader), *pCOMDescHeader };

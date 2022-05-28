@@ -333,32 +333,26 @@ namespace libpe
 #ifdef LIBPE_SHARED_DLL
 #ifdef LIBPE_SHARED_DLL_EXPORT
 #define ILIBPEAPI __declspec(dllexport)
-#else
+#else  //LIBPE_SHARED_DLL_EXPORT
 #define ILIBPEAPI __declspec(dllimport)
-	/********************************************************
-	* Platform and configuration specific .lib name macros.	*
-	********************************************************/
 #ifdef _WIN64
 #ifdef _DEBUG
 #define LIBPE_LIB_NAME(x) x"64d.lib"
-#else
+#else  //_DEBUG
 #define LIBPE_LIB_NAME(x) x"64.lib"
-#endif
-#else
+#endif //_DEBUG
+#else  //_WIN64
 #ifdef _DEBUG
 #define LIBPE_LIB_NAME(x) x"d.lib"
-#else
+#else  //_DEBUG
 #define LIBPE_LIB_NAME(x) x".lib"
-#endif
-#endif
-	/********************************************************
-	* End of .lib name macros.                              *
-	********************************************************/
+#endif //_DEBUG
+#endif //_WIN64
 #pragma comment(lib, LIBPE_LIB_NAME("libpe"))
-#endif
-#else
+#endif //LIBPE_SHARED_DLL_EXPORT
+#else  //LIBPE_SHARED_DLL
 #define	ILIBPEAPI
-#endif
+#endif //LIBPE_SHARED_DLL
 
 	/********************************************************************************************
 	* Factory function Createlibpe, returns IlibpePtr - unique_ptr with custom deleter.         *
