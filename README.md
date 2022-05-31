@@ -5,7 +5,8 @@
 * [Introduction](#introduction)
 * [Usage](#usage)
 * [Methods](#methods) <details><summary>_Expand_</summary>
-  * [LoadPe](#loadpe)
+  * [LoadPe (from disk)](#loadpedisk)
+  * [LoadPe (from memory)](#loadpemem)
   * [GetFileInfo](#getfileinfo)
   * [GetOffsetFromRVA](#getoffsetfromrva)
   * [GetOffsetFromVA](#getoffsetfromva)
@@ -78,7 +79,7 @@ To use `libpe` as a shared `.dll`:
 The **libpe** uses its own `libpe` namespace.
 
 ## [](#)Methods
-### [](#)LoadPe
+### <a name="loadpedisk"></a>LoadPe
 ```cpp
 auto LoadPe(LPCWSTR)->int;
 ```
@@ -91,6 +92,12 @@ if(pLibpe->LoadPe(L"C:\\MyFile.exe") == PEOK)
 }
 ```
 After this method succeeds you then can call all the other methods to retrieve needed information. The PE file itself doesn't stay in memory any longer, so you don't have to explicitly unload it.
+
+### <a name="loadpemem"></a>LoadPe
+```cpp
+auto LoadPe(std::span<std::byte> spnFile)->int;
+```
+This method overload is used to parse a PE file that is already in memory.
 
 ## [](#)GetFileInfo
 ```cpp

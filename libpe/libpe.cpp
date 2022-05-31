@@ -41,6 +41,7 @@ namespace libpe
 	{
 	public:
 		auto LoadPe(LPCWSTR pwszFile)->int override;
+		auto LoadPe(std::span<std::byte> spnFile)->int override;
 		[[nodiscard]] auto GetFileInfo()const->PEFILEINFO override;
 		[[nodiscard]] auto GetOffsetFromRVA(ULONGLONG ullRVA)const->DWORD override;
 		[[nodiscard]] auto GetOffsetFromVA(ULONGLONG ullVA)const->DWORD override;
@@ -99,8 +100,8 @@ namespace libpe
 		bool ParseCOMDescriptor();
 	private:
 		bool m_fLoaded { false };              //Flag shows PE load succession.
-		LARGE_INTEGER m_stFileSize { };        //Size of the loaded PE file.
-		ULONGLONG m_ullMaxPtrAddr { };         //Maximum address that can be dereferenced.
+		std::uint64_t m_ullFileSize { };       //Size of the PE file.
+		ULONGLONG m_ullMaxPtr { };             //Maximum address that can be dereferenced.
 		std::unique_ptr<char []> m_pEmergencyMemory { std::make_unique<char []>(0x8FFF) }; //Reserved 16K of reserved memory.
 		LPVOID m_lpBase { };                   //Pointer to file mapping beginning.
 		PIMAGE_DOS_HEADER m_pDosHeader { };    //DOS header pointer.
@@ -138,17 +139,15 @@ namespace libpe
 	{
 		assert(pwszFile != nullptr);
 
-		if (m_fLoaded) //If PE file was already previously loaded.
-			ClearAll();
-
 		const auto hFile = CreateFileW(pwszFile, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 		assert(hFile != INVALID_HANDLE_VALUE);
 		if (hFile == INVALID_HANDLE_VALUE)
 			return ERR_FILE_OPEN;
 
-		::GetFileSizeEx(hFile, &m_stFileSize);
-		assert(m_stFileSize.QuadPart >= sizeof(IMAGE_DOS_HEADER));
-		if (m_stFileSize.QuadPart < sizeof(IMAGE_DOS_HEADER)) {
+		LARGE_INTEGER stLI { };
+		::GetFileSizeEx(hFile, &stLI);
+		assert(stLI.QuadPart >= sizeof(IMAGE_DOS_HEADER));
+		if (stLI.QuadPart < sizeof(IMAGE_DOS_HEADER)) {
 			CloseHandle(hFile);
 			return ERR_FILE_SIZESMALL;
 		}
@@ -160,21 +159,39 @@ namespace libpe
 			return ERR_FILE_MAPPING;
 		}
 
-		m_lpBase = MapViewOfFile(hMapObject, FILE_MAP_READ, 0, 0, 0);
-		assert(m_lpBase != nullptr); //Not enough memory? File is too big?
-		if (m_lpBase == nullptr) {
+		const auto pViewOfFile = MapViewOfFile(hMapObject, FILE_MAP_READ, 0, 0, 0);
+		assert(pViewOfFile != nullptr); //Not enough memory? File is too big?
+		if (pViewOfFile == nullptr) {
 			CloseHandle(hMapObject);
 			CloseHandle(hFile);
 			return ERR_FILE_MAPPING;
 		}
-		m_ullMaxPtrAddr = reinterpret_cast<DWORD_PTR>(m_lpBase) + m_stFileSize.QuadPart;
 
-		if (!ParseMSDOSHeader()) {
-			UnmapViewOfFile(m_lpBase);
-			CloseHandle(hMapObject);
-			CloseHandle(hFile);
+		const auto ret = LoadPe({ static_cast<std::byte*>(pViewOfFile), static_cast<std::size_t>(stLI.QuadPart) });
+		UnmapViewOfFile(pViewOfFile);
+		CloseHandle(hMapObject);
+		CloseHandle(hFile);
+
+		return ret;
+	}
+
+	auto Clibpe::LoadPe(std::span<std::byte> spnFile)->int
+	{
+		assert(!spnFile.empty());
+		if (m_fLoaded)
+			ClearAll();
+
+		if (spnFile.size() < sizeof(IMAGE_DOS_HEADER))
+			return ERR_FILE_SIZESMALL;
+
+		m_lpBase = spnFile.data();
+		m_ullFileSize = spnFile.size();
+		m_ullMaxPtr = reinterpret_cast<DWORD_PTR>(m_lpBase) + m_ullFileSize;
+
+		if (!ParseMSDOSHeader())
 			return ERR_FILE_NODOSHDR;
-		}
+
+		m_fLoaded = true;
 
 		ParseRichHeader();
 
@@ -197,10 +214,6 @@ namespace libpe
 			ParseDelayImport();
 			ParseCOMDescriptor();
 		}
-
-		UnmapViewOfFile(m_lpBase);
-		CloseHandle(hMapObject);
-		CloseHandle(hFile);
 
 		return PEOK;
 	}
@@ -546,7 +559,7 @@ namespace libpe
 			if ((ullRVA >= pSecHdr.VirtualAddress) && (ullRVA < (pSecHdr.VirtualAddress + pSecHdr.Misc.VirtualSize)))
 			{
 				dwOffset = static_cast<DWORD>(ullRVA) - (pSecHdr.VirtualAddress - pSecHdr.PointerToRawData);
-				if (dwOffset > static_cast<DWORD>(m_stFileSize.QuadPart))
+				if (dwOffset > static_cast<DWORD>(m_ullFileSize))
 					dwOffset = 0;
 			}
 		}
@@ -593,7 +606,7 @@ namespace libpe
 	template<typename T>
 	T Clibpe::GetTData(ULONGLONG ullOffset)const
 	{
-		if (ullOffset > (static_cast<ULONGLONG>(m_stFileSize.QuadPart) - sizeof(BYTE))) //Check for file size exceeding.
+		if (ullOffset > (static_cast<ULONGLONG>(m_ullFileSize) - sizeof(BYTE))) //Check for file size exceeding.
 			return { };
 
 		return *reinterpret_cast<T*>(reinterpret_cast<DWORD_PTR>(m_lpBase) + ullOffset);;
@@ -617,8 +630,8 @@ namespace libpe
 			dwAddr = tAddr;
 
 		return dwAddr == 0 ? false : (fCanReferenceBoundary ?
-			((dwAddr <= m_ullMaxPtrAddr) && (dwAddr >= reinterpret_cast<DWORD_PTR>(m_lpBase))) :
-			((dwAddr < m_ullMaxPtrAddr) && (dwAddr >= reinterpret_cast<DWORD_PTR>(m_lpBase))));
+			((dwAddr <= m_ullMaxPtr) && (dwAddr >= reinterpret_cast<DWORD_PTR>(m_lpBase))) :
+			((dwAddr < m_ullMaxPtr) && (dwAddr >= reinterpret_cast<DWORD_PTR>(m_lpBase))));
 	}
 
 	/******************************************************************************
@@ -662,7 +675,6 @@ namespace libpe
 
 		m_stMSDOSHeader = *m_pDosHeader;
 		m_stFileInfo.fHasDosHdr = true;
-		m_fLoaded = true;
 
 		return true;
 	}
