@@ -18,6 +18,12 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\libpe.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\libpe.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{3C2559D5-7A9A-4E39-A2C5-C4D4806376EA}</ProjectGuid>
@@ -241,12 +247,6 @@
       <Path>$(IntDir)$(MSBuildProjectName).log</Path>
     </BuildLog>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="libpe.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="libpe.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
