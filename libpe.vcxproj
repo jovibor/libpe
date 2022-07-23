@@ -78,21 +78,21 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(SolutionDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)bin\obj\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>$(ProjectName)d</TargetName>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)bin\obj\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>$(ProjectName)64d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
     <EmbedManifest>false</EmbedManifest>
-    <IntDir>$(SolutionDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)bin\obj\$(Configuration)\$(Platform)\</IntDir>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
@@ -101,7 +101,7 @@
     <EmbedManifest>false</EmbedManifest>
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir)bin\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)bin\obj\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
