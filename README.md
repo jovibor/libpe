@@ -31,6 +31,22 @@
   * [Clear](#clear)
   * [Destroy](#destroy)
   </details>
+* [Maps](#maps) <details><summary>_Expand_</summary>
+  * [MapFileHdrMachine](#mapfilehdrmachine)
+  * [MapFileHdrCharact](#mapfilehdrcharact)
+  * [MapOptHdrMagic](#mapopthdrmagic)
+  * [MapOptHdrSubsystem](#mapopthdrsubsystem)
+  * [MapOptHdrDllCharact](#mapophdrdllcharact)
+  * [MapSecHdrCharact](#mapsechdrcharact)
+  * [MapResID](#mapresid)
+  * [MapWinCertRevision](#mapwincertrevision)
+  * [MapWinCertType](#mapwincerttype)
+  * [MapRelocType](#mapreloctype)
+  * [MapDbgType](#mapdbgtype)
+  * [MapTLSCharact](#maptlscharact)
+  * [MapLCDGuardFlags](#maplcdguardflags)
+  * [MapCOR20Flags](#mapcor20flags)
+  </details>
 * [Global Functions](#global-functions)
   * [CreateRawlibpe](#createrawlibpe)
   * [GetLibInfo](#getlibinfo)
@@ -309,33 +325,6 @@ The next code excerpt populates `std::wstring` with all resources' types and nam
 
 int main()
 {
-	const std::map<WORD, std::wstring> g_mapResType {
-	{ 1, L"RT_CURSOR" },
-	{ 2, L"RT_BITMAP" },
-	{ 3, L"RT_ICON" },
-	{ 4, L"RT_MENU" },
-	{ 5, L"RT_DIALOG" },
-	{ 6, L"RT_STRING" },
-	{ 7, L"RT_FONTDIR" },
-	{ 8, L"RT_FONT" },
-	{ 9, L"RT_ACCELERATOR" },
-	{ 10, L"RT_RCDATA" },
-	{ 11, L"RT_MESSAGETABLE" },
-	{ 12, L"RT_GROUP_CURSOR" },
-	{ 14, L"RT_GROUP_ICON" },
-	{ 16, L"RT_VERSION" },
-	{ 17, L"RT_DLGINCLUDE" },
-	{ 19, L"RT_PLUGPLAY" },
-	{ 20, L"RT_VXD" },
-	{ 21, L"RT_ANICURSOR" },
-	{ 22, L"RT_ANIICON" },
-	{ 23, L"RT_HTML" },
-	{ 24, L"RT_MANIFEST" },
-	{ 28, L"RT_RIBBON_XML" },
-	{ 240, L"RT_DLGINIT" },
-	{ 241, L"RT_TOOLBAR" }
-	};
-
 	using namespace libpe;
 	IlibpePtr pLibpe { Createlibpe() };
 	if (pLibpe->LoadPe(PATH_TO_FILE) != PEOK)
@@ -355,7 +344,7 @@ int main()
 			swprintf(wstr, MAX_PATH, L"Entry: %li [Name: %s]", ilvlRoot, iterRoot.wstrResName.data());
 		else
 		{
-			if (const auto iter = g_mapResType.find(pResDirEntry->Id); iter != g_mapResType.end())
+			if (const auto iter = MapResID.find(pResDirEntry->Id); iter != MapResID.end())
 				swprintf(wstr, MAX_PATH, L"Entry: %li [Id: %u, %s]", ilvlRoot, pResDirEntry->Id, iter->second.data());
 			else
 				swprintf(wstr, MAX_PATH, L"Entry: %li [Id: %u]", ilvlRoot, pResDirEntry->Id);
@@ -605,6 +594,108 @@ void Destroy();
 ```
 Destroys the **libpe** object.  
 You don't usally call this method, it will be called automatically during object destruction. 
+
+## [](#)Maps
+A **PE** file consists of many structures, they in turn possess many fields some of which have predefined values.  
+These maps are meant to alleviate such fields' conversion to a human-reading format. They are simple `std::unordered_map<DWORD, std::wstring_view>` maps.
+
+Note that some fields can only have one value, while the others can combine many values with bitwise `or |` operation.
+
+### [](#)MapFileHdrMachine
+This map forms one of the values from `IMAGE_NT_HEADERS::IMAGE_FILE_HEADER::Machine` field.
+
+### [](#)MapFileHdrCharact
+This map forms one or more values from `IMAGE_NT_HEADERS::IMAGE_FILE_HEADER::Characteristics` field.
+```cpp
+const auto pNTHdr = m_pLibpe->GetNTHeader();
+const auto pDescr = &pNTHdr->unHdr.stNTHdr32.FileHeader; //Same for both x86/x64.
+std::wstring  wstrCharact;
+for (const auto& flags : MapFileHdrCharact) {
+    if (flags.first & pDescr->Characteristics) {
+        wstrCharact += flags.second;
+        wstrCharact += L"\n";
+    }
+}
+```
+
+### [](#)MapOptHdrMagic
+This map forms one of the values from `IMAGE_NT_HEADERS::IMAGE_OPTIONAL_HEADER::Magic` field.
+
+### [](#)MapOptHdrSubsystem
+This map forms one of the values from `IMAGE_NT_HEADERS::IMAGE_OPTIONAL_HEADER::Subsystem` field.
+
+### [](#)MapOptHdrDllCharact
+This map forms one or more values from `IMAGE_NT_HEADERS::IMAGE_OPTIONAL_HEADER::DllCharacteristics` field.
+```cpp
+const auto pNTHdr = m_pLibpe->GetNTHeader();
+const auto pOptHdr = &pNTHdr->unHdr.stNTHdr32.OptionalHeader //For x64: pNTHdr->unHdr.stNTHdr64.OptionalHeader
+std::wstring wstrCharact;
+for (const auto& flags : MapOptHdrDllCharact) {
+    if (flags.first & pOptHdr->DllCharacteristics) {
+        wstrCharact += flags.second;
+        wstrCharact += L"\n";
+    }
+}
+```
+
+### [](#)MapSecHdrCharact
+This map forms one or more values from `IMAGE_SECTION_HEADER::Characteristics` field.
+```cpp
+const auto pSecHeaders = m_pLibpe->GetSecHeaders();
+std::wstring wstrCharact;
+auto IdOfSection = 0; //ID of desired section.
+for (const auto& flags : MapSecHdrCharact) {
+    if (flags.first & pSecHeaders->at(IdOfSection).stSecHdr.Characteristics) {
+        wstrCharact += flags.second;
+        wstrCharact += L"\n";
+    }
+}
+```
+
+### [](#)MapResID
+This map forms one of the values from `IMAGE_RESOURCE_DIRECTORY_ENTRY::Id` field.
+
+### [](#)MapWinCertRevision
+This map forms one of the values from  `WIN_CERTIFICATE::wRevision` field.
+
+### [](#)MapWinCertType
+This map forms one of the values from `WIN_CERTIFICATE::wCertificateType` field.
+
+### [](#)MapRelocType
+This map forms one of the values from `PERELOCDATA::wRelocType` field.
+
+### [](#)MapDbgType
+This map forms one of the values from `IMAGE_DEBUG_DIRECTORY::Type` field.
+
+### [](#)MapTLSCharact
+This map forms one of the values from `IMAGE_TLS_DIRECTORY::Characteristics` field.
+
+### [](#)MapLCDGuardFlags
+This map forms one or more values from `IMAGE_LOAD_CONFIG_DIRECTORY::GuardFlags` field.
+```cpp
+const auto pLCD = m_pLibpe->GetLoadConfig();
+const auto pPELCD = &pLCD->unLCD.stLCD32; //For x64: pLCD->unLCD.stLCD64
+std::wstring wstrGFlags;
+for (const auto& flags : MapLCDGuardFlags) {
+    if (flags.first & pPELCD->GuardFlags) {
+        wstrGFlags += flags.second;
+        wstrGFlags += L"\n";
+    }
+}
+```
+
+### [](#)MapCOR20Flags
+This map forms one or more values from `IMAGE_COR20_HEADER::Flags` field.
+```cpp
+const auto pCOMDesc = m_pLibpe->GetCOMDescriptor();
+std::wstring wstrFlags;
+for (const auto& flags : MapCOR20Flags) {
+    if (flags.first & pCOMDesc->stCorHdr.Flags) {
+        wstrFlags += flags.second;
+        wstrFlags += L"\n";
+    }
+}
+```
 
 ## [](#)Global Functions
 
