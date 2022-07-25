@@ -398,11 +398,10 @@ int main()
 
 ### [](#)FlatResources
 ```cpp
-auto FlatResources(PERESROOT& stResRoot)const->PERESFLAT_VEC;
+static auto FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC;
 ```
-This function is kind of light version of the `GetResources` method. It takes `PERESROOT` struct, returned by the `GetResources`, as an argument, and returns `vector` of `PERESFLAT` structures.  
+This `static` function is kind of a light version of the `GetResources` method. It takes `PERESROOT` struct returned by the `GetResources`, and returns `std::vector` of `PERESFLAT` structures.  
 `PERESFLAT` is a light struct that only possesses a pointers to the actual resources data, unlike heavy `PERESROOT`. `FlatResources` flattens all the resources, making accessing them more convenient.
-
 ```cpp
 struct PERESFLAT {
     std::wstring_view    wstrTypeName { }; //Type name.
@@ -413,7 +412,7 @@ struct PERESFLAT {
     WORD                 wResID { };       //Resource ID.
     WORD                 wLangID { };      //Lang ID.
 };
-using PERESFLAT_VEC = std::vector< PERESFLAT>;
+using PERESFLAT_VEC = std::vector<PERESFLAT>;
 ```
 
 ### [](#)GetExceptions

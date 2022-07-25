@@ -53,7 +53,7 @@ namespace libpe
 		[[nodiscard]] auto GetExport()->PEEXPORT* override;
 		[[nodiscard]] auto GetImport()->PEIMPORT_VEC* override;
 		[[nodiscard]] auto GetResources()->PERESROOT* override;
-		[[nodiscard]] auto FlatResources(PERESROOT& stResRoot)const->PERESFLAT_VEC override;
+		[[nodiscard]] static auto FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC;
 		[[nodiscard]] auto GetExceptions()->PEEXCEPTION_VEC* override;
 		[[nodiscard]] auto GetSecurity()->PESECURITY_VEC* override;
 		[[nodiscard]] auto GetRelocations()->PERELOC_VEC* override;
@@ -102,7 +102,7 @@ namespace libpe
 		bool m_fLoaded { false };              //Flag shows PE load succession.
 		std::uint64_t m_ullFileSize { };       //Size of the PE file.
 		ULONGLONG m_ullMaxPtr { };             //Maximum address that can be dereferenced.
-		std::unique_ptr<char []> m_pEmergencyMemory { std::make_unique<char []>(0x8FFF) }; //Reserved 16K of reserved memory.
+		std::unique_ptr<char[]> m_pEmergencyMemory { std::make_unique<char[]>(0x8FFF) }; //Reserved 16K of reserved memory.
 		LPVOID m_lpBase { };                   //Pointer to file mapping beginning.
 		PIMAGE_DOS_HEADER m_pDosHeader { };    //DOS header pointer.
 		PIMAGE_NT_HEADERS32 m_pNTHeader32 { }; //NT header pointer for x86.
@@ -314,7 +314,7 @@ namespace libpe
 		return &m_stResource;
 	}
 
-	auto Clibpe::FlatResources(PERESROOT& stResRoot)const->PERESFLAT_VEC
+	auto Clibpe::FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC
 	{
 		std::size_t sTotalRes { 0 }; //How many resources total?
 		for (const auto& iterRoot : stResRoot.vecResData) //To reserve space in vector, count total amount of resources.
@@ -937,7 +937,7 @@ namespace libpe
 				L"Error", MB_ICONERROR);
 
 			vecFuncs.clear();
-			m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+			m_pEmergencyMemory = std::make_unique<char[]>(0x8FFF);
 		}
 		catch (...)
 		{
@@ -1087,7 +1087,7 @@ namespace libpe
 				L"Too many import entries!\nFile seems to be corrupted.", L"Error", MB_ICONERROR);
 
 			m_vecImport.clear();
-			m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+			m_pEmergencyMemory = std::make_unique<char[]>(0x8FFF);
 		}
 		catch (...)
 		{
@@ -1283,7 +1283,7 @@ namespace libpe
 			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Resource table.\nFile seems to be corrupted.",
 				L"Error", MB_ICONERROR);
 
-			m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+			m_pEmergencyMemory = std::make_unique<char[]>(0x8FFF);
 		}
 		catch (...)
 		{
@@ -1426,7 +1426,7 @@ namespace libpe
 			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Relocation table.\nFile seems to be corrupted.",
 				L"Error", MB_ICONERROR);
 
-			m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+			m_pEmergencyMemory = std::make_unique<char[]>(0x8FFF);
 		}
 		catch (...)
 		{
@@ -1511,7 +1511,7 @@ namespace libpe
 			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Debug info.\r\n"
 				L"File seems to be corrupted.", L"Error", MB_ICONERROR);
 
-			m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+			m_pEmergencyMemory = std::make_unique<char[]>(0x8FFF);
 		}
 
 		return true;
@@ -1607,7 +1607,7 @@ namespace libpe
 			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get TLS table.\r\n"
 				L"File seems to be corrupted.", L"Error", MB_ICONERROR);
 
-			m_pEmergencyMemory = std::make_unique<char []>(0x8FFF);
+			m_pEmergencyMemory = std::make_unique<char[]>(0x8FFF);
 		}
 		catch (...)
 		{

@@ -556,7 +556,7 @@ namespace libpe
 		[[nodiscard]] virtual auto GetExport()->PEEXPORT* = 0;
 		[[nodiscard]] virtual auto GetImport()->PEIMPORT_VEC* = 0;
 		[[nodiscard]] virtual auto GetResources()->PERESROOT* = 0;
-		[[nodiscard]] virtual auto FlatResources(PERESROOT& stResRoot)const->PERESFLAT_VEC = 0;
+		[[nodiscard]] static  auto FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC;
 		[[nodiscard]] virtual auto GetExceptions()->PEEXCEPTION_VEC* = 0;
 		[[nodiscard]] virtual auto GetSecurity()->PESECURITY_VEC* = 0;
 		[[nodiscard]] virtual auto GetRelocations()->PERELOC_VEC* = 0;
