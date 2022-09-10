@@ -279,13 +279,13 @@ namespace libpe
 
 	//Flattened resources.
 	struct PERESFLAT {
-		std::wstring_view    wstrTypeName { }; //Type name.
-		std::wstring_view    wstrResName { };  //Resource name.
-		std::wstring_view    wstrLangName { }; //Lang name.
-		std::span<std::byte> spnData { };      //Resource data.
-		WORD                 wTypeID { };      //Type ID, e.g. RT_CURSOR, RT_BITMAP, etc...
-		WORD                 wResID { };       //Resource ID.
-		WORD                 wLangID { };      //Lang ID.
+		std::wstring_view          wstrTypeName { }; //Type name.
+		std::wstring_view          wstrResName { };  //Resource name.
+		std::wstring_view          wstrLangName { }; //Lang name.
+		std::span<const std::byte> spnData { };      //Resource data.
+		WORD                       wTypeID { };      //Type ID, e.g. RT_CURSOR, RT_BITMAP, etc...
+		WORD                       wResID { };       //Resource ID.
+		WORD                       wLangID { };      //Lang ID.
 	};
 	using PERESFLAT_VEC = std::vector<PERESFLAT>;
 	inline const std::unordered_map<DWORD, std::wstring_view> MapResID {
@@ -556,7 +556,6 @@ namespace libpe
 		[[nodiscard]] virtual auto GetExport()->PEEXPORT* = 0;
 		[[nodiscard]] virtual auto GetImport()->PEIMPORT_VEC* = 0;
 		[[nodiscard]] virtual auto GetResources()->PERESROOT* = 0;
-		[[nodiscard]] static  auto FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC;
 		[[nodiscard]] virtual auto GetExceptions()->PEEXCEPTION_VEC* = 0;
 		[[nodiscard]] virtual auto GetSecurity()->PESECURITY_VEC* = 0;
 		[[nodiscard]] virtual auto GetRelocations()->PERELOC_VEC* = 0;
@@ -568,6 +567,7 @@ namespace libpe
 		[[nodiscard]] virtual auto GetCOMDescriptor()->PECOMDESCRIPTOR* = 0;
 		virtual void Clear() = 0; //Clear all internal structs.
 		virtual void Destroy() = 0;
+		[[nodiscard]] static auto FlatResources(const PERESROOT& stResRoot)->PERESFLAT_VEC;
 	};
 
 	//Return codes.

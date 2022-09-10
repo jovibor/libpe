@@ -53,7 +53,6 @@ namespace libpe
 		[[nodiscard]] auto GetExport()->PEEXPORT* override;
 		[[nodiscard]] auto GetImport()->PEIMPORT_VEC* override;
 		[[nodiscard]] auto GetResources()->PERESROOT* override;
-		[[nodiscard]] static auto FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC;
 		[[nodiscard]] auto GetExceptions()->PEEXCEPTION_VEC* override;
 		[[nodiscard]] auto GetSecurity()->PESECURITY_VEC* override;
 		[[nodiscard]] auto GetRelocations()->PERELOC_VEC* override;
@@ -314,79 +313,6 @@ namespace libpe
 		return &m_stResource;
 	}
 
-	auto Clibpe::FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC
-	{
-		std::size_t sTotalRes { 0 }; //How many resources total?
-		for (const auto& iterRoot : stResRoot.vecResData) //To reserve space in vector, count total amount of resources.
-		{
-			auto pResDirEntry = &iterRoot.stResDirEntry; //Level Root
-			if (pResDirEntry->DataIsDirectory)
-			{
-				const auto pstResLvL2 = &iterRoot.stResLvL2;
-				for (const auto& iterLvL2 : pstResLvL2->vecResData)
-				{
-					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
-					if (pResDirEntry2->DataIsDirectory) {
-						sTotalRes += iterLvL2.stResLvL3.vecResData.size(); //Level 3
-					}
-					else
-						++sTotalRes;
-				}
-			}
-			else
-				++sTotalRes;
-		}
-
-		std::vector<PERESFLAT> vecData { };
-		vecData.reserve(sTotalRes);
-		for (auto& iterRoot : stResRoot.vecResData)
-		{
-			PERESFLAT stRes { };
-			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY
-			if (pResDirEntryRoot->NameIsString)
-				stRes.wstrTypeName = iterRoot.wstrResName;
-			else
-				stRes.wTypeID = pResDirEntryRoot->Id;
-
-			if (pResDirEntryRoot->DataIsDirectory)
-			{
-				for (auto& iterLvL2 : iterRoot.stResLvL2.vecResData)
-				{
-					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
-					if (pResDirEntry2->NameIsString)
-						stRes.wstrResName = iterLvL2.wstrResName;
-					else
-						stRes.wResID = pResDirEntry2->Id;
-
-					if (pResDirEntry2->DataIsDirectory)
-					{
-						for (auto& iterLvL3 : iterLvL2.stResLvL3.vecResData)
-						{
-							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
-							if (pResDirEntry3->NameIsString)
-								stRes.wstrLangName = iterLvL3.wstrResName;
-							else
-								stRes.wLangID = pResDirEntry3->Id;
-
-							stRes.spnData = iterLvL3.vecRawResData;
-							vecData.emplace_back(stRes);
-						}
-					}
-					else {
-						stRes.spnData = iterLvL2.vecRawResData;
-						vecData.emplace_back(stRes);
-					}
-				}
-			}
-			else {
-				stRes.spnData = iterRoot.vecRawResData;
-				vecData.emplace_back(stRes);
-			}
-		}
-
-		return vecData;
-	}
-
 	auto Clibpe::GetExceptions()->PEEXCEPTION_VEC*
 	{
 		assert(m_fLoaded);
@@ -477,6 +403,82 @@ namespace libpe
 	{
 		delete this;
 	}
+
+	auto Ilibpe::FlatResources(const PERESROOT& stResRoot)->PERESFLAT_VEC
+	{
+		std::size_t sTotalRes { 0 }; //How many resources total?
+		for (const auto& iterRoot : stResRoot.vecResData) //To reserve space in vector, count total amount of resources.
+		{
+			auto pResDirEntry = &iterRoot.stResDirEntry; //Level Root
+			if (pResDirEntry->DataIsDirectory)
+			{
+				const auto pstResLvL2 = &iterRoot.stResLvL2;
+				for (const auto& iterLvL2 : pstResLvL2->vecResData)
+				{
+					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
+					if (pResDirEntry2->DataIsDirectory) {
+						sTotalRes += iterLvL2.stResLvL3.vecResData.size(); //Level 3
+					}
+					else
+						++sTotalRes;
+				}
+			}
+			else
+				++sTotalRes;
+		}
+
+		std::vector<PERESFLAT> vecData { };
+		vecData.reserve(sTotalRes);
+		for (auto& iterRoot : stResRoot.vecResData)
+		{
+			PERESFLAT stRes { };
+			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY
+			if (pResDirEntryRoot->NameIsString)
+				stRes.wstrTypeName = iterRoot.wstrResName;
+			else
+				stRes.wTypeID = pResDirEntryRoot->Id;
+
+			if (pResDirEntryRoot->DataIsDirectory)
+			{
+				for (auto& iterLvL2 : iterRoot.stResLvL2.vecResData)
+				{
+					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
+					if (pResDirEntry2->NameIsString)
+						stRes.wstrResName = iterLvL2.wstrResName;
+					else
+						stRes.wResID = pResDirEntry2->Id;
+
+					if (pResDirEntry2->DataIsDirectory)
+					{
+						for (auto& iterLvL3 : iterLvL2.stResLvL3.vecResData)
+						{
+							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
+							if (pResDirEntry3->NameIsString)
+								stRes.wstrLangName = iterLvL3.wstrResName;
+							else
+								stRes.wLangID = pResDirEntry3->Id;
+
+							stRes.spnData = iterLvL3.vecRawResData;
+							vecData.emplace_back(stRes);
+						}
+					}
+					else {
+						stRes.spnData = iterLvL2.vecRawResData;
+						vecData.emplace_back(stRes);
+					}
+				}
+			}
+			else {
+				stRes.spnData = iterRoot.vecRawResData;
+				vecData.emplace_back(stRes);
+			}
+		}
+
+		return vecData;
+	}
+
+
+	//Clibpe private methods.
 
 	PIMAGE_SECTION_HEADER Clibpe::GetSecHdrFromRVA(ULONGLONG ullRVA)const
 	{
