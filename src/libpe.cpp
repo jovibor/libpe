@@ -434,7 +434,7 @@ namespace libpe
 			PERESFLAT stRes { };
 			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY
 			if (pResDirEntryRoot->NameIsString)
-				stRes.wstrTypeName = iterRoot.wstrResName;
+				stRes.wsvTypeName = iterRoot.wstrResName;
 			else
 				stRes.wTypeID = pResDirEntryRoot->Id;
 
@@ -444,7 +444,7 @@ namespace libpe
 				{
 					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
 					if (pResDirEntry2->NameIsString)
-						stRes.wstrResName = iterLvL2.wstrResName;
+						stRes.wsvResName = iterLvL2.wstrResName;
 					else
 						stRes.wResID = pResDirEntry2->Id;
 
@@ -454,7 +454,7 @@ namespace libpe
 						{
 							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
 							if (pResDirEntry3->NameIsString)
-								stRes.wstrLangName = iterLvL3.wstrResName;
+								stRes.wsvLangName = iterLvL3.wstrResName;
 							else
 								stRes.wLangID = pResDirEntry3->Id;
 
@@ -1136,7 +1136,7 @@ namespace libpe
 					pResDirStr = reinterpret_cast<PIMAGE_RESOURCE_DIR_STRING_U>(reinterpret_cast<DWORD_PTR>(pResDirRoot)
 						+ static_cast<DWORD_PTR>(pResDirEntryRoot->NameOffset));
 					if (IsPtrSafe(pResDirStr))
-						//Copy not more then MAX_PATH chars into wstrResName, avoiding overflow.
+						//Copy not more then MAX_PATH chars into wstrResNameRoot, avoiding overflow.
 						wstrResNameRoot.assign(pResDirStr->NameString, pResDirStr->Length < MAX_PATH ? pResDirStr->Length : MAX_PATH);
 				}
 				if (pResDirEntryRoot->DataIsDirectory)
@@ -1172,7 +1172,7 @@ namespace libpe
 								pResDirStr = reinterpret_cast<PIMAGE_RESOURCE_DIR_STRING_U>(reinterpret_cast<DWORD_PTR>(pResDirRoot)
 									+ static_cast<DWORD_PTR>(pResDirEntryLvL2->NameOffset));
 								if (IsPtrSafe(pResDirStr))
-									//Copy no more then MAX_PATH chars into wstrResName, avoiding overflow.
+									//Copy not more then MAX_PATH chars into wstrResNameLvL2, avoiding overflow.
 									wstrResNameLvL2.assign(pResDirStr->NameString, pResDirStr->Length < MAX_PATH ? pResDirStr->Length : MAX_PATH);
 							}
 
@@ -1206,7 +1206,7 @@ namespace libpe
 											pResDirStr = reinterpret_cast<PIMAGE_RESOURCE_DIR_STRING_U>
 												(reinterpret_cast<DWORD_PTR>(pResDirRoot) + static_cast<DWORD_PTR>(pResDirEntryLvL3->NameOffset));
 											if (IsPtrSafe(pResDirStr))
-												//Copy not more then MAX_PATH chars into wstrResName, avoiding overflow.
+												//Copy not more then MAX_PATH chars into wstrResNameLvL3, avoiding overflow.
 												wstrResNameLvL3.assign(pResDirStr->NameString, pResDirStr->Length < MAX_PATH ? pResDirStr->Length : MAX_PATH);
 										}
 

@@ -279,13 +279,13 @@ namespace libpe
 
 	//Flattened resources.
 	struct PERESFLAT {
-		std::wstring_view          wstrTypeName { }; //Type name.
-		std::wstring_view          wstrResName { };  //Resource name.
-		std::wstring_view          wstrLangName { }; //Lang name.
-		std::span<const std::byte> spnData { };      //Resource data.
-		WORD                       wTypeID { };      //Type ID, e.g. RT_CURSOR, RT_BITMAP, etc...
-		WORD                       wResID { };       //Resource ID.
-		WORD                       wLangID { };      //Lang ID.
+		std::wstring_view          wsvTypeName { }; //Resource type name.
+		std::wstring_view          wsvResName { };  //Resource itself name.
+		std::wstring_view          wsvLangName { }; //Resource lang name.
+		std::span<const std::byte> spnData { };     //Resource data.
+		WORD                       wTypeID { };     //Type ID, e.g. RT_CURSOR, RT_BITMAP, etc...
+		WORD                       wResID { };      //Resource ID.
+		WORD                       wLangID { };     //Lang ID.
 	};
 	using PERESFLAT_VEC = std::vector<PERESFLAT>;
 	inline const std::unordered_map<DWORD, std::wstring_view> MapResID {
