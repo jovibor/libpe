@@ -236,56 +236,65 @@ namespace libpe
 	* IMAGE_RESOURCE_DIRECTORY_ENTRY of the last, third, level of resources.                            *
 	****************************************************************************************************/
 
-	//Level 3 (the lowest) Resources.
+	//Level 3/Lang (the lowest) resources.
 	struct PERESLVL3DATA {
-		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level 3 standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
-		std::wstring                   wstrResName;    //Level 3 resource name.
-		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level 3 standard IMAGE_RESOURCE_DATA_ENTRY struct.
-		std::vector<std::byte>         vecRawResData;  //Level 3 resource raw data.
+		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level 3 (Lang) standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
+		std::wstring                   wstrResName;    //Level 3 (Lang) resource name.
+		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level 3 (Lang) standard IMAGE_RESOURCE_DATA_ENTRY struct.
+		std::vector<std::byte>         vecRawResData;  //Level 3 (Lang) resource raw data.
 	};
+	using PERESLANGDATA = PERESLVL3DATA;
+
 	struct PERESLVL3 {
 		DWORD                      dwOffset;   //File's raw offset of this level 3 IMAGE_RESOURCE_DIRECTORY descriptor.
 		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level 3 standard IMAGE_RESOURCE_DIRECTORY header.
 		std::vector<PERESLVL3DATA> vecResData; //Array of level 3 resource entries.
 	};
+	using PERESLANG = PERESLVL3;
 
-	//Level 2 Resources — Includes LVL3 Resourses.
+	//Level 2/Name resources — Includes Lang resourses.
 	struct PERESLVL2DATA {
-		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level 2 standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
-		std::wstring                   wstrResName;	   //Level 2 resource name.
-		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level 2 standard IMAGE_RESOURCE_DATA_ENTRY struct.
-		std::vector<std::byte>         vecRawResData;  //Level 2 resource raw data.
-		PERESLVL3                      stResLvL3;      //Level 3 resource struct.
+		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level 2 (Name) standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
+		std::wstring                   wstrResName;    //Level 2 (Name) resource name.
+		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level 2 (Name) standard IMAGE_RESOURCE_DATA_ENTRY struct.
+		std::vector<std::byte>         vecRawResData;  //Level 2 (Name) resource raw data.
+		PERESLVL3                      stResLvL3;      //Level 3 (Lang) resource struct.
 	};
+	using PERESNAMEDATA = PERESLVL2DATA;
+
 	struct PERESLVL2 {
 		DWORD                      dwOffset;   //File's raw offset of this level 2 IMAGE_RESOURCE_DIRECTORY descriptor.
 		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level 2 standard IMAGE_RESOURCE_DIRECTORY header.
 		std::vector<PERESLVL2DATA> vecResData; //Array of level 2 resource entries.
 	};
+	using PERESNAME = PERESLVL2;
 
-	//Level 1 (Root) Resources — Includes LVL2 Resources.
+	//Level 1/Type resources — Includes Name Resources.
 	struct PERESROOTDATA {
-		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level root standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
-		std::wstring                   wstrResName;	   //Level root resource name.
-		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level root standard IMAGE_RESOURCE_DATA_ENTRY struct.
-		std::vector<std::byte>         vecRawResData;  //Level root resource raw data.
-		PERESLVL2                      stResLvL2;      //Level 2 resource struct.
+		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level root (Type) standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
+		std::wstring                   wstrResName;	   //Level root (Type) resource name.
+		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level root (Type) standard IMAGE_RESOURCE_DATA_ENTRY struct.
+		std::vector<std::byte>         vecRawResData;  //Level root (Type) resource raw data.
+		PERESLVL2                      stResLvL2;      //Level 2 (Name) resource struct.
 	};
+	using PERESTYPEDATA = PERESROOTDATA;
+
 	struct PERESROOT {
-		DWORD                      dwOffset;   //File's raw offset of this level 1 IMAGE_RESOURCE_DIRECTORY descriptor.
-		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level 1 standard IMAGE_RESOURCE_DIRECTORY header.
-		std::vector<PERESROOTDATA> vecResData; //Array of level 1 resource entries.
+		DWORD                      dwOffset;   //File's raw offset of this level root IMAGE_RESOURCE_DIRECTORY descriptor.
+		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level root standard IMAGE_RESOURCE_DIRECTORY header.
+		std::vector<PERESROOTDATA> vecResData; //Array of level root resource entries.
 	};
+	using PERESTYPE = PERESROOT;
 
 	//Flattened resources.
 	struct PERESFLAT {
-		std::wstring_view          wsvTypeName { }; //Resource type name.
-		std::wstring_view          wsvResName { };  //Resource itself name.
-		std::wstring_view          wsvLangName { }; //Resource lang name.
-		std::span<const std::byte> spnData { };     //Resource data.
-		WORD                       wTypeID { };     //Type ID, e.g. RT_CURSOR, RT_BITMAP, etc...
-		WORD                       wResID { };      //Resource ID.
-		WORD                       wLangID { };     //Lang ID.
+		std::span<const std::byte> spnData { };    //Resource data.
+		std::wstring_view          wsvTypeStr { }; //Resource Type name.
+		std::wstring_view          wsvNameStr { }; //Resource Name name (resource itself name).
+		std::wstring_view          wsvLangStr { }; //Resource Lang name.
+		WORD                       wTypeID { };    //Resource Type ID (RT_CURSOR, RT_BITMAP, etc...).
+		WORD                       wNameID { };    //Resource Name ID (resource itself ID).
+		WORD                       wLangID { };    //Resource Lang ID.
 	};
 	using PERESFLAT_VEC = std::vector<PERESFLAT>;
 	inline const std::unordered_map<DWORD, std::wstring_view> MapResID {
@@ -617,8 +626,7 @@ namespace libpe
 	/********************************************
 	* LIBPEINFO: service info structure.        *
 	********************************************/
-	struct LIBPEINFO
-	{
+	struct LIBPEINFO {
 		const wchar_t* pwszVersion { };        //wchar_t string Version.
 		union {
 			unsigned long long ullVersion { }; //long long number Version.

@@ -404,13 +404,13 @@ This `static` function is kind of a light version of the `GetResources` method. 
 `PERESFLAT` is a light struct that only possesses a pointers to the actual resources data, unlike heavy `PERESROOT`. `FlatResources` flattens all the resources, making accessing them more convenient.
 ```cpp
 struct PERESFLAT {
-    std::wstring_view          wsvTypeName { }; //Resource type name.
-    std::wstring_view          wsvResName { };  //Resource itself name.
-    std::wstring_view          wsvLangName { }; //Resource lang name.
-    std::span<const std::byte> spnData { };     //Resource data.
-    WORD                       wTypeID { };     //Type ID, e.g. RT_CURSOR, RT_BITMAP, etc...
-    WORD                       wResID { };      //Resource ID.
-    WORD                       wLangID { };     //Lang ID.
+    std::span<const std::byte> spnData { };    //Resource data.
+    std::wstring_view          wsvTypeStr { }; //Resource Type name.
+    std::wstring_view          wsvNameStr { }; //Resource Name name (resource itself name).
+    std::wstring_view          wsvLangStr { }; //Resource Lang name.
+    WORD                       wTypeID { };    //Resource Type ID (RT_CURSOR, RT_BITMAP, etc...).
+    WORD                       wNameID { };    //Resource Name ID (resource itself ID).
+    WORD                       wLangID { };    //Resource Lang ID.
 };
 using PERESFLAT_VEC = std::vector<PERESFLAT>;
 ```

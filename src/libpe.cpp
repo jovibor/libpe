@@ -434,7 +434,7 @@ namespace libpe
 			PERESFLAT stRes { };
 			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY
 			if (pResDirEntryRoot->NameIsString)
-				stRes.wsvTypeName = iterRoot.wstrResName;
+				stRes.wsvTypeStr = iterRoot.wstrResName;
 			else
 				stRes.wTypeID = pResDirEntryRoot->Id;
 
@@ -444,9 +444,9 @@ namespace libpe
 				{
 					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
 					if (pResDirEntry2->NameIsString)
-						stRes.wsvResName = iterLvL2.wstrResName;
+						stRes.wsvNameStr = iterLvL2.wstrResName;
 					else
-						stRes.wResID = pResDirEntry2->Id;
+						stRes.wNameID = pResDirEntry2->Id;
 
 					if (pResDirEntry2->DataIsDirectory)
 					{
@@ -454,7 +454,7 @@ namespace libpe
 						{
 							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
 							if (pResDirEntry3->NameIsString)
-								stRes.wsvLangName = iterLvL3.wstrResName;
+								stRes.wsvLangStr = iterLvL3.wstrResName;
 							else
 								stRes.wLangID = pResDirEntry3->Id;
 
