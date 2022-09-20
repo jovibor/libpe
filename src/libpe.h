@@ -1,6 +1,6 @@
 /****************************************************************************************
 * Copyright © 2018-2022, Jovibor: https://github.com/jovibor/                           *
-* libpe is a library for obtaining PE (x86) and PE+ (x64) files' inner structure.       *
+* libpe is a library for obtaining PE32 (x86) and PE32+ (x64) files' inner structure.   *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
@@ -192,8 +192,9 @@ namespace libpe
 
 	//Export table.
 	struct PEEXPORTFUNC {
-		DWORD       dwRVA;            //Function RVA.
+		DWORD       dwFuncRVA;        //Function RVA.
 		DWORD       dwOrdinal;        //Function ordinal.
+		DWORD       dwNameRVA;        //Name RVA.
 		std::string strFuncName;      //Function name.
 		std::string strForwarderName; //Function forwarder name.
 	};

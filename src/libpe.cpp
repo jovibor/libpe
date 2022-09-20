@@ -1,6 +1,6 @@
 /****************************************************************************************
 * Copyright © 2018-2022, Jovibor: https://github.com/jovibor/                           *
-* libpe is a library for obtaining PE (x86) and PE+ (x64) files' inner structure.       *
+* libpe is a library for obtaining PE32 (x86) and PE32+ (x64) files' inner structure.   *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
@@ -879,49 +879,53 @@ namespace libpe
 		if (pExportDir == nullptr)
 			return false;
 
-		const auto pdwFuncs = static_cast<PDWORD>(RVAToPtr(pExportDir->AddressOfFunctions));
-		if (pdwFuncs == nullptr)
+		const auto pdwFuncsRVA = static_cast<PDWORD>(RVAToPtr(pExportDir->AddressOfFunctions));
+		if (pdwFuncsRVA == nullptr)
 			return false;
 
 		std::vector<PEEXPORTFUNC> vecFuncs;
 		std::string strModuleName;
 		const auto pwOrdinals = static_cast<PWORD>(RVAToPtr(pExportDir->AddressOfNameOrdinals));
-		auto* ppszNames = static_cast<LPCSTR*>(RVAToPtr(pExportDir->AddressOfNames));
+		const auto pdwNamesRVA = static_cast<PDWORD>(RVAToPtr(pExportDir->AddressOfNames));
 
 		try {
 			for (size_t iterFuncs = 0; iterFuncs < static_cast<size_t>(pExportDir->NumberOfFunctions); ++iterFuncs)
 			{
-				//Checking pdwFuncs array.
-				if (!IsPtrSafe(pdwFuncs + iterFuncs))
+				if (!IsPtrSafe(pdwFuncsRVA + iterFuncs)) //Checking pdwFuncsRVA array.
 					break;
 
-				if (pdwFuncs[iterFuncs]) //if RVA==0 —> going next entry.
+				if (pdwFuncsRVA[iterFuncs]) //if RVA==0 —> going next entry.
 				{
-					std::string strFuncName, strForwarderName;
-					if (ppszNames && pwOrdinals)
+					std::string strFuncName;
+					std::string strForwarderName;
+					DWORD dwNameRVA { };
+					if (pdwNamesRVA && pwOrdinals) {
 						for (size_t iterFuncNames = 0; iterFuncNames < static_cast<size_t>(pExportDir->NumberOfNames); ++iterFuncNames)
 						{
-							//Checking pwOrdinals array.
-							if (!IsPtrSafe(pwOrdinals + iterFuncNames))
+							if (!IsPtrSafe(pwOrdinals + iterFuncNames)) //Checking pwOrdinals array.
 								break;
-							//Cycling through ordinals table to get func name.
-							if (pwOrdinals[iterFuncNames] == iterFuncs)
+
+							if (pwOrdinals[iterFuncNames] == iterFuncs) //Cycling through ordinals table to get func name.
 							{
-								const auto pszFuncName = static_cast<LPCSTR>(RVAToPtr(reinterpret_cast<DWORD_PTR>(ppszNames[iterFuncNames])));
+								dwNameRVA = pdwNamesRVA[iterFuncNames];
+								const auto pszFuncName = static_cast<LPCSTR>(RVAToPtr(dwNameRVA));
 								//Checking func name for length correctness.
-								if (pszFuncName && (StringCchLengthA(pszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+								if (pszFuncName && (StringCchLengthA(pszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 									strFuncName = pszFuncName;
+								}
 								break;
 							}
 						}
-					if ((pdwFuncs[iterFuncs] >= dwExportStartRVA) && (pdwFuncs[iterFuncs] <= dwExportEndRVA))
+					}
+
+					if ((pdwFuncsRVA[iterFuncs] >= dwExportStartRVA) && (pdwFuncsRVA[iterFuncs] <= dwExportEndRVA))
 					{
-						const auto pszForwarderName = static_cast<LPCSTR>(RVAToPtr(pdwFuncs[iterFuncs]));
+						const auto pszForwarderName = static_cast<LPCSTR>(RVAToPtr(pdwFuncsRVA[iterFuncs]));
 						//Checking forwarder name for length correctness.
 						if (pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
 							strForwarderName = pszForwarderName;
 					}
-					vecFuncs.emplace_back(pdwFuncs[iterFuncs], static_cast<DWORD>(iterFuncs)/*Ordinal*/,
+					vecFuncs.emplace_back(pdwFuncsRVA[iterFuncs], static_cast<DWORD>(iterFuncs)/*Ordinal*/, dwNameRVA,
 						std::move(strFuncName), std::move(strForwarderName));
 				}
 			}

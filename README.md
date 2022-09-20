@@ -229,8 +229,9 @@ auto GetExport()->PEEXPORT*;
 Gets file's **Export** information.
 ```cpp
 struct PEEXPORTFUNC {
-    DWORD       dwRVA;            //Function RVA.
+    DWORD       dwFuncRVA;        //Function RVA.
     DWORD       dwOrdinal;        //Function ordinal.
+    DWORD       dwNameRVA;        //Name RVA.
     std::string strFuncName;      //Function name.
     std::string strForwarderName; //Function forwarder name.
 };
