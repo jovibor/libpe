@@ -41,7 +41,7 @@ namespace libpe
 	{
 	public:
 		auto LoadPe(LPCWSTR pwszFile)->int override;
-		auto LoadPe(std::span<std::byte> spnFile)->int override;
+		auto LoadPe(std::span<const std::byte> spnFile)->int override;
 		[[nodiscard]] auto GetFileInfo()const->PEFILEINFO override;
 		[[nodiscard]] auto GetOffsetFromRVA(ULONGLONG ullRVA)const->DWORD override;
 		[[nodiscard]] auto GetOffsetFromVA(ULONGLONG ullVA)const->DWORD override;
@@ -65,18 +65,22 @@ namespace libpe
 		void Clear()override;
 		void Destroy()override;
 	private:
-		[[nodiscard]] PIMAGE_SECTION_HEADER GetSecHdrFromRVA(ULONGLONG ullRVA)const;
-		[[nodiscard]] PIMAGE_SECTION_HEADER GetSecHdrFromName(LPCSTR lpszName)const;
-		[[nodiscard]] LPVOID RVAToPtr(ULONGLONG ullRVA)const;
-		[[nodiscard]] DWORD RVAToOffset(ULONGLONG ullRVA)const;
-		[[nodiscard]] DWORD PtrToOffset(LPCVOID lp)const;
-		[[nodiscard]] DWORD GetDirEntryRVA(DWORD dwEntry)const;
-		[[nodiscard]] DWORD GetDirEntrySize(DWORD dwEntry)const;
-		template<typename T>
-		[[nodiscard]] T GetTData(ULONGLONG ullOffset)const;
-		template<typename T>
-		[[nodiscard]] bool IsPtrSafe(T tAddr, bool fCanReferenceBoundary = false)const;
 		void ClearAll();
+		[[nodiscard]] auto GetBaseAddr()const->DWORD_PTR;
+		[[nodiscard]] auto GetDataSize()const->ULONGLONG;
+		[[nodiscard]] auto GetDosPtr()const->const IMAGE_DOS_HEADER*;
+		[[nodiscard]] auto GetDirEntryRVA(DWORD dwEntry)const->DWORD;
+		[[nodiscard]] auto GetDirEntrySize(DWORD dwEntry)const->DWORD;
+		[[nodiscard]] auto GetImageBase()const->ULONGLONG;
+		[[nodiscard]] auto GetSecHdrFromName(LPCSTR lpszName)const->PIMAGE_SECTION_HEADER;
+		[[nodiscard]] auto GetSecHdrFromRVA(ULONGLONG ullRVA)const->PIMAGE_SECTION_HEADER;
+		template<typename T>
+		[[nodiscard]] auto GetTData(ULONGLONG ullOffset)const->T;
+		template<typename T>
+		[[nodiscard]] auto IsPtrSafe(T tAddr, bool fCanReferenceBoundary = false)const->bool;
+		[[nodiscard]] auto PtrToOffset(LPCVOID lp)const->DWORD;
+		[[nodiscard]] auto RVAToOffset(ULONGLONG ullRVA)const->DWORD;
+		[[nodiscard]] auto RVAToPtr(ULONGLONG ullRVA)const->LPVOID;
 		bool ParseMSDOSHeader();
 		bool ParseRichHeader();
 		bool ParseNTFileOptHeader();
@@ -99,14 +103,10 @@ namespace libpe
 		bool ParseCOMDescriptor();
 	private:
 		bool m_fLoaded { false };              //Flag shows PE load succession.
-		std::uint64_t m_ullFileSize { };       //Size of the PE file.
-		ULONGLONG m_ullMaxPtr { };             //Maximum address that can be dereferenced.
-		std::unique_ptr<char[]> m_pEmergencyMemory { std::make_unique<char[]>(0x8FFF) }; //Reserved 16K of reserved memory.
-		LPVOID m_lpBase { };                   //Pointer to file mapping beginning.
-		PIMAGE_DOS_HEADER m_pDosHeader { };    //DOS header pointer.
+		std::unique_ptr<char[]> m_pEmergencyMemory { std::make_unique<char[]>(0x8FFF) }; //Reserved 16K of memory.
+		std::span<const std::byte> m_spnData { }; //File data.
 		PIMAGE_NT_HEADERS32 m_pNTHeader32 { }; //NT header pointer for x86.
 		PIMAGE_NT_HEADERS64 m_pNTHeader64 { }; //NT header pointer for x64.
-		ULONGLONG m_ullImageBase { };          //Image base for x86/x64.
 
 		//Further structs are for client code:
 		PEFILEINFO m_stFileInfo { };           //File information.
@@ -174,7 +174,7 @@ namespace libpe
 		return ret;
 	}
 
-	auto Clibpe::LoadPe(std::span<std::byte> spnFile)->int
+	auto Clibpe::LoadPe(std::span<const std::byte> spnFile)->int
 	{
 		assert(!spnFile.empty());
 		if (m_fLoaded)
@@ -183,9 +183,7 @@ namespace libpe
 		if (spnFile.size() < sizeof(IMAGE_DOS_HEADER))
 			return ERR_FILE_SIZESMALL;
 
-		m_lpBase = spnFile.data();
-		m_ullFileSize = spnFile.size();
-		m_ullMaxPtr = reinterpret_cast<DWORD_PTR>(m_lpBase) + m_ullFileSize;
+		m_spnData = spnFile;
 
 		if (!ParseMSDOSHeader())
 			return ERR_FILE_NODOSHDR;
@@ -214,6 +212,8 @@ namespace libpe
 			ParseCOMDescriptor();
 		}
 
+		m_spnData = { };
+
 		return PEOK;
 	}
 
@@ -238,7 +238,7 @@ namespace libpe
 		if (!m_fLoaded)
 			return { };
 
-		return RVAToOffset(ullVA - m_ullImageBase);
+		return RVAToOffset(ullVA - GetImageBase());
 	}
 
 	auto Clibpe::GetMSDOSHeader()->IMAGE_DOS_HEADER*
@@ -480,170 +480,14 @@ namespace libpe
 
 	//Clibpe private methods.
 
-	PIMAGE_SECTION_HEADER Clibpe::GetSecHdrFromRVA(ULONGLONG ullRVA)const
-	{
-		PIMAGE_SECTION_HEADER pSecHdr;
-		WORD wNumOfSections;
-
-		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr)
-		{
-			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
-			wNumOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
-		}
-		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr)
-		{
-			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
-			wNumOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
-		}
-		else
-			return nullptr;
-
-		for (unsigned i = 0; i < wNumOfSections; ++i, ++pSecHdr)
-		{
-			if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecHdr) + sizeof(IMAGE_SECTION_HEADER)))
-				return nullptr;
-			//Is RVA within this section?
-			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
-				return pSecHdr;
-		}
-
-		return nullptr;
-	}
-
-	PIMAGE_SECTION_HEADER Clibpe::GetSecHdrFromName(LPCSTR lpszName)const
-	{
-		PIMAGE_SECTION_HEADER pSecHdr;
-		WORD wNumberOfSections;
-
-		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr)
-		{
-			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
-			wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
-		}
-		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr)
-		{
-			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
-			wNumberOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
-		}
-		else
-			return nullptr;
-
-		for (unsigned i = 0; i < wNumberOfSections; ++i, ++pSecHdr)
-		{
-			if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecHdr) + sizeof(IMAGE_SECTION_HEADER)))
-				break;
-			if (strncmp(reinterpret_cast<char*>(pSecHdr->Name), lpszName, IMAGE_SIZEOF_SHORT_NAME) == 0)
-				return pSecHdr;
-		}
-
-		return nullptr;
-	}
-
-	LPVOID Clibpe::RVAToPtr(ULONGLONG ullRVA)const
-	{
-		const auto pSecHdr = GetSecHdrFromRVA(ullRVA);
-		if (pSecHdr == nullptr)
-			return nullptr;
-
-		const auto ptr = reinterpret_cast<LPVOID>(reinterpret_cast<DWORD_PTR>(m_lpBase)
-				+ ullRVA - static_cast<DWORD_PTR>(pSecHdr->VirtualAddress - pSecHdr->PointerToRawData));
-
-		return IsPtrSafe(ptr, true) ? ptr : nullptr;
-	}
-
-	DWORD Clibpe::RVAToOffset(ULONGLONG ullRVA)const
-	{
-		DWORD dwOffset { };
-		for (const auto& iter : m_vecSecHeaders)
-		{
-			auto& pSecHdr = iter.stSecHdr;
-			//Is RVA within this section?
-			if ((ullRVA >= pSecHdr.VirtualAddress) && (ullRVA < (pSecHdr.VirtualAddress + pSecHdr.Misc.VirtualSize)))
-			{
-				dwOffset = static_cast<DWORD>(ullRVA) - (pSecHdr.VirtualAddress - pSecHdr.PointerToRawData);
-				if (dwOffset > static_cast<DWORD>(m_ullFileSize))
-					dwOffset = 0;
-			}
-		}
-
-		return dwOffset;
-	}
-
-	DWORD Clibpe::PtrToOffset(LPCVOID lp)const
-	{
-		if (lp == nullptr)
-			return 0;
-
-		return static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(lp) - reinterpret_cast<DWORD_PTR>(m_lpBase));
-	}
-
-	DWORD Clibpe::GetDirEntryRVA(DWORD dwEntry)const
-	{
-		if (!m_stFileInfo.fHasNTHdr)
-			return { };
-
-		if (m_stFileInfo.fIsx86)
-			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
-
-		if (m_stFileInfo.fIsx64)
-			return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
-
-		return { };
-	}
-
-	DWORD Clibpe::GetDirEntrySize(DWORD dwEntry)const
-	{
-		if (!m_stFileInfo.fHasNTHdr)
-			return { };
-
-		if (m_stFileInfo.fIsx86)
-			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
-
-		if (m_stFileInfo.fIsx64)
-			return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].Size;
-
-		return { };
-	}
-
-	template<typename T>
-	T Clibpe::GetTData(ULONGLONG ullOffset)const
-	{
-		if (ullOffset > (static_cast<ULONGLONG>(m_ullFileSize) - sizeof(BYTE))) //Check for file size exceeding.
-			return { };
-
-		return *reinterpret_cast<T*>(reinterpret_cast<DWORD_PTR>(m_lpBase) + ullOffset);;
-	}
-
-	/**************************************************************************************************
-	* This func checks given pointer for nullptr and, more important, whether it fits allowed bounds. *
-	* In PE headers there are plenty of places where wrong (bogus) values for pointers might reside,  *
-	* causing many runtime «fun» if trying to dereference them.                                       *
-	* Second arg (fCanReferenceBoundary) shows if pointer can point to the very end of a file, it's   *
-	* valid for some PE structures. Template is used just for convenience, sometimes there is a need  *
-	* to check pure address DWORD_PTR instead of a pointer.                                           *
-	**************************************************************************************************/
-	template<typename T>
-	bool Clibpe::IsPtrSafe(const T tAddr, bool fCanReferenceBoundary)const
-	{
-		DWORD_PTR dwAddr;
-		if constexpr (!std::is_same_v<T, DWORD_PTR>)
-			dwAddr = reinterpret_cast<DWORD_PTR>(tAddr);
-		else
-			dwAddr = tAddr;
-
-		return dwAddr == 0 ? false : (fCanReferenceBoundary ?
-			((dwAddr <= m_ullMaxPtr) && (dwAddr >= reinterpret_cast<DWORD_PTR>(m_lpBase))) :
-			((dwAddr < m_ullMaxPtr) && (dwAddr >= reinterpret_cast<DWORD_PTR>(m_lpBase))));
-	}
-
-	/******************************************************************************
-	* Clearing all internal vectors and nullify all structs, pointers and flags.  *
-	* Called if LoadPe is invoked second time by the same Ilibpe pointer.         *
-	******************************************************************************/
 	void Clibpe::ClearAll()
 	{
+		/******************************************************************************
+		* Clearing all internal vectors and nullify all structs, pointers and flags.  *
+		* Called if LoadPe is invoked second time by the same Ilibpe pointer.         *
+		******************************************************************************/
 		m_fLoaded = false;
-		m_lpBase = nullptr;
+		m_spnData = { };
 		m_pNTHeader32 = nullptr;
 		m_pNTHeader64 = nullptr;
 		m_stFileInfo = { };
@@ -666,57 +510,240 @@ namespace libpe
 		m_stCOR20Desc = { };
 	}
 
+	auto Clibpe::GetBaseAddr()const->DWORD_PTR
+	{
+		return reinterpret_cast<DWORD_PTR>(m_spnData.data());
+	}
+
+	auto Clibpe::GetDataSize()const->ULONGLONG
+	{
+		return m_spnData.size();
+	}
+
+	auto Clibpe::GetDosPtr()const->const IMAGE_DOS_HEADER*
+	{
+		return reinterpret_cast<const IMAGE_DOS_HEADER*>(m_spnData.data());
+	}
+
+	auto Clibpe::GetDirEntryRVA(DWORD dwEntry)const->DWORD
+	{
+		if (!m_stFileInfo.fHasNTHdr)
+			return { };
+
+		if (m_stFileInfo.fIsx86)
+			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
+
+		if (m_stFileInfo.fIsx64)
+			return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
+
+		return { };
+	}
+
+	auto Clibpe::GetDirEntrySize(DWORD dwEntry)const->DWORD
+	{
+		if (!m_stFileInfo.fHasNTHdr)
+			return { };
+
+		if (m_stFileInfo.fIsx86)
+			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
+
+		if (m_stFileInfo.fIsx64)
+			return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].Size;
+
+		return { };
+	}
+
+	auto Clibpe::GetImageBase()const->ULONGLONG
+	{
+		if (m_stFileInfo.fIsx86) {
+			return m_pNTHeader32->OptionalHeader.ImageBase;
+		}
+
+		if (m_stFileInfo.fIsx64) {
+			return m_pNTHeader64->OptionalHeader.ImageBase;
+		}
+
+		return { };
+	}
+
+	auto Clibpe::GetSecHdrFromName(LPCSTR lpszName)const->PIMAGE_SECTION_HEADER
+	{
+		PIMAGE_SECTION_HEADER pSecHdr;
+		WORD wNumberOfSections;
+
+		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr) {
+			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
+			wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
+		}
+		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr) {
+			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
+			wNumberOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
+		}
+		else
+			return nullptr;
+
+		for (unsigned i = 0; i < wNumberOfSections; ++i, ++pSecHdr)
+		{
+			if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecHdr) + sizeof(IMAGE_SECTION_HEADER)))
+				break;
+			if (strncmp(reinterpret_cast<char*>(pSecHdr->Name), lpszName, IMAGE_SIZEOF_SHORT_NAME) == 0)
+				return pSecHdr;
+		}
+
+		return nullptr;
+	}
+
+	auto Clibpe::GetSecHdrFromRVA(ULONGLONG ullRVA)const->PIMAGE_SECTION_HEADER
+	{
+		PIMAGE_SECTION_HEADER pSecHdr;
+		WORD wNumOfSections;
+
+		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr) {
+			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
+			wNumOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
+		}
+		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr) {
+			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
+			wNumOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
+		}
+		else
+			return nullptr;
+
+		for (unsigned i = 0; i < wNumOfSections; ++i, ++pSecHdr)
+		{
+			if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecHdr) + sizeof(IMAGE_SECTION_HEADER)))
+				return nullptr;
+			//Is RVA within this section?
+			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
+				return pSecHdr;
+		}
+
+		return nullptr;
+	}
+
+	template<typename T>
+	auto Clibpe::GetTData(ULONGLONG ullOffset)const->T
+	{
+		if (ullOffset > (GetDataSize() - sizeof(T))) //Check for file size exceeding.
+			return { };
+
+		return *reinterpret_cast<T*>(GetBaseAddr() + ullOffset);
+	}
+
+	template<typename T>
+	auto Clibpe::IsPtrSafe(const T tAddr, bool fCanReferenceBoundary)const->bool
+	{
+		/**************************************************************************************************
+		* This func checks given pointer for nullptr and, more important, whether it fits allowed bounds. *
+		* In PE headers there are plenty of places where wrong (bogus) values for pointers might reside,  *
+		* causing many runtime «fun» if trying to dereference them.                                       *
+		* Second arg (fCanReferenceBoundary) shows if pointer can point to the very end of a file, it's   *
+		* valid for some PE structures. Template is used just for convenience, sometimes there is a need  *
+		* to check pure address DWORD_PTR instead of a pointer.                                           *
+		**************************************************************************************************/
+		DWORD_PTR dwAddr;
+		if constexpr (!std::is_same_v<T, DWORD_PTR>) {
+			dwAddr = reinterpret_cast<DWORD_PTR>(tAddr);
+		}
+		else {
+			dwAddr = tAddr;
+		}
+
+		const auto ullMaxAddr = GetBaseAddr() + GetDataSize();
+
+		return dwAddr == 0 ? false : (fCanReferenceBoundary ?
+			((dwAddr <= ullMaxAddr) && (dwAddr >= GetBaseAddr())) :
+			((dwAddr < ullMaxAddr) && (dwAddr >= GetBaseAddr())));
+	}
+
+	auto Clibpe::PtrToOffset(LPCVOID lp)const->DWORD
+	{
+		if (lp == nullptr)
+			return 0;
+
+		return static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(lp) - GetBaseAddr());
+	}
+
+	auto Clibpe::RVAToOffset(ULONGLONG ullRVA)const->DWORD
+	{
+		DWORD dwOffset { };
+		for (const auto& iter : m_vecSecHeaders)
+		{
+			const auto& pSecHdr = iter.stSecHdr;
+			//Is RVA within this section?
+			if ((ullRVA >= pSecHdr.VirtualAddress) && (ullRVA < (pSecHdr.VirtualAddress + pSecHdr.Misc.VirtualSize)))
+			{
+				dwOffset = static_cast<DWORD>(ullRVA) - (pSecHdr.VirtualAddress - pSecHdr.PointerToRawData);
+				if (dwOffset > static_cast<DWORD>(GetDataSize()))
+					dwOffset = 0;
+			}
+		}
+
+		return dwOffset;
+	}
+
+	auto Clibpe::RVAToPtr(ULONGLONG ullRVA)const->LPVOID
+	{
+		const auto pSecHdr = GetSecHdrFromRVA(ullRVA);
+		if (pSecHdr == nullptr)
+			return nullptr;
+
+		const auto ptr = reinterpret_cast<LPVOID>(GetBaseAddr() + ullRVA
+			- static_cast<DWORD_PTR>(pSecHdr->VirtualAddress - pSecHdr->PointerToRawData));
+
+		return IsPtrSafe(ptr, true) ? ptr : nullptr;
+	}
+
 	bool Clibpe::ParseMSDOSHeader()
 	{
-		m_pDosHeader = static_cast<PIMAGE_DOS_HEADER>(m_lpBase);
+		const auto pDosHdr = GetDosPtr();
 
 		//If file has at least MSDOS header signature then we can assume, 
-		//that this is a minimum correct PE file, and process further.
-		if (m_pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+		//that this is a minimally correct PE file and process further.
+		if (pDosHdr->e_magic != IMAGE_DOS_SIGNATURE)
 			return false;
 
-		m_stMSDOSHeader = *m_pDosHeader;
+		m_stMSDOSHeader = *pDosHdr;
 		m_stFileInfo.fHasDosHdr = true;
 
 		return true;
 	}
 
-	/********************************************
-	* Undocumented, so called «Rich», header.	*
-	* Dwells not in all PE files.				*
-	********************************************/
 	bool Clibpe::ParseRichHeader()
 	{
-		//«Rich» stub starts at 0x80 offset,
-		//before m_pDosHeader->e_lfanew (PE header start offset)
+		//Undocumented, so called «Rich» header, dwells not in all PE files.
+		//«Rich» stub starts at 0x80 offset, before pDosHdr->e_lfanew (PE header offset start).
 		//If e_lfanew <= 0x80 — there is no «Rich» header.
-		if (m_pDosHeader->e_lfanew <= 0x80 || !IsPtrSafe(reinterpret_cast<DWORD_PTR>(m_pDosHeader) + static_cast<DWORD_PTR>(m_pDosHeader->e_lfanew)))
+
+		const auto ullBaseAddr = GetBaseAddr();
+		const auto e_lfanew = GetDosPtr()->e_lfanew;
+		if (e_lfanew <= 0x80 || !IsPtrSafe(ullBaseAddr + static_cast<DWORD_PTR>(e_lfanew)))
 			return false;
 
-		const auto pRichStartVA = reinterpret_cast<PDWORD>(reinterpret_cast<DWORD_PTR>(m_pDosHeader) + 0x80);
+		const auto pRichStartVA = reinterpret_cast<PDWORD>(ullBaseAddr + 0x80);
 		PDWORD pRichIter = pRichStartVA;
 
-		for (auto i = 0; i < ((m_pDosHeader->e_lfanew - 0x80) / 4); ++i, ++pRichIter)
+		for (auto i = 0; i < ((e_lfanew - 0x80) / 4); ++i, ++pRichIter)
 		{
 			//Check "Rich" (ANSI) sign, it's always at the end of the «Rich» header.
 			//Then take DWORD right after the "Rich" sign — it's a xor mask.
 			//Apply this mask to the first DWORD of «Rich» header, it must be "DanS" (ANSI) after xoring.
 			if ((*pRichIter == 0x68636952/*"Rich"*/) && ((*pRichStartVA ^ *(pRichIter + 1)) == 0x536E6144/*"Dans"*/)
-				&& (reinterpret_cast<DWORD_PTR>(pRichIter) >= reinterpret_cast<DWORD_PTR>(m_pDosHeader) + 0x90)) //To avoid too small (bogus) «Rich» header.
+				&& (reinterpret_cast<DWORD_PTR>(pRichIter) >= ullBaseAddr + 0x90)) //To avoid too small (bogus) «Rich» header.
 			{
 				//Amount of all «Rich» DOUBLE_DWORD structs.
 				//First 16 bytes in «Rich» header are irrelevant. It's "DanS" itself and 12 more zeroed bytes.
 				//That's why we subtracting 0x90 to find out amount of all «Rich» structures:
 				//0x80 («Rich» start) + 16 (0xF) = 0x90.
-				const DWORD dwRichSize = static_cast<DWORD>((reinterpret_cast<DWORD_PTR>(pRichIter) - reinterpret_cast<DWORD_PTR>(m_pDosHeader)) - 0x90) / 8;
+				const DWORD dwRichSize = static_cast<DWORD>((reinterpret_cast<DWORD_PTR>(pRichIter) - ullBaseAddr) - 0x90) / 8;
 				const DWORD dwRichXORMask = *(pRichIter + 1); //xor mask of «Rich» header.
-				pRichIter = reinterpret_cast<PDWORD>(reinterpret_cast<DWORD_PTR>(m_pDosHeader) + 0x90);//VA of «Rich» DOUBLE_DWORD structs start.
+				pRichIter = reinterpret_cast<PDWORD>(ullBaseAddr + 0x90);//VA of «Rich» DOUBLE_DWORD structs start.
 
 				for (unsigned j = 0; j < dwRichSize; ++j)
 				{
 					//Pushing double DWORD of «Rich» structure.
 					//Disassembling first DWORD by two WORDs.
-					m_vecRichHeader.emplace_back(static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(pRichIter) - reinterpret_cast<DWORD_PTR>(m_lpBase)),
+					m_vecRichHeader.emplace_back(static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(pRichIter) - GetBaseAddr()),
 						HIWORD(dwRichXORMask ^ *pRichIter), LOWORD(dwRichXORMask ^ *pRichIter), dwRichXORMask ^ *(pRichIter + 1));
 					pRichIter += 2; //Jump to the next DOUBLE_DWORD.
 				}
@@ -732,7 +759,8 @@ namespace libpe
 
 	bool Clibpe::ParseNTFileOptHeader()
 	{
-		auto pNTHeader = reinterpret_cast<PIMAGE_NT_HEADERS32>(reinterpret_cast<DWORD_PTR>(m_pDosHeader) + static_cast<DWORD_PTR>(m_pDosHeader->e_lfanew));
+		const auto pNTHeader = reinterpret_cast<PIMAGE_NT_HEADERS32>(GetBaseAddr()
+			+ static_cast<DWORD_PTR>(GetDosPtr()->e_lfanew));
 		if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pNTHeader) + sizeof(IMAGE_NT_HEADERS32)))
 			return false;
 
@@ -746,14 +774,12 @@ namespace libpe
 			m_pNTHeader32 = pNTHeader;
 			m_stNTHeader.unHdr.stNTHdr32 = *m_pNTHeader32;
 			m_stNTHeader.dwOffset = PtrToOffset(m_pNTHeader32);
-			m_ullImageBase = m_pNTHeader32->OptionalHeader.ImageBase;
 			break;
 		case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
 			m_stFileInfo.fIsx64 = true;
 			m_pNTHeader64 = reinterpret_cast<PIMAGE_NT_HEADERS64>(pNTHeader);
 			m_stNTHeader.unHdr.stNTHdr64 = *m_pNTHeader64;
 			m_stNTHeader.dwOffset = PtrToOffset(m_pNTHeader64);
-			m_ullImageBase = m_pNTHeader64->OptionalHeader.ImageBase;
 			break;
 		//case IMAGE_ROM_OPTIONAL_HDR_MAGIC: //Not implemented yet.
 		default:
@@ -852,7 +878,7 @@ namespace libpe
 				const long lOffset = strtol(reinterpret_cast<const char*>(&pSecHdr->Name[1]), &pEndPtr, 10);
 				if (!(lOffset == 0 && (pEndPtr == reinterpret_cast<const char*>(&pSecHdr->Name[1]) || *pEndPtr != '\0')))
 				{
-					const char* lpszSecRealName = reinterpret_cast<const char*>(reinterpret_cast<DWORD_PTR>(m_lpBase)
+					const char* lpszSecRealName = reinterpret_cast<const char*>(GetBaseAddr()
 						+ static_cast<DWORD_PTR>(dwSymbolTable) + static_cast<DWORD_PTR>(dwNumberOfSymbols) * 18
 						+ static_cast<DWORD_PTR>(lOffset));
 					if (IsPtrSafe(lpszSecRealName))
@@ -866,7 +892,7 @@ namespace libpe
 		if (m_vecSecHeaders.empty())
 			return false;
 
-		m_stFileInfo.fHasSections = true;;
+		m_stFileInfo.fHasSections = true;
 
 		return true;
 	}
@@ -883,10 +909,10 @@ namespace libpe
 		if (pdwFuncsRVA == nullptr)
 			return false;
 
-		std::vector<PEEXPORTFUNC> vecFuncs;
-		std::string strModuleName;
 		const auto pwOrdinals = static_cast<PWORD>(RVAToPtr(pExportDir->AddressOfNameOrdinals));
 		const auto pdwNamesRVA = static_cast<PDWORD>(RVAToPtr(pExportDir->AddressOfNames));
+		std::vector<PEEXPORTFUNC> vecFuncs;
+		std::string strModuleName;
 
 		try {
 			for (size_t iterFuncs = 0; iterFuncs < static_cast<size_t>(pExportDir->NumberOfFunctions); ++iterFuncs)
@@ -985,7 +1011,7 @@ namespace libpe
 
 						std::vector<PEIMPORTFUNC> vecFunc { };
 						std::string strDllName { };
-						//Counter for import module funcs. If it exceeds 5000 we stop parsing import descr, it's definitely bogus.
+						//Counter for import module funcs, if it exceeds iMaxFuncs we stop parsing import descr, it's definitely bogus.
 						int iFuncsCount = 0;
 
 						while (pThunk32->u1.AddressOfData)
@@ -1108,7 +1134,7 @@ namespace libpe
 
 	bool Clibpe::ParseResources()
 	{
-		auto pResDirRoot = static_cast<PIMAGE_RESOURCE_DIRECTORY>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE)));
+		const auto pResDirRoot = static_cast<PIMAGE_RESOURCE_DIRECTORY>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_RESOURCE)));
 		if (pResDirRoot == nullptr)
 			return false;
 
@@ -1119,7 +1145,7 @@ namespace libpe
 		PIMAGE_RESOURCE_DIR_STRING_U pResDirStr;
 
 		try {
-			DWORD dwNumOfEntriesRoot = pResDirRoot->NumberOfNamedEntries + pResDirRoot->NumberOfIdEntries;
+			const DWORD dwNumOfEntriesRoot = pResDirRoot->NumberOfNamedEntries + pResDirRoot->NumberOfIdEntries;
 			if (!IsPtrSafe(pResDirEntryRoot + dwNumOfEntriesRoot))
 				return false;
 
@@ -1156,7 +1182,7 @@ namespace libpe
 					else
 					{
 						auto pResDirEntryLvL2 = reinterpret_cast<PIMAGE_RESOURCE_DIRECTORY_ENTRY>(pResDirLvL2 + 1);
-						DWORD dwNumOfEntriesLvL2 = pResDirLvL2->NumberOfNamedEntries + pResDirLvL2->NumberOfIdEntries;
+						const DWORD dwNumOfEntriesLvL2 = pResDirLvL2->NumberOfNamedEntries + pResDirLvL2->NumberOfIdEntries;
 						if (!IsPtrSafe(pResDirEntryLvL2 + dwNumOfEntriesLvL2))
 							break;
 
@@ -1193,7 +1219,7 @@ namespace libpe
 								else
 								{
 									auto pResDirEntryLvL3 = reinterpret_cast<PIMAGE_RESOURCE_DIRECTORY_ENTRY>(pResDirLvL3 + 1);
-									DWORD dwNumOfEntriesLvL3 = pResDirLvL3->NumberOfNamedEntries + pResDirLvL3->NumberOfIdEntries;
+									const DWORD dwNumOfEntriesLvL3 = pResDirLvL3->NumberOfNamedEntries + pResDirLvL3->NumberOfIdEntries;
 									if (!IsPtrSafe(pResDirEntryLvL3 + dwNumOfEntriesLvL3))
 										break;
 
@@ -1221,7 +1247,7 @@ namespace libpe
 											//IMAGE_RESOURCE_DATA_ENTRY::OffsetToData is actually a general RVA,
 											//not an offset from root IMAGE_RESOURCE_DIRECTORY, like IMAGE_RESOURCE_DIRECTORY_ENTRY::OffsetToData.
 
-											auto pThirdResRawDataBegin = static_cast<std::byte*>(RVAToPtr(pResDataEntryLvL3->OffsetToData));
+											const auto pThirdResRawDataBegin = static_cast<std::byte*>(RVAToPtr(pResDataEntryLvL3->OffsetToData));
 											//Checking RAW Resource data pointer out of bounds.
 											if (pThirdResRawDataBegin && IsPtrSafe(reinterpret_cast<DWORD_PTR>(pThirdResRawDataBegin)
 												+ static_cast<DWORD_PTR>(pResDataEntryLvL3->Size), true)) {
@@ -1244,7 +1270,7 @@ namespace libpe
 									+ static_cast<DWORD_PTR>(pResDirEntryLvL2->OffsetToData));
 								if (IsPtrSafe(pResDataEntryLvL2))
 								{
-									auto pSecondResRawDataBegin = static_cast<std::byte*>(RVAToPtr(pResDataEntryLvL2->OffsetToData));
+									const auto pSecondResRawDataBegin = static_cast<std::byte*>(RVAToPtr(pResDataEntryLvL2->OffsetToData));
 									//Checking RAW Resource data pointer out of bounds.
 									if (pSecondResRawDataBegin && IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecondResRawDataBegin)
 										+ static_cast<DWORD_PTR>(pResDataEntryLvL2->Size), true)) {
@@ -1304,7 +1330,7 @@ namespace libpe
 
 	bool Clibpe::ParseExceptions()
 	{
-		//IMAGE_RUNTIME_FUNCTION_ENTRY (without leading underscore) 
+		//IMAGE_RUNTIME_FUNCTION_ENTRY (without leading underscore)
 		//might have different typedef depending on defined platform, see winnt.h
 		auto pRuntimeFuncsEntry = static_cast<_PIMAGE_RUNTIME_FUNCTION_ENTRY>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_EXCEPTION)));
 		if (pRuntimeFuncsEntry == nullptr)
@@ -1335,10 +1361,10 @@ namespace libpe
 			return false;
 
 		//Checks for bogus file offsets that can cause DWORD_PTR overflow.
-		if (IsSumOverflow(static_cast<DWORD_PTR>(dwSecurityDirOffset), reinterpret_cast<DWORD_PTR>(m_lpBase)))
+		if (IsSumOverflow(static_cast<DWORD_PTR>(dwSecurityDirOffset), GetBaseAddr()))
 			return false;
 
-		auto dwSecurityDirStartVA = reinterpret_cast<DWORD_PTR>(m_lpBase) + static_cast<DWORD_PTR>(dwSecurityDirOffset);
+		auto dwSecurityDirStartVA = GetBaseAddr() + static_cast<DWORD_PTR>(dwSecurityDirOffset);
 		if (IsSumOverflow(dwSecurityDirStartVA, static_cast<DWORD_PTR>(dwSecurityDirSize)))
 			return false;
 
@@ -1447,7 +1473,7 @@ namespace libpe
 
 	bool Clibpe::ParseDebug()
 	{
-		const DWORD dwDebugDirRVA = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG);
+		const auto dwDebugDirRVA = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_DEBUG);
 		if (!dwDebugDirRVA)
 			return false;
 
@@ -1456,7 +1482,7 @@ namespace libpe
 		PIMAGE_SECTION_HEADER pDebugSecHdr = GetSecHdrFromName(".debug");
 		if (pDebugSecHdr && (pDebugSecHdr->VirtualAddress == dwDebugDirRVA))
 		{
-			pDebugDir = reinterpret_cast<PIMAGE_DEBUG_DIRECTORY>(reinterpret_cast<DWORD_PTR>(m_lpBase) + static_cast<DWORD_PTR>(pDebugSecHdr->PointerToRawData));
+			pDebugDir = reinterpret_cast<PIMAGE_DEBUG_DIRECTORY>(GetBaseAddr() + static_cast<DWORD_PTR>(pDebugSecHdr->PointerToRawData));
 			dwDebugDirSize = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG) * static_cast<DWORD>(sizeof(IMAGE_DEBUG_DIRECTORY));
 		}
 		else //Looking for the debug directory.
@@ -1525,7 +1551,7 @@ namespace libpe
 
 	bool Clibpe::ParseArchitecture()
 	{
-		const DWORD dwArchDirRVA = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_ARCHITECTURE);
+		const auto dwArchDirRVA = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_ARCHITECTURE);
 		if (!dwArchDirRVA)
 			return false;
 
@@ -1590,7 +1616,7 @@ namespace libpe
 			else
 				return false;
 
-			auto pTLSCallbacks = static_cast<PDWORD>(RVAToPtr(ullAddressOfCallBacks - m_ullImageBase));
+			auto pTLSCallbacks = static_cast<PDWORD>(RVAToPtr(ullAddressOfCallBacks - GetImageBase()));
 			if (pTLSCallbacks)
 			{
 				while (*pTLSCallbacks)

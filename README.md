@@ -56,8 +56,8 @@
 **libpe** is a Windows library for obtaining inner information from the [Portable Executable Format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format) binaries. The library is implemented as a pure abstract virtual interface with a decent amount of methods. 
 
 * Works with PE32(x86) and PE32+(x64) binaries
-* Supports PE/PE+ binaries of any size (although PE format is restricted to **4GB**)
-* All inner PE/PE+ data structures, headers and layouts
+* Supports PE32/PE32+ binaries of any size (although PE format is restricted to **4GB**)
+* All inner PE32/PE32+ data structures, headers and layouts
     * MSDOS Header
     * «Rich» Header
     * NT/File/Optional Headers
@@ -111,7 +111,7 @@ After this method succeeds you then can call all the other methods to retrieve n
 
 ### <a name="loadpemem"></a>LoadPe
 ```cpp
-auto LoadPe(std::span<std::byte> spnFile)->int;
+auto LoadPe(std::span<const std::byte> spnFile)->int;
 ```
 This method overload is used to parse a PE file that is already in memory.
 
