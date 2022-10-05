@@ -212,8 +212,6 @@ namespace libpe
 			ParseCOMDescriptor();
 		}
 
-		m_spnData = { };
-
 		return PEOK;
 	}
 
@@ -1376,7 +1374,7 @@ namespace libpe
 		while (dwSecurityDirStartVA < dwSecurityDirEndVA)
 		{
 			auto pCertificate = reinterpret_cast<LPWIN_CERTIFICATE>(dwSecurityDirStartVA);
-			DWORD dwCertSize = pCertificate->dwLength - static_cast<DWORD>(offsetof(WIN_CERTIFICATE, bCertificate));
+			const auto dwCertSize = pCertificate->dwLength - static_cast<DWORD>(offsetof(WIN_CERTIFICATE, bCertificate));
 			if (!IsPtrSafe(dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwCertSize)))
 				break;
 
@@ -1487,10 +1485,10 @@ namespace libpe
 		}
 		else //Looking for the debug directory.
 		{
-			if ((pDebugSecHdr = GetSecHdrFromRVA(dwDebugDirRVA)) == nullptr)
+			if (pDebugSecHdr = GetSecHdrFromRVA(dwDebugDirRVA); pDebugSecHdr == nullptr)
 				return false;
 
-			if ((pDebugDir = static_cast<PIMAGE_DEBUG_DIRECTORY>(RVAToPtr(dwDebugDirRVA))) == nullptr)
+			if (pDebugDir = static_cast<PIMAGE_DEBUG_DIRECTORY>(RVAToPtr(dwDebugDirRVA)); pDebugDir == nullptr)
 				return false;
 
 			dwDebugDirSize = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_DEBUG);
