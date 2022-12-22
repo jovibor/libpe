@@ -40,28 +40,28 @@ namespace libpe
 	class Clibpe final : public Ilibpe
 	{
 	public:
-		auto LoadPe(LPCWSTR pwszFile)->int override;
-		auto LoadPe(std::span<const std::byte> spnFile)->int override;
+		auto LoadPe(LPCWSTR pwszFile) -> int override;
+		auto LoadPe(std::span<const std::byte> spnFile) -> int override;
 		[[nodiscard]] auto GetFileInfo()const->PEFILEINFO override;
 		[[nodiscard]] auto GetOffsetFromRVA(ULONGLONG ullRVA)const->DWORD override;
 		[[nodiscard]] auto GetOffsetFromVA(ULONGLONG ullVA)const->DWORD override;
-		[[nodiscard]] auto GetMSDOSHeader()->IMAGE_DOS_HEADER* override;
-		[[nodiscard]] auto GetRichHeader()->PERICHHDR_VEC* override;
-		[[nodiscard]] auto GetNTHeader()->PENTHDR* override;
-		[[nodiscard]] auto GetDataDirs()->PEDATADIR_VEC* override;
-		[[nodiscard]] auto GetSecHeaders()->PESECHDR_VEC* override;
-		[[nodiscard]] auto GetExport()->PEEXPORT* override;
-		[[nodiscard]] auto GetImport()->PEIMPORT_VEC* override;
-		[[nodiscard]] auto GetResources()->PERESROOT* override;
-		[[nodiscard]] auto GetExceptions()->PEEXCEPTION_VEC* override;
-		[[nodiscard]] auto GetSecurity()->PESECURITY_VEC* override;
-		[[nodiscard]] auto GetRelocations()->PERELOC_VEC* override;
-		[[nodiscard]] auto GetDebug()->PEDEBUG_VEC* override;
-		[[nodiscard]] auto GetTLS()->PETLS* override;
-		[[nodiscard]] auto GetLoadConfig()->PELOADCONFIG* override;
-		[[nodiscard]] auto GetBoundImport()->PEBOUNDIMPORT_VEC* override;
-		[[nodiscard]] auto GetDelayImport()->PEDELAYIMPORT_VEC* override;
-		[[nodiscard]] auto GetCOMDescriptor()->PECOMDESCRIPTOR* override;
+		[[nodiscard]] auto GetMSDOSHeader() -> IMAGE_DOS_HEADER* override;
+		[[nodiscard]] auto GetRichHeader() -> PERICHHDR_VEC* override;
+		[[nodiscard]] auto GetNTHeader() -> PENTHDR* override;
+		[[nodiscard]] auto GetDataDirs() -> PEDATADIR_VEC* override;
+		[[nodiscard]] auto GetSecHeaders() -> PESECHDR_VEC* override;
+		[[nodiscard]] auto GetExport() -> PEEXPORT* override;
+		[[nodiscard]] auto GetImport() -> PEIMPORT_VEC* override;
+		[[nodiscard]] auto GetResources() -> PERESROOT* override;
+		[[nodiscard]] auto GetExceptions() -> PEEXCEPTION_VEC* override;
+		[[nodiscard]] auto GetSecurity() -> PESECURITY_VEC* override;
+		[[nodiscard]] auto GetRelocations() -> PERELOC_VEC* override;
+		[[nodiscard]] auto GetDebug() -> PEDEBUG_VEC* override;
+		[[nodiscard]] auto GetTLS() -> PETLS* override;
+		[[nodiscard]] auto GetLoadConfig() -> PELOADCONFIG* override;
+		[[nodiscard]] auto GetBoundImport() -> PEBOUNDIMPORT_VEC* override;
+		[[nodiscard]] auto GetDelayImport() -> PEDELAYIMPORT_VEC* override;
+		[[nodiscard]] auto GetCOMDescriptor() -> PECOMDESCRIPTOR* override;
 		void Clear()override;
 		void Destroy()override;
 	private:
@@ -520,10 +520,10 @@ namespace libpe
 		if (!m_stFileInfo.fHasNTHdr)
 			return { };
 
-		if (m_stFileInfo.fIsx86)
+		if (m_stFileInfo.fIsPE32)
 			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 
-		if (m_stFileInfo.fIsx64)
+		if (m_stFileInfo.fIsPE64)
 			return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 
 		return { };
@@ -534,10 +534,10 @@ namespace libpe
 		if (!m_stFileInfo.fHasNTHdr)
 			return { };
 
-		if (m_stFileInfo.fIsx86)
+		if (m_stFileInfo.fIsPE32)
 			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
 
-		if (m_stFileInfo.fIsx64)
+		if (m_stFileInfo.fIsPE64)
 			return m_pNTHeader64->OptionalHeader.DataDirectory[dwEntry].Size;
 
 		return { };
@@ -545,11 +545,11 @@ namespace libpe
 
 	auto Clibpe::GetImageBase()const->ULONGLONG
 	{
-		if (m_stFileInfo.fIsx86) {
+		if (m_stFileInfo.fIsPE32) {
 			return m_pNTHeader32->OptionalHeader.ImageBase;
 		}
 
-		if (m_stFileInfo.fIsx64) {
+		if (m_stFileInfo.fIsPE64) {
 			return m_pNTHeader64->OptionalHeader.ImageBase;
 		}
 
@@ -561,11 +561,11 @@ namespace libpe
 		PIMAGE_SECTION_HEADER pSecHdr;
 		WORD wNumberOfSections;
 
-		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr) {
+		if (m_stFileInfo.fIsPE32 && m_stFileInfo.fHasNTHdr) {
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
 			wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
 		}
-		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr) {
+		else if (m_stFileInfo.fIsPE64 && m_stFileInfo.fHasNTHdr) {
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
 			wNumberOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
 		}
@@ -587,11 +587,11 @@ namespace libpe
 		PIMAGE_SECTION_HEADER pSecHdr;
 		WORD wNumOfSections;
 
-		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr) {
+		if (m_stFileInfo.fIsPE32 && m_stFileInfo.fHasNTHdr) {
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
 			wNumOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
 		}
-		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr) {
+		else if (m_stFileInfo.fIsPE64 && m_stFileInfo.fHasNTHdr) {
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
 			wNumOfSections = m_pNTHeader64->FileHeader.NumberOfSections;
 		}
@@ -752,13 +752,13 @@ namespace libpe
 
 		switch (pNTHeader->OptionalHeader.Magic) {
 		case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
-			m_stFileInfo.fIsx86 = true;
+			m_stFileInfo.fIsPE32 = true;
 			m_pNTHeader32 = pNTHeader;
 			m_stNTHeader.unHdr.stNTHdr32 = *m_pNTHeader32;
 			m_stNTHeader.dwOffset = PtrToOffset(m_pNTHeader32);
 			break;
 		case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
-			m_stFileInfo.fIsx64 = true;
+			m_stFileInfo.fIsPE64 = true;
 			m_pNTHeader64 = reinterpret_cast<PIMAGE_NT_HEADERS64>(pNTHeader);
 			m_stNTHeader.unHdr.stNTHdr64 = *m_pNTHeader64;
 			m_stNTHeader.dwOffset = PtrToOffset(m_pNTHeader64);
@@ -779,11 +779,11 @@ namespace libpe
 		PIMAGE_SECTION_HEADER pSecHdr;
 		DWORD dwRVAAndSizes;
 
-		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr) {
+		if (m_stFileInfo.fIsPE32 && m_stFileInfo.fHasNTHdr) {
 			pDataDir = reinterpret_cast<PIMAGE_DATA_DIRECTORY>(m_pNTHeader32->OptionalHeader.DataDirectory);
 			dwRVAAndSizes = m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes;
 		}
-		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr) {
+		else if (m_stFileInfo.fIsPE64 && m_stFileInfo.fHasNTHdr) {
 			pDataDir = reinterpret_cast<PIMAGE_DATA_DIRECTORY>(m_pNTHeader64->OptionalHeader.DataDirectory);
 			dwRVAAndSizes = m_pNTHeader64->OptionalHeader.NumberOfRvaAndSizes;
 		}
@@ -816,13 +816,13 @@ namespace libpe
 		WORD wNumSections;
 		DWORD dwSymbolTable, dwNumberOfSymbols;
 
-		if (m_stFileInfo.fIsx86 && m_stFileInfo.fHasNTHdr) {
+		if (m_stFileInfo.fIsPE32 && m_stFileInfo.fHasNTHdr) {
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
 			wNumSections = m_pNTHeader32->FileHeader.NumberOfSections;
 			dwSymbolTable = m_pNTHeader32->FileHeader.PointerToSymbolTable;
 			dwNumberOfSymbols = m_pNTHeader32->FileHeader.NumberOfSymbols;
 		}
-		else if (m_stFileInfo.fIsx64 && m_stFileInfo.fHasNTHdr) {
+		else if (m_stFileInfo.fIsPE64 && m_stFileInfo.fHasNTHdr) {
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader64);
 			wNumSections = m_pNTHeader64->FileHeader.NumberOfSections;
 			dwSymbolTable = m_pNTHeader64->FileHeader.PointerToSymbolTable;
@@ -965,7 +965,7 @@ namespace libpe
 			constexpr auto iMaxFuncs = 5000;
 			int iModulesCount = 0;
 
-			if (m_stFileInfo.fIsx86) {
+			if (m_stFileInfo.fIsPE32) {
 				while (pImpDesc->Name) {
 					auto pThunk32 = reinterpret_cast<PIMAGE_THUNK_DATA32>(static_cast<DWORD_PTR>(pImpDesc->OriginalFirstThunk));
 					if (!pThunk32)
@@ -1018,7 +1018,7 @@ namespace libpe
 						break;
 				}
 			}
-			else if (m_stFileInfo.fIsx64) {
+			else if (m_stFileInfo.fIsPE64) {
 				while (pImpDesc->Name) {
 					auto pThunk64 = reinterpret_cast<PIMAGE_THUNK_DATA64>(static_cast<DWORD_PTR>(pImpDesc->OriginalFirstThunk));
 					if (!pThunk64)
@@ -1516,7 +1516,7 @@ namespace libpe
 			PETLS::UNPETLS varTLSDir;
 			PDWORD pdwTLSPtr;
 
-			if (m_stFileInfo.fIsx86) {
+			if (m_stFileInfo.fIsPE32) {
 				const auto pTLSDir32 = static_cast<PIMAGE_TLS_DIRECTORY32>(RVAToPtr(dwTLSDirRVA));
 				if (!pTLSDir32)
 					return false;
@@ -1527,7 +1527,7 @@ namespace libpe
 				ullEndAddressOfRawData = pTLSDir32->EndAddressOfRawData;
 				ullAddressOfCallBacks = pTLSDir32->AddressOfCallBacks;
 			}
-			else if (m_stFileInfo.fIsx64) {
+			else if (m_stFileInfo.fIsPE64) {
 				const auto pTLSDir64 = static_cast<PIMAGE_TLS_DIRECTORY64>(RVAToPtr(dwTLSDirRVA));
 				if (!pTLSDir64)
 					return false;
@@ -1572,7 +1572,7 @@ namespace libpe
 
 	bool Clibpe::ParseLCD()
 	{
-		if (m_stFileInfo.fIsx86) {
+		if (m_stFileInfo.fIsPE32) {
 			const auto pLCD32 = static_cast<PIMAGE_LOAD_CONFIG_DIRECTORY32>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG)));
 			if (!pLCD32 || !IsPtrSafe(reinterpret_cast<DWORD_PTR>(pLCD32) + sizeof(IMAGE_LOAD_CONFIG_DIRECTORY32)))
 				return false;
@@ -1580,7 +1580,7 @@ namespace libpe
 			m_stLCD.dwOffset = PtrToOffset(pLCD32);
 			m_stLCD.unLCD.stLCD32 = *pLCD32;
 		}
-		else if (m_stFileInfo.fIsx64) {
+		else if (m_stFileInfo.fIsPE64) {
 			const auto pLCD64 = static_cast<PIMAGE_LOAD_CONFIG_DIRECTORY64>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG)));
 			if (!pLCD64 || !IsPtrSafe(reinterpret_cast<DWORD_PTR>(pLCD64) + sizeof(PIMAGE_LOAD_CONFIG_DIRECTORY64)))
 				return false;
@@ -1661,7 +1661,7 @@ namespace libpe
 		if (pDelayImpDescr == nullptr)
 			return false;
 
-		if (m_stFileInfo.fIsx86) {
+		if (m_stFileInfo.fIsPE32) {
 			while (pDelayImpDescr->DllNameRVA) {
 				auto pThunk32Name = reinterpret_cast<PIMAGE_THUNK_DATA32>(static_cast<DWORD_PTR>(pDelayImpDescr->ImportNameTableRVA));
 
@@ -1723,7 +1723,7 @@ namespace libpe
 				}
 			}
 		}
-		else if (m_stFileInfo.fIsx64) {
+		else if (m_stFileInfo.fIsPE64) {
 			while (pDelayImpDescr->DllNameRVA) {
 				auto pThunk64Name = reinterpret_cast<PIMAGE_THUNK_DATA64>(static_cast<DWORD_PTR>(pDelayImpDescr->ImportNameTableRVA));
 

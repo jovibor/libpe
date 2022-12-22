@@ -525,8 +525,8 @@ namespace libpe
 
 	//File information struct.
 	struct PEFILEINFO {
-		bool fIsx86 : 1 {};
-		bool fIsx64 : 1 {};
+		bool fIsPE32 : 1 {};
+		bool fIsPE64 : 1 {};
 		bool fHasDosHdr : 1 {};
 		bool fHasRichHdr : 1 {};
 		bool fHasNTHdr : 1 {};
@@ -553,31 +553,31 @@ namespace libpe
 	class Ilibpe
 	{
 	public:
-		virtual auto LoadPe(LPCWSTR pwszFile)->int = 0;                   //Load PE file from file.
-		virtual auto LoadPe(std::span<const std::byte> spnFile)->int = 0; //Load PE file from memory.
+		virtual auto LoadPe(LPCWSTR pwszFile) -> int = 0;                   //Load PE file from file.
+		virtual auto LoadPe(std::span<const std::byte> spnFile) -> int = 0; //Load PE file from memory.
 		[[nodiscard]] virtual auto GetFileInfo()const->PEFILEINFO = 0;
 		[[nodiscard]] virtual auto GetOffsetFromRVA(ULONGLONG ullRVA)const->DWORD = 0;
 		[[nodiscard]] virtual auto GetOffsetFromVA(ULONGLONG ullVA)const->DWORD = 0;
-		[[nodiscard]] virtual auto GetMSDOSHeader()->IMAGE_DOS_HEADER* = 0;
-		[[nodiscard]] virtual auto GetRichHeader()->PERICHHDR_VEC* = 0;
-		[[nodiscard]] virtual auto GetNTHeader()->PENTHDR* = 0;
-		[[nodiscard]] virtual auto GetDataDirs()->PEDATADIR_VEC* = 0;
-		[[nodiscard]] virtual auto GetSecHeaders()->PESECHDR_VEC* = 0;
-		[[nodiscard]] virtual auto GetExport()->PEEXPORT* = 0;
-		[[nodiscard]] virtual auto GetImport()->PEIMPORT_VEC* = 0;
-		[[nodiscard]] virtual auto GetResources()->PERESROOT* = 0;
-		[[nodiscard]] virtual auto GetExceptions()->PEEXCEPTION_VEC* = 0;
-		[[nodiscard]] virtual auto GetSecurity()->PESECURITY_VEC* = 0;
-		[[nodiscard]] virtual auto GetRelocations()->PERELOC_VEC* = 0;
-		[[nodiscard]] virtual auto GetDebug()->PEDEBUG_VEC* = 0;
-		[[nodiscard]] virtual auto GetTLS()->PETLS* = 0;
-		[[nodiscard]] virtual auto GetLoadConfig()->PELOADCONFIG* = 0;
-		[[nodiscard]] virtual auto GetBoundImport()->PEBOUNDIMPORT_VEC* = 0;
-		[[nodiscard]] virtual auto GetDelayImport()->PEDELAYIMPORT_VEC* = 0;
-		[[nodiscard]] virtual auto GetCOMDescriptor()->PECOMDESCRIPTOR* = 0;
+		[[nodiscard]] virtual auto GetMSDOSHeader() -> IMAGE_DOS_HEADER* = 0;
+		[[nodiscard]] virtual auto GetRichHeader() -> PERICHHDR_VEC* = 0;
+		[[nodiscard]] virtual auto GetNTHeader() -> PENTHDR* = 0;
+		[[nodiscard]] virtual auto GetDataDirs() -> PEDATADIR_VEC* = 0;
+		[[nodiscard]] virtual auto GetSecHeaders() -> PESECHDR_VEC* = 0;
+		[[nodiscard]] virtual auto GetExport() -> PEEXPORT* = 0;
+		[[nodiscard]] virtual auto GetImport() -> PEIMPORT_VEC* = 0;
+		[[nodiscard]] virtual auto GetResources() -> PERESROOT* = 0;
+		[[nodiscard]] virtual auto GetExceptions() -> PEEXCEPTION_VEC* = 0;
+		[[nodiscard]] virtual auto GetSecurity() -> PESECURITY_VEC* = 0;
+		[[nodiscard]] virtual auto GetRelocations() -> PERELOC_VEC* = 0;
+		[[nodiscard]] virtual auto GetDebug() -> PEDEBUG_VEC* = 0;
+		[[nodiscard]] virtual auto GetTLS() -> PETLS* = 0;
+		[[nodiscard]] virtual auto GetLoadConfig() -> PELOADCONFIG* = 0;
+		[[nodiscard]] virtual auto GetBoundImport() -> PEBOUNDIMPORT_VEC* = 0;
+		[[nodiscard]] virtual auto GetDelayImport() -> PEDELAYIMPORT_VEC* = 0;
+		[[nodiscard]] virtual auto GetCOMDescriptor() -> PECOMDESCRIPTOR* = 0;
 		virtual void Clear() = 0; //Clear all internal structs.
 		virtual void Destroy() = 0;
-		[[nodiscard]] static auto FlatResources(const PERESROOT& stResRoot)->PERESFLAT_VEC;
+		[[nodiscard]] static auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC;
 	};
 
 	//Return codes.
