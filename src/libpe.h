@@ -1,10 +1,11 @@
 /****************************************************************************************
-* Copyright © 2018-2022, Jovibor: https://github.com/jovibor/                           *
+* Copyright © 2018-2023, Jovibor: https://github.com/jovibor/                           *
 * libpe is a library for obtaining PE32 (x86) and PE32+ (x64) files' inner structure.   *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
 ****************************************************************************************/
 #pragma once
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <WinTrust.h> //WIN_CERTIFICATE struct.
 #include <memory>

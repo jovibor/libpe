@@ -1,5 +1,5 @@
 /****************************************************************************************
-* Copyright © 2018-2022, Jovibor: https://github.com/jovibor/                           *
+* Copyright © 2018-2023, Jovibor: https://github.com/jovibor/                           *
 * libpe is a library for obtaining PE32 (x86) and PE32+ (x64) files' inner structure.   *
 * Official git repository: https://github.com/jovibor/libpe                             *
 * This software is available under the "MIT License".                                   *
@@ -8,7 +8,7 @@
 #include <cassert>
 #include <strsafe.h>
 
-#define LIBPE_PRODUCT_NAME		  L"libpe, (C) Jovibor 2018-2022, https://github.com/jovibor/libpe"
+#define LIBPE_PRODUCT_NAME		  L"libpe, (C) Jovibor 2018-2023, https://github.com/jovibor/libpe"
 #define LIBPE_VERSION_MAJOR		  1
 #define LIBPE_VERSION_MINOR		  2
 #define LIBPE_VERSION_MAINTENANCE 0
@@ -145,7 +145,6 @@ namespace libpe
 
 		LARGE_INTEGER stLI { };
 		::GetFileSizeEx(hFile, &stLI);
-		assert(stLI.QuadPart >= sizeof(IMAGE_DOS_HEADER));
 		if (stLI.QuadPart < sizeof(IMAGE_DOS_HEADER)) {
 			CloseHandle(hFile);
 			return ERR_FILE_SIZESMALL;
