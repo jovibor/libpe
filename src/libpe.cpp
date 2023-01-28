@@ -600,9 +600,11 @@ namespace libpe
 		for (unsigned i = 0; i < wNumOfSections; ++i, ++pSecHdr) {
 			if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecHdr) + sizeof(IMAGE_SECTION_HEADER)))
 				return nullptr;
+
 			//Is RVA within this section?
-			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize)))
+			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize))) {
 				return pSecHdr;
+			}
 		}
 
 		return nullptr;
@@ -636,11 +638,11 @@ namespace libpe
 			dwAddr = tAddr;
 		}
 
-		const auto ullMaxAddr = GetBaseAddr() + GetDataSize();
+		const auto ullBase = GetBaseAddr();
+		const auto ullMaxAddr = ullBase + GetDataSize();
 
-		return dwAddr == 0 ? false : (fCanReferenceBoundary ?
-			((dwAddr <= ullMaxAddr) && (dwAddr >= GetBaseAddr())) :
-			((dwAddr < ullMaxAddr) && (dwAddr >= GetBaseAddr())));
+		return (dwAddr == 0 || dwAddr < ullBase) ? false : (fCanReferenceBoundary ?
+			dwAddr <= ullMaxAddr : dwAddr < ullMaxAddr);
 	}
 
 	auto Clibpe::PtrToOffset(LPCVOID lp)const->DWORD
@@ -653,14 +655,16 @@ namespace libpe
 
 	auto Clibpe::RVAToOffset(ULONGLONG ullRVA)const->DWORD
 	{
-		DWORD dwOffset { };
+		DWORD dwOffset { 0 };
 		for (const auto& iter : m_vecSecHeaders) {
-			const auto& pSecHdr = iter.stSecHdr;
+			const auto pSecHdr = &iter.stSecHdr;
+
 			//Is RVA within this section?
-			if ((ullRVA >= pSecHdr.VirtualAddress) && (ullRVA < (pSecHdr.VirtualAddress + pSecHdr.Misc.VirtualSize))) {
-				dwOffset = static_cast<DWORD>(ullRVA) - (pSecHdr.VirtualAddress - pSecHdr.PointerToRawData);
-				if (dwOffset > static_cast<DWORD>(GetDataSize()))
+			if ((ullRVA >= pSecHdr->VirtualAddress) && (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize))) {
+				dwOffset = static_cast<DWORD>(ullRVA) - pSecHdr->VirtualAddress + pSecHdr->PointerToRawData;
+				if (dwOffset > static_cast<DWORD>(GetDataSize())) {
 					dwOffset = 0;
+				}
 			}
 		}
 
@@ -674,7 +678,7 @@ namespace libpe
 			return nullptr;
 
 		const auto ptr = reinterpret_cast<LPVOID>(GetBaseAddr() + ullRVA
-			- static_cast<DWORD_PTR>(pSecHdr->VirtualAddress - pSecHdr->PointerToRawData));
+			- static_cast<DWORD_PTR>(pSecHdr->VirtualAddress) + static_cast<DWORD_PTR>(pSecHdr->PointerToRawData));
 
 		return IsPtrSafe(ptr, true) ? ptr : nullptr;
 	}
