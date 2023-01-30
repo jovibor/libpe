@@ -554,8 +554,10 @@ namespace libpe
 	class Ilibpe
 	{
 	public:
-		virtual auto LoadPe(LPCWSTR pwszFile) -> int = 0;                   //Load PE file from file.
-		virtual auto LoadPe(std::span<const std::byte> spnFile) -> int = 0; //Load PE file from memory.
+		virtual auto ParsePE(LPCWSTR pwszFile) -> int = 0;                   //Parse PE from disk file.
+		virtual auto ParsePE(std::span<const std::byte> spnFile) -> int = 0; //Parse PE file from memory bytes.
+		[[deprecated("Deprecated, use ParsePE instead.")]] virtual auto LoadPe(LPCWSTR pwszFile) -> int = 0;
+		[[deprecated("Deprecated, use ParsePE instead.")]] virtual auto LoadPe(std::span<const std::byte> spnFile) -> int = 0;
 		[[nodiscard]] virtual auto GetFileInfo()const->PEFILEINFO = 0;
 		[[nodiscard]] virtual auto GetOffsetFromRVA(ULONGLONG ullRVA)const->DWORD = 0;
 		[[nodiscard]] virtual auto GetOffsetFromVA(ULONGLONG ullVA)const->DWORD = 0;

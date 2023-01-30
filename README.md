@@ -5,8 +5,8 @@
 * [Introduction](#introduction)
 * [Usage](#usage)
 * [Methods](#methods) <details><summary>_Expand_</summary>
-  * [LoadPe (from disk)](#loadpedisk)
-  * [LoadPe (from memory)](#loadpemem)
+  * [ParsePE (from disk)](#parsepedisk)
+  * [ParsePE (from memory)](#parsepemem)
   * [GetFileInfo](#getfileinfo)
   * [GetOffsetFromRVA](#getoffsetfromrva)
   * [GetOffsetFromVA](#getoffsetfromva)
@@ -95,23 +95,23 @@ To use `libpe` as a shared `.dll`:
 The **libpe** uses its own `libpe` namespace.
 
 ## [](#)Methods
-### <a name="loadpedisk"></a>LoadPe
+### <a name="parsepedisk"></a>ParsePE
 ```cpp
-auto LoadPe(LPCWSTR)->int;
+auto ParsePE(LPCWSTR)->int;
 ```
 This is the first method you call to proceed a PE file.
 ```cpp
 IlibpePtr pLibpe { Createlibpe() };
-if(pLibpe->LoadPe(L"C:\\MyFile.exe") == PEOK)
+if(pLibpe->ParsePE(L"C:\\MyFile.exe") == PEOK)
 {
     ...
 }
 ```
 After this method succeeds you then can call all the other methods to retrieve needed information. The PE file itself doesn't stay in memory any longer, so you don't have to explicitly unload it.
 
-### <a name="loadpemem"></a>LoadPe
+### <a name="parsepemem"></a>ParsePE
 ```cpp
-auto LoadPe(std::span<const std::byte> spnFile)->int;
+auto ParsePE(std::span<const std::byte> spnFile)->int;
 ```
 This method overload is used to parse a PE file that is already in memory.
 
@@ -246,7 +246,7 @@ struct PEEXPORT {
 Getting Export information is very simple:
 ```cpp
 IlibpePtr pLibpe { Createlibpe() };
-pLibpe->LoadPe(L"PATH_TO_PE_FILE");
+pLibpe->ParsePE(L"PATH_TO_PE_FILE");
 const auto pExport = pLibpe->GetExport();
 
 pExport->stExportDesc;  //IMAGE_EXPORT_DIRECTORY struct.
@@ -289,7 +289,7 @@ using PEIMPORT_VEC = std::vector<PEIMPORT>;
 To obtain **Import table** information from the file see the following code:
 ```cpp
 IlibpePtr pLibpe { Createlibpe() };
-pLibpe->LoadPe(L"PATH_TO_PE_FILE");
+pLibpe->ParsePE(L"PATH_TO_PE_FILE");
 const auto pImport = pLibpe->GetImport();
 
 for (auto& itModule : *pImport) //Cycle through all imports that this PE file contains.
@@ -328,7 +328,7 @@ int main()
 {
 	using namespace libpe;
 	IlibpePtr pLibpe { Createlibpe() };
-	if (pLibpe->LoadPe(PATH_TO_FILE) != PEOK)
+	if (pLibpe->ParsePE(PATH_TO_FILE) != PEOK)
 		return -1;
 
 	const auto pResRoot = pLibpe->GetResources();
@@ -586,7 +586,7 @@ struct PECOMDESCRIPTOR {
 ```cpp
 void Clear();
 ```
-Clears all internal structs to free the memory. Call this method if you don't need loaded PE information anymore. When calling `LoadPe` method the `Clear` is invoked automatically.
+Clears all internal structs to free the memory. Call this method if you don't need loaded PE information anymore. When calling `ParsePE` method the `Clear` is invoked automatically.
 
 ### [](#)Destroy
 ```cpp
