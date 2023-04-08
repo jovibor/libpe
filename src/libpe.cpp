@@ -28,7 +28,7 @@ namespace libpe
 		| (static_cast<ULONGLONG>(LIBPE_VERSION_MINOR) << 32) | (static_cast<ULONGLONG>(LIBPE_VERSION_MAINTENANCE) << 16));
 
 	extern "C" ILIBPEAPI LIBPEINFO __cdecl GetLibInfo() {
-		return { LIBPE_VERSION_WSTR, LIBPE_VERSION_ULONGLONG };
+		return { LIBPE_VERSION_WSTR, { LIBPE_VERSION_ULONGLONG } };
 	}
 
 	//Checking overflow at summing two DWORD_PTR.
@@ -983,8 +983,9 @@ namespace libpe
 			if (m_stFileInfo.fIsPE32) {
 				while (pImpDesc->Name) {
 					auto pThunk32 = reinterpret_cast<PIMAGE_THUNK_DATA32>(static_cast<DWORD_PTR>(pImpDesc->OriginalFirstThunk));
-					if (!pThunk32)
+					if (!pThunk32) {
 						pThunk32 = reinterpret_cast<PIMAGE_THUNK_DATA32>(static_cast<DWORD_PTR>(pImpDesc->FirstThunk));
+					}
 
 					if (pThunk32) {
 						pThunk32 = static_cast<PIMAGE_THUNK_DATA32>(RVAToPtr(reinterpret_cast<DWORD_PTR>(pThunk32)));
@@ -1017,8 +1018,9 @@ namespace libpe
 						}
 
 						const auto szName = static_cast<LPCSTR>(RVAToPtr(pImpDesc->Name));
-						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 							strDllName = szName;
+						}
 
 						m_vecImport.emplace_back(PtrToOffset(pImpDesc), *pImpDesc, std::move(strDllName), std::move(vecFunc));
 
@@ -1037,8 +1039,9 @@ namespace libpe
 			else if (m_stFileInfo.fIsPE64) {
 				while (pImpDesc->Name) {
 					auto pThunk64 = reinterpret_cast<PIMAGE_THUNK_DATA64>(static_cast<DWORD_PTR>(pImpDesc->OriginalFirstThunk));
-					if (!pThunk64)
+					if (!pThunk64) {
 						pThunk64 = reinterpret_cast<PIMAGE_THUNK_DATA64>(static_cast<DWORD_PTR>(pImpDesc->FirstThunk));
+					}
 
 					if (pThunk64) {
 						pThunk64 = static_cast<PIMAGE_THUNK_DATA64>(RVAToPtr(reinterpret_cast<DWORD_PTR>(pThunk64)));
@@ -1063,16 +1066,16 @@ namespace libpe
 							}
 							vecFunc.emplace_back(unImpThunk64, stImpByName, std::move(strFuncName));
 
-							pThunk64++;
-							if (++iFuncsCount == iMaxFuncs)
+							if (!IsPtrSafe(++pThunk64))
 								break;
 							if (++iFuncsCount == iMaxFuncs)
 								break;
 						}
 
 						const auto szName = static_cast<LPCSTR>(RVAToPtr(pImpDesc->Name));
-						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 							strDllName = szName;
+						}
 
 						m_vecImport.emplace_back(PtrToOffset(pImpDesc), *pImpDesc, std::move(strDllName), std::move(vecFunc));
 
@@ -1149,8 +1152,9 @@ namespace libpe
 						break;
 
 					std::vector<PERESLVL2DATA> vecResDataLvL2;
-					if (pResDirLvL2 == pResDirRoot) //Resource loop hack
+					if (pResDirLvL2 == pResDirRoot) { //Resource loop hack
 						stResLvL2 = { PtrToOffset(pResDirLvL2), *pResDirLvL2, vecResDataLvL2 };
+					}
 					else {
 						auto pResDirEntryLvL2 = reinterpret_cast<PIMAGE_RESOURCE_DIRECTORY_ENTRY>(pResDirLvL2 + 1);
 						const DWORD dwNumOfEntriesLvL2 = pResDirLvL2->NumberOfNamedEntries + pResDirLvL2->NumberOfIdEntries;
@@ -1183,8 +1187,9 @@ namespace libpe
 									break;
 
 								std::vector<PERESLVL3DATA> vecResDataLvL3;
-								if (pResDirLvL3 == pResDirLvL2 || pResDirLvL3 == pResDirRoot)
+								if (pResDirLvL3 == pResDirLvL2 || pResDirLvL3 == pResDirRoot) {
 									stResLvL3 = { PtrToOffset(pResDirLvL3), *pResDirLvL3, vecResDataLvL3 };
+								}
 								else {
 									auto pResDirEntryLvL3 = reinterpret_cast<PIMAGE_RESOURCE_DIRECTORY_ENTRY>(pResDirLvL3 + 1);
 									const DWORD dwNumOfEntriesLvL3 = pResDirLvL3->NumberOfNamedEntries + pResDirLvL3->NumberOfIdEntries;
@@ -1361,8 +1366,9 @@ namespace libpe
 			return false;
 
 		try {
-			if (!pBaseRelocDesc->SizeOfBlock || !pBaseRelocDesc->VirtualAddress)
+			if (!pBaseRelocDesc->SizeOfBlock || !pBaseRelocDesc->VirtualAddress) {
 				m_vecRelocs.emplace_back(PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, std::vector<PERELOCDATA> { });
+			}
 
 			while ((pBaseRelocDesc->SizeOfBlock) && (pBaseRelocDesc->VirtualAddress)) {
 				if (pBaseRelocDesc->SizeOfBlock < sizeof(IMAGE_BASE_RELOCATION)) {
@@ -1378,7 +1384,7 @@ namespace libpe
 					if (!IsPtrSafe(pwRelocEntry))
 						break;
 					//Getting HIGH 4 bits of reloc's entry WORD —> reloc type.
-					WORD wRelocType = (*pwRelocEntry & 0xF000) >> 12;
+					const WORD wRelocType = (*pwRelocEntry & 0xF000) >> 12;
 					vecRelocs.emplace_back(PtrToOffset(pwRelocEntry), wRelocType, static_cast<WORD>((*pwRelocEntry) & 0x0fff)/*Low 12 bits —> Offset*/);
 					if (wRelocType == IMAGE_REL_BASED_HIGHADJ) {	//The base relocation adds the high 16 bits of the difference to the 16-bit field at offset.
 						//The 16-bit field represents the high value of a 32-bit word. 
@@ -1390,7 +1396,7 @@ namespace libpe
 						}
 
 						vecRelocs.emplace_back(PtrToOffset(pwRelocEntry), wRelocType, *pwRelocEntry /*The low 16-bit field.*/);
-						dwNumRelocEntries--; //to compensate pwRelocEntry++.
+						--dwNumRelocEntries; //to compensate ++pwRelocEntry.
 					}
 				}
 
@@ -1462,19 +1468,22 @@ namespace libpe
 
 				if (pDebugDir->Type == IMAGE_DEBUG_TYPE_CODEVIEW) {
 					DWORD dwOffset = 0;
-					if (stDbgHdr.dwHdr[0] == 0x53445352) //"RSDS"
+					if (stDbgHdr.dwHdr[0] == 0x53445352) { //"RSDS"
 						dwOffset = sizeof(DWORD) * 6;
-					else if (stDbgHdr.dwHdr[0] == 0x3031424E) //"NB10"
+					}
+					else if (stDbgHdr.dwHdr[0] == 0x3031424E) { //"NB10"
 						dwOffset = sizeof(DWORD) * 4;
+					}
 
 					std::string strPDBName;
-					if (dwOffset > 0)
+					if (dwOffset > 0) {
 						for (unsigned iterStr = 0; iterStr < MAX_PATH; iterStr++) {
 							const auto byte = GetTData<BYTE>(pDebugDir->PointerToRawData + dwOffset + iterStr);
 							if (byte == 0) //End of string.
 								break;
 							strPDBName += byte;
 						}
+					}
 					stDbgHdr.strPDBName = std::move(strPDBName);
 				}
 
@@ -1530,8 +1539,6 @@ namespace libpe
 
 		try {
 			std::vector<DWORD> vecTLSCallbacks;
-			ULONGLONG ullStartAddressOfRawData { };
-			ULONGLONG ullEndAddressOfRawData { };
 			ULONGLONG ullAddressOfCallBacks { };
 			PETLS::UNPETLS varTLSDir;
 			PDWORD pdwTLSPtr;
@@ -1543,8 +1550,6 @@ namespace libpe
 
 				varTLSDir.stTLSDir32 = *pTLSDir32;
 				pdwTLSPtr = reinterpret_cast<PDWORD>(pTLSDir32);
-				ullStartAddressOfRawData = pTLSDir32->StartAddressOfRawData;
-				ullEndAddressOfRawData = pTLSDir32->EndAddressOfRawData;
 				ullAddressOfCallBacks = pTLSDir32->AddressOfCallBacks;
 			}
 			else if (m_stFileInfo.fIsPE64) {
@@ -1554,8 +1559,6 @@ namespace libpe
 
 				varTLSDir.stTLSDir64 = *pTLSDir64;
 				pdwTLSPtr = reinterpret_cast<PDWORD>(pTLSDir64);
-				ullStartAddressOfRawData = pTLSDir64->StartAddressOfRawData;
-				ullEndAddressOfRawData = pTLSDir64->EndAddressOfRawData;
 				ullAddressOfCallBacks = pTLSDir64->AddressOfCallBacks;
 			}
 			else
@@ -1634,9 +1637,11 @@ namespace libpe
 				std::string strForwarderModuleName { };
 
 				const auto szName = reinterpret_cast<LPCSTR>(reinterpret_cast<DWORD_PTR>(pBoundImpDesc) + pBoundImpForwarder->OffsetModuleName);
-				if (IsPtrSafe(szName))
-					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+				if (IsPtrSafe(szName)) {
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 						strForwarderModuleName = szName;
+					}
+				}
 
 				vecBoundForwarders.emplace_back(PtrToOffset(pBoundImpForwarder), *pBoundImpForwarder, std::move(strForwarderModuleName));
 
@@ -1649,9 +1654,11 @@ namespace libpe
 			}
 
 			const auto szName = reinterpret_cast<LPCSTR>(reinterpret_cast<DWORD_PTR>(pBoundImpDesc) + pBoundImpDesc->OffsetModuleName);
-			if (IsPtrSafe(szName))
-				if (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)
+			if (IsPtrSafe(szName)) {
+				if (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER) {
 					strModuleName = szName;
+				}
+			}
 
 			m_vecBoundImp.emplace_back(PtrToOffset(pBoundImpDesc), *pBoundImpDesc, std::move(strModuleName), std::move(vecBoundForwarders));
 
@@ -1721,20 +1728,24 @@ namespace libpe
 
 						if (!IsPtrSafe(++pThunk32Name))
 							break;
-						if (pThunk32IAT)
+						if (pThunk32IAT) {
 							if (!IsPtrSafe(++pThunk32IAT))
 								break;
-						if (pThunk32BoundIAT)
+						}
+						if (pThunk32BoundIAT) {
 							if (!IsPtrSafe(++pThunk32BoundIAT))
 								break;
-						if (pThunk32UnloadInfoTable)
+						}
+						if (pThunk32UnloadInfoTable) {
 							if (!IsPtrSafe(++pThunk32UnloadInfoTable))
 								break;
+						}
 					}
 
 					const auto szName = static_cast<LPCSTR>(RVAToPtr(pDelayImpDescr->DllNameRVA));
-					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 						strDllName = szName;
+					}
 
 					m_vecDelayImp.emplace_back(PtrToOffset(pDelayImpDescr), *pDelayImpDescr, std::move(strDllName), std::move(vecFunc));
 
@@ -1783,20 +1794,24 @@ namespace libpe
 
 						if (!IsPtrSafe(++pThunk64Name))
 							break;
-						if (pThunk64IAT)
+						if (pThunk64IAT) {
 							if (!IsPtrSafe(++pThunk64IAT))
 								break;
-						if (pThunk64BoundIAT)
+						}
+						if (pThunk64BoundIAT) {
 							if (!IsPtrSafe(++pThunk64BoundIAT))
 								break;
-						if (pThunk64UnloadInfoTable)
+						}
+						if (pThunk64UnloadInfoTable) {
 							if (!IsPtrSafe(++pThunk64UnloadInfoTable))
 								break;
+						}
 					}
 
 					const auto szName = static_cast<LPCSTR>(RVAToPtr(pDelayImpDescr->DllNameRVA));
-					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER))
+					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 						strDllName = szName;
+					}
 
 					m_vecDelayImp.emplace_back(PtrToOffset(pDelayImpDescr), *pDelayImpDescr, std::move(strDllName), std::move(vecFunc));
 
