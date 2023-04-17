@@ -1,16 +1,13 @@
-## libpe
-**PE32**/**PE32+** binaries viewer library.
+## Introduction
+**libpe** is a lightweight and very fast library for parsing **PE32(x86)** and **PE32+(x64)** binaries, implemented as a C++20 module.
 
 ## Table of Contents
-* [Introduction](#introduction)
+* [Features](#features)
 * [Usage](#usage)
-* [Methods](#methods) <details><summary>_Expand_</summary>
-  * [ParsePE (from disk)](#parsepedisk)
-  * [ParsePE (from memory)](#parsepemem)
-  * [GetFileInfo](#getfileinfo)
-  * [GetOffsetFromRVA](#getoffsetfromrva)
-  * [GetOffsetFromVA](#getoffsetfromva)
-  * [GetMSDOSHeader](#getmsdosheader)
+* [Class Methods](#class-methods) <details><summary>_Expand_</summary>
+  * [OpenFile](#openfile)
+  * [CloseFile](#closefile)
+  * [GetDOSHeader](#getdosheader)
   * [GetRichHeader](#getrichheader)
   * [GetNTHeader](#getntheader)
   * [GetDataDirs](#getdatadirs)
@@ -18,7 +15,6 @@
   * [GetExport](#getexport)
   * [GetImport](#getimport)
   * [GetResources](#getresources)
-  * [FlatResources](#flatresources)
   * [GetExceptions](#getexceptions)
   * [GetSecurity](#getsecurity)
   * [GetRelocations](#getrelocations)
@@ -28,8 +24,12 @@
   * [GetBoundImport](#getboundimport)
   * [GetDelayImport](#getdelayimport)
   * [GetCOMDescriptor](#getcomdescriptor)
-  * [Clear](#clear)
-  * [Destroy](#destroy)
+  </details>
+* [Helper Methods](#helper-methods) <details><summary>_Expand_</summary>
+  * [GetFileType](#getfiletype)
+  * [GetImageBase](#getimagebase)
+  * [GetOffsetFromRVA](#getoffsetfromrva)
+  * [FlatResources](#flatresources)
   </details>
 * [Maps](#maps) <details><summary>_Expand_</summary>
   * [MapFileHdrMachine](#mapfilehdrmachine)
@@ -47,17 +47,11 @@
   * [MapLCDGuardFlags](#maplcdguardflags)
   * [MapCOR20Flags](#mapcor20flags)
   </details>
-* [Global Functions](#global-functions)
-  * [CreateRawlibpe](#createrawlibpe)
-  * [GetLibInfo](#getlibinfo)
 * [License](#license)
 
-## [](#)Introduction
-**libpe** is a Windows library for obtaining inner information from the [Portable Executable Format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format) binaries. The library is implemented as a pure abstract virtual interface with a decent amount of methods. 
-
-* Works with PE32(x86) and PE32+(x64) binaries
-* Supports PE32/PE32+ binaries of any size (although PE format is restricted to **4GB**)
-* All inner PE32/PE32+ data structures, headers and layouts
+## [](#)Features
+* Works with both **PE32(x86)** and **PE32+(x64)** binaries
+* Obtains all **PE32/PE32+** data structures:
     * MSDOS Header
     * «Rich» Header
     * NT/File/Optional Headers
@@ -75,101 +69,53 @@
     * Bound Import Table
     * Delay Import Table
     * COM Table
-* Built with **/std:c++20** standard conformance
 
-[Pepper](https://github.com/jovibor/Pepper) is one of the gui apps that is built on top of the **libpe**, and using it extensively.
+[Pepper](https://github.com/jovibor/Pepper) is one of the apps that is built on top of the **libpe**.
 
 ## [](#)Usage
-The usage of the library is quite simple:
-1. Add *libpe.h/libpe.cpp* into your project
-2. Declare `IlibpePtr` variable as: `IlibpePtr m_pLibpe { Createlibpe() };`
-
-Factory function `Createlibpe` returns `IlibpePtr` - a `std::unique_ptr` with custom deleter.  
-
-If you, for some reason, need a raw interface pointer, you can directly call [`CreateRawlibpe`](#createrawlibpe) function, which returns `Ilibpe*` interface pointer, but in this case you will need to call [`Destroy`](#destroy) method manually afterwards, to destroy `Ilibpe` object.
-
-To use `libpe` as a shared `.dll`:
-1. Compile `libpe` as a `.dll` from the MSVS solution
-2. Put the `#define LIBPE_SHARED_DLL` macro into your project, before `#include "libpe.h"`.
-
-The **libpe** uses its own `libpe` namespace.
-
-## [](#)Methods
-### <a name="parsepedisk"></a>ParsePE
 ```cpp
-auto ParsePE(LPCWSTR)->int;
-```
-This is the first method you call to proceed a PE file.
-```cpp
-IlibpePtr pLibpe { Createlibpe() };
-if(pLibpe->ParsePE(L"C:\\MyFile.exe") == PEOK)
-{
+import libpe;
+
+int main() {
+    libpe::Clibpe pe(L"C:\\myFile.exe"); //or pe.OpenFile(L"C:\\myFile.exe");
+    const auto peImp = pe.GetImport();
+    if(peImp) {
+    ...
+    }
     ...
 }
 ```
-After this method succeeds you then can call all the other methods to retrieve needed information. The PE file itself doesn't stay in memory any longer, so you don't have to explicitly unload it.
 
-### <a name="parsepemem"></a>ParsePE
+## [](#)Methods
+### OpenFile
 ```cpp
-auto ParsePE(std::span<const std::byte> spnFile)->int;
+auto OpenFile(const wchar_t* pwszFile)->int;
 ```
-This method overload is used to parse a PE file that is already in memory.
-
-## [](#)GetFileInfo
+Opens a file for further processing, until [`CloseFile`](#closefile) is called or `Clibpe` object goes out of scope and file closes automatically in destructor.
 ```cpp
-auto GetFileInfo()const->PEFILEINFO;
-```
-Retrieves `PEFILEINFO` structure that contains all service information about the loaded file.
-```cpp
-struct PEFILEINFO {
-    bool fIsx86 : 1 {};
-    bool fIsx64 : 1 {};
-    bool fHasDosHdr : 1 {};
-    bool fHasRichHdr : 1 {};
-    bool fHasNTHdr : 1 {};
-    bool fHasDataDirs : 1 {};
-    bool fHasSections : 1 {};
-    bool fHasExport : 1 {};
-    bool fHasImport : 1 {};
-    bool fHasResource : 1 {};
-    bool fHasException : 1 {};
-    bool fHasSecurity : 1 {};
-    bool fHasReloc : 1 {};
-    bool fHasDebug : 1 {};
-    bool fHasArchitect : 1 {};
-    bool fHasGlobalPtr : 1 {};
-    bool fHasTLS : 1 {};
-    bool fHasLoadCFG : 1 {};
-    bool fHasBoundImp : 1 {};
-    bool fHasIAT : 1 {};
-    bool fHasDelayImp : 1 {};
-    bool fHasCOMDescr : 1 {};
-};
+libpe::Clibpe pe;
+if(pe.OpenFile(L"C:\\MyFile.exe") == PEOK) {
+    ...
+}
 ```
 
-### [](#)GetOffsetFromRVA
+### [](#)CloseFile();
 ```cpp
-auto GetOffsetFromRVA(ULONGLONG ullRVA)const->DWORD;
+void CloseFile();
 ```
-Converts file's **RVA** (Relative Virtual Address) to the raw file offset.
+Explicitly closes file that was previously opened with the [`OpenFile(const wchar_t*)`](#openfile). This method is invoked automatically in `Clibpe` destructor.
 
-### [](#)GetOffsetFromVA
+### [](#)GetDOSHeader
 ```cpp
-auto GetOffsetFromVA(ULONGLONG ullVA)const->DWORD;
+[[nodiscard]] auto GetDOSHeader()const->std::optional<IMAGE_DOS_HEADER>;
 ```
-Converts file's **VA**  (Virtual Address) to the raw file offset.
-
-### [](#)GetMSDOSHeader
-```cpp
-auto GetMSDOSHeader()->IMAGE_DOS_HEADER*;
-```
-Gets file's standard **MSDOS** header.
+Returns a file's standard **MSDOS** header.
 
 ### [](#)GetRichHeader
 ```cpp
-auto GetRichHeader()->PERICHHDR_VEC*;
+[[nodiscard]] auto GetRichHeader()const->std::optional<PERICHHDR_VEC>;
 ```
-Gets array of the unofficial and undocumented, so called, **«Rich»** header structures.
+Returns an array of the unofficial and undocumented so called **«Rich»** structures.
 ```cpp
 struct PERICHHDR {
     DWORD dwOffset; //File's raw offset of the entry.
@@ -182,12 +128,12 @@ using PERICHHDR_VEC = std::vector<PERICHHDR>;
 
 ### [](#)GetNTHeader
 ```cpp
-auto GetNTHeader()->PENTHDR*;
+[[nodiscard]] auto GetNTHeader()const->std::optional<PENTHDR>;
 ```
-Gets file's **NT** header.
+Returns a file's **NT** header.
 ```cpp
 struct PENTHDR {
-    DWORD dwOffset; //File's raw offset of the header.
+    DWORD dwOffset;   //File's raw offset of the header.
     union UNPENTHDR { //Union of either x86 or x64 NT header.
         IMAGE_NT_HEADERS32 stNTHdr32; //x86 Header.
         IMAGE_NT_HEADERS64 stNTHdr64; //x64 Header.
@@ -197,36 +143,36 @@ struct PENTHDR {
 
 ### [](#)GetDataDirs
 ```cpp
-auto GetDataDirs()->PEDATADIR_VEC*;
+[[nodiscard]] auto GetDataDirs()const->std::optional<PEDATADIR_VEC>;
 ```
-Gets array of the file's **Data directories** structs.
+Returns an array of file's **Data directories** structs.
 ```cpp
 struct PEDATADIR {
-	IMAGE_DATA_DIRECTORY stDataDir;  //Standard header.
-	std::string          strSection; //Name of the section this directory resides in (points to).
+    IMAGE_DATA_DIRECTORY stDataDir;  //Standard header.
+    std::string          strSection; //Name of the section this directory resides in (points to).
 };
 using PEDATADIR_VEC = std::vector<PEDATADIR>;
 ```
 
 ### [](#)GetSecHeaders
 ```cpp
-auto GetSecHeaders()->PESECHDR_VEC*
+[[nodiscard]] auto GetSecHeaders()const->std::optional<PESECHDR_VEC>;
 ```
-Gets array of the file's **Sections headers** structs.
+Returns an array of file's **Sections headers** structs.
 ```cpp
 struct PESECHDR {
-	DWORD                dwOffset;   //File's raw offset of the section header descriptor.
-	IMAGE_SECTION_HEADER stSecHdr;   //Standard section header.
-	std::string          strSecName; //Section full name.
+    DWORD                dwOffset;   //File's raw offset of this section header descriptor.
+    IMAGE_SECTION_HEADER stSecHdr;   //Standard section header.
+    std::string          strSecName; //Section full name.
 };
 using PESECHDR_VEC = std::vector<PESECHDR>;
 ```
 
 ### [](#)GetExport
 ```cpp
-auto GetExport()->PEEXPORT*;
+[[nodiscard]] auto GetExport()const->std::optional<PEEXPORT>;
 ```
-Gets file's **Export** information.
+Returns a file's **Export** information.
 ```cpp
 struct PEEXPORTFUNC {
     DWORD       dwFuncRVA;        //Function RVA.
@@ -242,31 +188,31 @@ struct PEEXPORT {
     std::vector<PEEXPORTFUNC> vecFuncs;      //Array of the exported functions struct.	
 };
 ```
-**Example**  
-Getting Export information is very simple:
+**Example:**
 ```cpp
-IlibpePtr pLibpe { Createlibpe() };
-pLibpe->ParsePE(L"PATH_TO_PE_FILE");
-const auto pExport = pLibpe->GetExport();
+libpe::Clibpe pe(L"PATH_TO_PE_FILE");
+const auto peExport = pe.GetExport();
+if (!peExport) {
+    return;
+}
 
-pExport->stExportDesc;  //IMAGE_EXPORT_DIRECTORY struct.
-pExport->strModuleName; //Export module name.
-pExport->vecFuncs;      //Vector of exported functions.
+peExport->stExportDesc;  //IMAGE_EXPORT_DIRECTORY struct.
+peExport->strModuleName; //Export module name.
+peExport->vecFuncs;      //Vector of exported functions.
 
-for (const auto& itFuncs : pExport->vecFuncs)
-{
+for (const auto& itFuncs : peExport->vecFuncs) {
     itFuncs.strFuncName;      //Function name.
     itFuncs.dwOrdinal;        //Ordinal.
-    itFuncs.dwRVA;            //Function RVA.
+    itFuncs.dwFuncRVA;        //Function RVA.
     itFuncs.strForwarderName; //Forwarder name.
 }
 ```
 
 ### [](#)GetImport
 ```cpp
-auto GetImport()->PEIMPORT_VEC*;
+[[nodiscard]] auto GetImport()const->std::optional<PEIMPORT_VEC>;
 ```
-Gets array of the file's **Import table** entries.
+Returns an array of file's **Import table** entries.
 ```cpp
 struct PEIMPORTFUNC {
     union UNPEIMPORTTHUNK {
@@ -285,142 +231,107 @@ struct PEIMPORT {
 using PEIMPORT_VEC = std::vector<PEIMPORT>;
 ```
 
-**Example**  
-To obtain **Import table** information from the file see the following code:
+**Example**
 ```cpp
-IlibpePtr pLibpe { Createlibpe() };
-pLibpe->ParsePE(L"PATH_TO_PE_FILE");
-const auto pImport = pLibpe->GetImport();
+libpe::Clibpe pe(L"C:\\Windows\\notepad.exe");
+const auto peImp = pe.GetImport();
+if (!peImp) {
+    return -1;
+}
 
-for (auto& itModule : *pImport) //Cycle through all imports that this PE file contains.
-{
-    auto pImpDesc = &itModule.stImportDesc; //IMAGE_IMPORT_DESCRIPTOR struct.
-    auto& str = itModule.strModuleName;     //Name of the import module.
-	
-    for (auto& itFuncs : itModule.vecImportFunc) //Cycle through all the functions imported from itModule module.
-    {
-    	itFuncs.strFuncName;        //Imported function name (std::string).
-        itFuncs.stImpByName;        //IMAGE_IMPORT_BY_NAME struct for this function.
-       
-        itFuncs.varThunk.stThunk32; //Union of IMAGE_THUNK_DATA32 or IMAGE_THUNK_DATA64 (depending on the binary type).
-        if(pLibpe->GetFileInfo().fIsx86)
-            itFuncs.unThunk.stThunk32 //Process stThunk32 data
-        else
-            itFuncs.unThunk.stThunk64 //Process stThunk64 data
+for (const auto& itModule : *peImp) { //Cycle through all imports that this PE file contains.
+    std::cout << std::format("{}, Imported funcs: {}\r\n", itModule.strModuleName, itModule.vecImportFunc.size());
+    for (const auto& itFuncs : itModule.vecImportFunc) { //Cycle through all the functions imported from itModule module.
+        itFuncs.strFuncName;       //Imported function name.
+        itFuncs.stImpByName;       //IMAGE_IMPORT_BY_NAME struct for this function.
+        itFuncs.unThunk.stThunk32; //Union of IMAGE_THUNK_DATA32 or IMAGE_THUNK_DATA64 (depending on the PE type).
     }
 }
 ```
 
 ### [](#)GetResources
 ```cpp
-auto GetResources()->PERESROOT*;
+[[nodiscard]] auto GetResources()const->std::optional<PERESROOT>;
 ```
-Retrieves all the binary's resources.
+Returns all file's resources.
 
 ##### Example:
-The next code excerpt populates `std::wstring` with all resources' types and names that PE binary possesses, and prints it to the standard `std::wcout`.
+The next code snippet populates `std::wstring` with all resources' types and names that PE binary possesses, and prints it to the standard `std::wcout`.
 ```cpp
+#include <format>
 #include <iostream>
-#include <map>
-#include "libpe.h"
+#include <string>
+
+import libpe;
+using namespace libpe;
 
 int main()
 {
-	using namespace libpe;
-	IlibpePtr pLibpe { Createlibpe() };
-	if (pLibpe->ParsePE(PATH_TO_FILE) != PEOK)
-		return -1;
+    libpe::Clibpe pe;
+    if (pe.OpenFile(L"C:\\Windows\\notepad.exe") != PEOK) {
+        return -1;
+    }
 
-	const auto pResRoot = pLibpe->GetResources();
+    const auto peResRoot = pe.GetResources();
+    if (!peResRoot) {
+        return -1;
+    }
 
-	wchar_t wstr[MAX_PATH];
-	long ilvlRoot = 0, ilvl2 = 0, ilvl3 = 0;
-	std::wstring wstring; // This wstring will contain all resources by name.
+    std::wstring wstrResData; //This wstring will contain all resources by name.
+    for (const auto& iterRoot : peResRoot->vecResData) { //Main loop to extract Resources.
+        auto ilvlRoot = 0;
+        auto pResDirEntry = &iterRoot.stResDirEntry; //ROOT IMAGE_RESOURCE_DIRECTORY_ENTRY
+        if (pResDirEntry->NameIsString) {
+            wstrResData += std::format(L"Entry: {} [Name: {}]\r\n", ilvlRoot, iterRoot.wstrResName);
+        }
+        else {
+            if (const auto iter = MapResID.find(pResDirEntry->Id); iter != MapResID.end()) {
+                wstrResData += std::format(L"Entry: {} [Id: {}, {}]\r\n", ilvlRoot, pResDirEntry->Id, iter->second);
+            }
+            else {
+                wstrResData += std::format(L"Entry: {} [Id: {}]\r\n", ilvlRoot, pResDirEntry->Id);
+            }
+        }
 
-	//Main loop to extract Resources.
-	for (auto& iterRoot : pResRoot->vecResData)
-	{
-		auto pResDirEntry = &iterRoot.stResDirEntry; //ROOT IMAGE_RESOURCE_DIRECTORY_ENTRY
-		if (pResDirEntry->NameIsString)
-			swprintf(wstr, MAX_PATH, L"Entry: %li [Name: %s]", ilvlRoot, iterRoot.wstrResName.data());
-		else
-		{
-			if (const auto iter = MapResID.find(pResDirEntry->Id); iter != MapResID.end())
-				swprintf(wstr, MAX_PATH, L"Entry: %li [Id: %u, %s]", ilvlRoot, pResDirEntry->Id, iter->second.data());
-			else
-				swprintf(wstr, MAX_PATH, L"Entry: %li [Id: %u]", ilvlRoot, pResDirEntry->Id);
-		}
+        if (pResDirEntry->DataIsDirectory) {
+            auto ilvl2 = 0;
+            auto pstResLvL2 = &iterRoot.stResLvL2;
+            for (const auto& iterLvL2 : pstResLvL2->vecResData) {
+                pResDirEntry = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
+                if (pResDirEntry->NameIsString) {
+                    wstrResData += std::format(L"    Entry: {}, Name: {}\r\n", ilvl2, iterLvL2.wstrResName);
+                }
+                else {
+                    wstrResData += std::format(L"    Entry: {}, Id: {}\r\n", ilvl2, pResDirEntry->Id);
+                }
 
-		if (pResDirEntry->DataIsDirectory)
-		{
-			wstring += wstr;
-			wstring += L"\r\n";
-			ilvl2 = 0;
-
-			auto pstResLvL2 = &iterRoot.stResLvL2;
-			for (auto& iterLvL2 : pstResLvL2->vecResData)
-			{
-				pResDirEntry = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
-				if (pResDirEntry->NameIsString)
-					swprintf(wstr, MAX_PATH, L"Entry: %li, Name: %s", ilvl2, iterLvL2.wstrResName.data());
-				else
-					swprintf(wstr, MAX_PATH, L"Entry: %li, Id: %u", ilvl2, pResDirEntry->Id);
-
-				if (pResDirEntry->DataIsDirectory)
-				{
-					wstring += L"    ";
-					wstring += wstr;
-					wstring += L"\r\n";
-					ilvl3 = 0;
-
-					auto pstResLvL3 = &iterLvL2.stResLvL3;
-					for (auto& iterLvL3 : pstResLvL3->vecResData)
-					{
-						pResDirEntry = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
-						if (pResDirEntry->NameIsString)
-							swprintf(wstr, MAX_PATH, L"Entry: %li, Name: %s", ilvl3, iterLvL3.wstrResName.data());
-						else
-							swprintf(wstr, MAX_PATH, L"Entry: %li, lang: %u", ilvl3, pResDirEntry->Id);
-
-						wstring += L"        ";
-						wstring += wstr;
-						wstring += L"\r\n";
-						++ilvl3;
-					}
-				}
-				++ilvl2;
-			}
-		}
-		++ilvlRoot;
-	}
-	std::wcout << wstring;
-}
-```
-
-### [](#)FlatResources
-```cpp
-static auto FlatResources(PERESROOT& stResRoot)->PERESFLAT_VEC;
-```
-This `static` function is kind of a light version of the `GetResources` method. It takes `PERESROOT` struct returned by the `GetResources`, and returns `std::vector` of `PERESFLAT` structures.  
-`PERESFLAT` is a light struct that only possesses a pointers to the actual resources data, unlike heavy `PERESROOT`. `FlatResources` flattens all the resources, making accessing them more convenient.
-```cpp
-struct PERESFLAT {
-    std::span<const std::byte> spnData { };    //Resource data.
-    std::wstring_view          wsvTypeStr { }; //Resource Type name.
-    std::wstring_view          wsvNameStr { }; //Resource Name name (resource itself name).
-    std::wstring_view          wsvLangStr { }; //Resource Lang name.
-    WORD                       wTypeID { };    //Resource Type ID (RT_CURSOR, RT_BITMAP, etc...).
-    WORD                       wNameID { };    //Resource Name ID (resource itself ID).
-    WORD                       wLangID { };    //Resource Lang ID.
-};
-using PERESFLAT_VEC = std::vector<PERESFLAT>;
+                if (pResDirEntry->DataIsDirectory) {
+                    auto ilvl3 = 0;
+                    auto pstResLvL3 = &iterLvL2.stResLvL3;
+                    for (const auto& iterLvL3 : pstResLvL3->vecResData) {
+                        pResDirEntry = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
+                        if (pResDirEntry->NameIsString) {
+                            wstrResData += std::format(L"        Entry: {}, Name: {}\r\n", ilvl3, iterLvL3.wstrResName);
+                        }
+                        else {
+                            wstrResData += std::format(L"        Entry: {}, lang: {}\r\n", ilvl3, pResDirEntry->Id);
+                        }
+                        ++ilvl3;
+                    }
+                }
+                ++ilvl2;
+            }
+        }
+        ++ilvlRoot;
+    }
+    std::wcout << wstrResData;
 ```
 
 ### [](#)GetExceptions
 ```cpp
-auto GetExceptions()->PEEXCEPTION_VEC*;
+[[nodiscard]] auto GetExceptions()const->std::optional<PEEXCEPTION_VEC>;
 ```
-Gets array of the file's **Exception** entries.
+Returns an array of file's **Exception** entries.
 ```cpp
 struct PEEXCEPTION {
     DWORD                         dwOffset;           //File's raw offset of the exceptions descriptor.
@@ -431,9 +342,9 @@ using PEEXCEPTION_VEC = std::vector<PEEXCEPTION>;
 
 ### [](#)GetSecurity
 ```cpp
-auto GetSecurity()->PESECURITY_VEC*;
+[[nodiscard]] auto GetSecurity()const->std::optional<PESECURITY_VEC>;
 ```
-Gets array of the file's **Security** entries.
+Returns an array of file's **Security** entries.
 ```cpp
 struct PESECURITY {
     DWORD           dwOffset;  //File's raw offset of the security descriptor.
@@ -444,9 +355,9 @@ using PESECURITY_VEC = std::vector<PESECURITY>;
 
 ### [](#)GetRelocations
 ```cpp
-auto GetRelocations()->PERELOC_VEC*;
+[[nodiscard]] auto GetRelocations()const->std::optional<PERELOC_VEC>;
 ```
-Gets array of the file's relocation information.
+Returns an array of file's relocation information.
 ```cpp
 struct PERELOCDATA {
     DWORD dwOffset;     //File's raw offset of the Relocation data descriptor.
@@ -463,9 +374,9 @@ using PERELOC_VEC = std::vector<PERELOC>;
 
 ### [](#)GetDebug
 ```cpp
-auto GetDebug()->PEDEBUG_VEC*;
+[[nodiscard]] auto GetDebug()const->std::optional<PEDEBUG_VEC>;
 ```
-Gets array of the file's **Debug** entries.
+Returns an array of file's **Debug** entries.
 ```cpp
 struct PEDEBUGDBGHDR {
     //dwHdr[6] is an array of the first six DWORDs of IMAGE_DEBUG_DIRECTORY::PointerToRawData data (Debug info header).
@@ -487,9 +398,9 @@ using PEDEBUG_VEC = std::vector<PEDEBUG>;
 
 ### [](#)GetTLS
 ```cpp
-auto GetTLS()->PETLS*;
+[[nodiscard]] auto GetTLS()const->std::optional<PETLS>;
 ```
-Gets file's **Thread Local Storage** information.
+Returns file's **Thread Local Storage** information.
 ```cpp
 struct PETLS {
     DWORD              dwOffset;          //File's raw offset of the TLS header descriptor.
@@ -503,9 +414,9 @@ struct PETLS {
 
 ### [](#)GetLoadConfig
 ```cpp
-auto GetLoadConfig()->PELOADCONFIG*;
+[[nodiscard]] auto GetLoadConfig()const->std::optional<PELOADCONFIG>;
 ```
-Gets files's **LCD** info.
+Returns file's **Load Config Directory** info.
 ```cpp
 struct PELOADCONFIG {
     DWORD dwOffset;                            //File's raw offset of the LCD descriptor.
@@ -518,9 +429,9 @@ struct PELOADCONFIG {
 
 ### [](#)GetBoundImport
 ```cpp
-auto GetBoundImport()->PEBOUNDIMPORT_VEC*;
+[[nodiscard]] auto GetBoundImport()const->std::optional<PEBOUNDIMPORT_VEC>;
 ```
-Gets array of the file's **Bound Import** entries.
+Returns an array of file's **Bound Import** entries.
 ```cpp
 struct PEBOUNDFORWARDER {
     DWORD                     dwOffset;              //File's raw offset of the Bound Forwarder descriptor.
@@ -538,31 +449,30 @@ using PEBOUNDIMPORT_VEC = std::vector<PEBOUNDIMPORT>;
 
 ### [](#)GetDelayImport
 ```cpp
-auto GetDelayImport()->PEDELAYIMPORT_VEC*;
+[[nodiscard]] auto GetDelayImport()const->std::optional<PEDELAYIMPORT_VEC>;
 ```
-Gets array of the file's **Delay Import** entries.
+Returns an array of file's **Delay Import** entries.
 ```cpp
 struct PEDELAYIMPORTFUNC {
-    union UNPEDELAYIMPORTTHUNK
-    {
-    	struct x32 {
-    		IMAGE_THUNK_DATA32 stImportAddressTable;      //x86 Import Address Table struct.
-    		IMAGE_THUNK_DATA32 stImportNameTable;         //x86 Import Name Table struct.
-    		IMAGE_THUNK_DATA32 stBoundImportAddressTable; //x86 Bound Import Address Table struct.
-    		IMAGE_THUNK_DATA32 stUnloadInformationTable;  //x86 Unload Information Table struct.
-    	} st32;
-    	struct x64 {
-    		IMAGE_THUNK_DATA64 stImportAddressTable;      //x64 Import Address Table struct.
-    		IMAGE_THUNK_DATA64 stImportNameTable;         //x64 Import Name Table struct.
-    		IMAGE_THUNK_DATA64 stBoundImportAddressTable; //x64 Bound Import Address Table struct
-    		IMAGE_THUNK_DATA64 stUnloadInformationTable;  //x64 Unload Information Table struct.
-    	} st64;
+    union UNPEDELAYIMPORTTHUNK {
+        struct x32 {
+            IMAGE_THUNK_DATA32 stImportAddressTable;      //x86 Import Address Table struct.
+            IMAGE_THUNK_DATA32 stImportNameTable;         //x86 Import Name Table struct.
+            IMAGE_THUNK_DATA32 stBoundImportAddressTable; //x86 Bound Import Address Table struct.
+            IMAGE_THUNK_DATA32 stUnloadInformationTable;  //x86 Unload Information Table struct.
+        } st32;
+        struct x64 {
+            IMAGE_THUNK_DATA64 stImportAddressTable;      //x64 Import Address Table struct.
+            IMAGE_THUNK_DATA64 stImportNameTable;         //x64 Import Name Table struct.
+            IMAGE_THUNK_DATA64 stBoundImportAddressTable; //x64 Bound Import Address Table struct
+            IMAGE_THUNK_DATA64 stUnloadInformationTable;  //x64 Unload Information Table struct.
+        } st64;
     } unThunk;
     IMAGE_IMPORT_BY_NAME stImpByName; //Standard IMAGE_IMPORT_BY_NAME struct.
     std::string          strFuncName; //Function name.
 };
 struct PEDELAYIMPORT {
-    DWORD                          dwOffset;        //File's raw offset of the Delay Import descriptor.
+    DWORD                          dwOffset;        //File's raw offset of this Delay Import descriptor.
     IMAGE_DELAYLOAD_DESCRIPTOR     stDelayImpDesc;  //Standard IMAGE_DELAYLOAD_DESCRIPTOR struct.
     std::string                    strModuleName;   //Import module name.
     std::vector<PEDELAYIMPORTFUNC> vecDelayImpFunc; //Array of the Delay Import module functions.
@@ -572,7 +482,7 @@ using PEDELAYIMPORT_VEC = std::vector<PEDELAYIMPORT>;
 
 ### [](#)GetCOMDescriptor
 ```cpp
-auto GetCOMDescriptor()->PECOMDESCRIPTOR*;
+[[nodiscard]] auto GetCOMDescriptor()const->std::optional<PECOMDESCRIPTOR>;
 ```
 Gets file's **.NET** info.
 ```cpp
@@ -582,24 +492,56 @@ struct PECOMDESCRIPTOR {
 };
 ```
 
-### [](#)Clear
-```cpp
-void Clear();
-```
-Clears all internal structs to free the memory. Call this method if you don't need loaded PE information anymore. When calling `ParsePE` method the `Clear` is invoked automatically.
+## [](#)Helper Methods
+These freestanding methods do not need an active `Clibpe` object with an opened file. They instead take references to the previously obtained structures.
 
-### [](#)Destroy
+### [](#)GetFileType
 ```cpp
-void Destroy();
+[[nodiscard]] inline constexpr auto GetFileType(const PENTHDR& stNTHdr)->EFileType
 ```
-Destroys the **libpe** object.  
-You don't usally call this method, it will be called automatically during object destruction. 
+Returns **PE** file type in form of the `EFileType` enum.
+```cpp
+enum class EFileType : std::uint8_t {
+    UNKNOWN = 0, PE32, PE64, PEROM
+};
+```
+
+### [](#)GetImageBase
+```cpp
+[[nodiscard]] inline constexpr auto GetImageBase(const PENTHDR& stNTHdr)->ULONGLONG
+```
+Returns file's **Image Base**.
+
+### [](#)GetOffsetFromRVA
+```cpp
+[[nodiscard]] inline constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr)->DWORD
+```
+Converts file's RVA to the file's physical raw offset on disk.
+
+### [](#)FlatResources
+```cpp
+[[nodiscard]] inline constexpr auto FlatResources(const PERESROOT& stResRoot)
+```
+This function is kind of a light version of the `GetResources` method. It takes `PERESROOT` struct returned by the `GetResources`, and returns `std::vector` of `PERESFLAT` structures.  
+`PERESFLAT` is a light struct that only possesses pointers to an actual resources data, unlike heavy `PERESROOT`. `FlatResources` flattens all resources, making accessing them more convenient.
+```cpp
+struct PERESFLAT {
+    std::span<const std::byte> spnData { };    //Resource data.
+    std::wstring_view          wsvTypeStr { }; //Resource Type name.
+    std::wstring_view          wsvNameStr { }; //Resource Name name (resource itself name).
+    std::wstring_view          wsvLangStr { }; //Resource Lang name.
+    WORD                       wTypeID { };    //Resource Type ID (RT_CURSOR, RT_BITMAP, etc...).
+    WORD                       wNameID { };    //Resource Name ID (resource itself ID).
+    WORD                       wLangID { };    //Resource Lang ID.
+};
+using PERESFLAT_VEC = std::vector<PERESFLAT>;
+```
 
 ## [](#)Maps
 A **PE** file consists of many structures, they in turn possess many fields some of which have predefined values.  
 These maps are meant to alleviate such fields' conversion to a human-reading format. They are simple `std::unordered_map<DWORD, std::wstring_view>` maps.
 
-Note that some fields can only have one value, while the others can combine many values with bitwise `or |` operation.
+Note that some fields can only have one value, while the others can combine many values with a bitwise `or |` operation.
 
 ### [](#)MapFileHdrMachine
 This map forms one of the values from `IMAGE_NT_HEADERS::IMAGE_FILE_HEADER::Machine` field.
@@ -695,36 +637,6 @@ for (const auto& flags : MapCOR20Flags) {
         wstrFlags += L"\n";
     }
 }
-```
-
-## [](#)Global Functions
-
-### [](#)CreateRawlibpe
-```cpp
-extern "C" ILIBPEAPI Ilibpe * __cdecl CreateRawlibpe();
-```
-It's the main function that creates raw `Ilibpe` interface pointer, but you barely need to use it in your code.  
-See the [**Usage**](#usage) section for more info.
-
-### [](#)GetLibInfo
-```cpp
-extern "C" ILIBPEAPI PLIBPE_INFO __cdecl GetLibInfo();
-```
-Returns pointer to `LIBPE_INFO`, which is **libpe** service information structure.
-```cpp
-struct LIBPEINFO
-{
-    const wchar_t* pwszVersion { };        //wchar_t string Version.
-    union {
-    	unsigned long long ullVersion { }; //long long number Version.
-    	struct {
-    		short wMajor;
-    		short wMinor;
-    		short wMaintenance;
-    		short wRevision;
-    	} stVersion;
-    };
-};
 ```
 
 ## [](#)**License**
