@@ -911,9 +911,8 @@ namespace libpe
 
 							if (pwOrdinals[iterFuncNames] == iterFuncs) { //Cycling through ordinals table to get func name.
 								dwNameRVA = pdwNamesRVA[iterFuncNames];
-								const auto pszFuncName = static_cast<LPCSTR>(RVAToPtr(dwNameRVA));
-								//Checking func name for length correctness.
-								if (pszFuncName && (StringCchLengthA(pszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+								if (const auto pszFuncName = static_cast<LPCSTR>(RVAToPtr(dwNameRVA)); //Checking func name for length correctness.
+									pszFuncName && (StringCchLengthA(pszFuncName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 									strFuncName = pszFuncName;
 								}
 								break;
@@ -922,9 +921,8 @@ namespace libpe
 					}
 
 					if ((pdwFuncsRVA[iterFuncs] >= dwExportStartRVA) && (pdwFuncsRVA[iterFuncs] <= dwExportEndRVA)) {
-						const auto pszForwarderName = static_cast<LPCSTR>(RVAToPtr(pdwFuncsRVA[iterFuncs]));
-						//Checking forwarder name for length correctness.
-						if (pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+						if (const auto pszForwarderName = static_cast<LPCSTR>(RVAToPtr(pdwFuncsRVA[iterFuncs])); //Checking forwarder name for length correctness.
+							pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 							strForwarderName = pszForwarderName;
 						}
 					}
@@ -932,11 +930,10 @@ namespace libpe
 						std::move(strFuncName), std::move(strForwarderName));
 				}
 			}
-			const auto szExportName = static_cast<LPCSTR>(RVAToPtr(pExportDir->Name));
 
 			std::string strModuleName; //Actual IMG name.
-			//Checking Export name for length correctness.
-			if (szExportName && (StringCchLengthA(szExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+			if (const auto szExportName = static_cast<LPCSTR>(RVAToPtr(pExportDir->Name)); //Checking Export name for length correctness.
+				szExportName && (StringCchLengthA(szExportName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 				strModuleName = szExportName;
 			}
 
@@ -996,8 +993,8 @@ namespace libpe
 							IMAGE_IMPORT_BY_NAME stImpByName { };
 							std::string strFuncName;
 							if (!(pThunk32->u1.Ordinal & IMAGE_ORDINAL_FLAG32)) {
-								const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk32->u1.AddressOfData));
-								if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+								if (const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk32->u1.AddressOfData));
+									pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 									stImpByName = *pName;
 									strFuncName = pName->Name;
 								}
@@ -1010,8 +1007,8 @@ namespace libpe
 								break;
 						}
 
-						const auto szName = static_cast<LPCSTR>(RVAToPtr(pImpDesc->Name));
-						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+						if (const auto szName = static_cast<LPCSTR>(RVAToPtr(pImpDesc->Name));
+							szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 							strDllName = szName;
 						}
 
@@ -1051,8 +1048,8 @@ namespace libpe
 							IMAGE_IMPORT_BY_NAME stImpByName { };
 							std::string strFuncName;
 							if (!(pThunk64->u1.Ordinal & IMAGE_ORDINAL_FLAG64)) {
-								const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk64->u1.AddressOfData));
-								if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+								if (const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk64->u1.AddressOfData));
+									pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 									stImpByName = *pName;
 									strFuncName = pName->Name;
 								}
@@ -1065,8 +1062,8 @@ namespace libpe
 								break;
 						}
 
-						const auto szName = static_cast<LPCSTR>(RVAToPtr(pImpDesc->Name));
-						if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+						if (const auto szName = static_cast<LPCSTR>(RVAToPtr(pImpDesc->Name));
+							szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 							strDllName = szName;
 						}
 
@@ -1622,8 +1619,8 @@ namespace libpe
 			for (unsigned i = 0; i < pBoundImpDesc->NumberOfModuleForwarderRefs; ++i) {
 				std::string strForwarderModuleName { };
 
-				const auto szName = reinterpret_cast<LPCSTR>(reinterpret_cast<DWORD_PTR>(pBoundImpDesc) + pBoundImpForwarder->OffsetModuleName);
-				if (IsPtrSafe(szName)) {
+				if (const auto szName = reinterpret_cast<LPCSTR>(reinterpret_cast<DWORD_PTR>(pBoundImpDesc) + pBoundImpForwarder->OffsetModuleName);
+					IsPtrSafe(szName)) {
 					if (szName && (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 						strForwarderModuleName = szName;
 					}
@@ -1639,8 +1636,8 @@ namespace libpe
 					break;
 			}
 
-			const auto szName = reinterpret_cast<LPCSTR>(reinterpret_cast<DWORD_PTR>(pBoundImpDesc) + pBoundImpDesc->OffsetModuleName);
-			if (IsPtrSafe(szName)) {
+			if (const auto szName = reinterpret_cast<LPCSTR>(reinterpret_cast<DWORD_PTR>(pBoundImpDesc) + pBoundImpDesc->OffsetModuleName);
+				IsPtrSafe(szName)) {
 				if (StringCchLengthA(szName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER) {
 					strModuleName = szName;
 				}
@@ -1694,8 +1691,8 @@ namespace libpe
 						std::string strFuncName;
 						IMAGE_IMPORT_BY_NAME stImpByName { };
 						if (!(pThunk32Name->u1.Ordinal & IMAGE_ORDINAL_FLAG32)) {
-							const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk32Name->u1.AddressOfData));
-							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+							if (const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk32Name->u1.AddressOfData));
+								pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 								stImpByName = *pName;
 								strFuncName = pName->Name;
 							}
@@ -1758,8 +1755,8 @@ namespace libpe
 						std::string strFuncName;
 						IMAGE_IMPORT_BY_NAME stImpByName { };
 						if (!(pThunk64Name->u1.Ordinal & IMAGE_ORDINAL_FLAG64)) {
-							const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk64Name->u1.AddressOfData));
-							if (pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
+							if (const auto pName = static_cast<PIMAGE_IMPORT_BY_NAME>(RVAToPtr(pThunk64Name->u1.AddressOfData));
+								pName && (StringCchLengthA(pName->Name, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 								stImpByName = *pName;
 								strFuncName = pName->Name;
 							}
