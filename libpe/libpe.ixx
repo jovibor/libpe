@@ -22,7 +22,7 @@ namespace libpe
 {
 	export constexpr auto LIBPE_VERSION_MAJOR = 2;
 	export constexpr auto LIBPE_VERSION_MINOR = 0;
-	export constexpr auto LIBPE_VERSION_MAINTENANCE = 0;
+	export constexpr auto LIBPE_VERSION_PATCH = 0;
 
 	//Rich.
 	export struct PERICHHDR {
