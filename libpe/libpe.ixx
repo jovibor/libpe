@@ -901,7 +901,8 @@ namespace libpe
 				if (!IsPtrSafe(pdwFuncRVA + iterFuncRVA)) //Checking pdwFuncRVA array.
 					break;
 
-				if (pdwFuncRVA[iterFuncRVA] == 0) //if RVA==0 —> going next entry.
+				const auto dwFuncRVA = pdwFuncRVA[iterFuncRVA]; //Function RVA;
+				if (dwFuncRVA == 0) //if RVA==0 —> going next entry.
 					continue;
 
 				std::string strFuncName;
@@ -911,7 +912,7 @@ namespace libpe
 						if (!IsPtrSafe(pwFuncOrdinals + iterFuncNames)) //Checking pwFuncOrdinals array.
 							break;
 
-						//Correspondence between ordinal, name, RVA:
+						//Correspondence between ordinal-name-RVA:
 						//ordinal = Biased_Ordinal - OrdinalBase;
 						//FuncRVA = AddressOfFunctions[ordinal];
 						//index = Search_In_AddressOfNameOrdinals(ordinal);
@@ -932,13 +933,14 @@ namespace libpe
 				}
 
 				std::string strForwarderName;
-				if ((pdwFuncRVA[iterFuncRVA] >= dwExportStartRVA) && (pdwFuncRVA[iterFuncRVA] <= dwExportEndRVA)) {
-					if (const auto pszForwarderName = static_cast<LPCSTR>(RVAToPtr(pdwFuncRVA[iterFuncRVA])); //Checking forwarder name for length correctness.
+				if ((dwFuncRVA >= dwExportStartRVA) && (dwFuncRVA <= dwExportEndRVA)) {
+					if (const auto pszForwarderName = static_cast<LPCSTR>(RVAToPtr(dwFuncRVA)); //Checking forwarder name for length correctness.
 						pszForwarderName && (StringCchLengthA(pszForwarderName, MAX_PATH, nullptr) != STRSAFE_E_INVALID_PARAMETER)) {
 						strForwarderName = pszForwarderName;
 					}
 				}
-				vecFuncs.emplace_back(pdwFuncRVA[iterFuncRVA], iterFuncRVA + pExportDir->Base /*Biased ordinal*/, dwFuncNameRVA,
+
+				vecFuncs.emplace_back(dwFuncRVA, iterFuncRVA + pExportDir->Base /*Biased ordinal*/, dwFuncNameRVA,
 					std::move(strFuncName), std::move(strForwarderName));
 			}
 
