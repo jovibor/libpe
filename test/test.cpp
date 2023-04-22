@@ -13,20 +13,31 @@ int main()
 		return -1;
 	}
 
-	std::wstring wstrData = L"Resources**********************************************:\r\n";
+	std::string strRich = "Rich***************************************************:\r\n";
+	if (const auto peRich = pe.GetRichHeader(); peRich) {
+		for (const auto& ref : *peRich) {
+			strRich += std::format("ID: {:04X}, Ver: {:05}, Count: {}\r\n", ref.wId, ref.wVersion, ref.dwCount);
+		}
+	}
+	else {
+		strRich += "No Rich header.\r\n";
+	}
+	std::cout << strRich << "\r\n";
+
+	std::wstring wstrRes = L"Resources**********************************************:\r\n";
 	if (const auto peResRoot = pe.GetResources(); peResRoot) {
 		for (const auto& iterRoot : peResRoot->vecResData) { //Main loop to extract Resources.
 			auto ilvlRoot = 0;
 			auto pResDirEntry = &iterRoot.stResDirEntry; //ROOT IMAGE_RESOURCE_DIRECTORY_ENTRY
 			if (pResDirEntry->NameIsString) {
-				wstrData += std::format(L"Entry: {} [Name: {}]\r\n", ilvlRoot, iterRoot.wstrResName);
+				wstrRes += std::format(L"Entry: {} [Name: {}]\r\n", ilvlRoot, iterRoot.wstrResName);
 			}
 			else {
 				if (const auto iter = MapResID.find(pResDirEntry->Id); iter != MapResID.end()) {
-					wstrData += std::format(L"Entry: {} [Id: {}, {}]\r\n", ilvlRoot, pResDirEntry->Id, iter->second);
+					wstrRes += std::format(L"Entry: {} [Id: {}, {}]\r\n", ilvlRoot, pResDirEntry->Id, iter->second);
 				}
 				else {
-					wstrData += std::format(L"Entry: {} [Id: {}]\r\n", ilvlRoot, pResDirEntry->Id);
+					wstrRes += std::format(L"Entry: {} [Id: {}]\r\n", ilvlRoot, pResDirEntry->Id);
 				}
 			}
 
@@ -36,10 +47,10 @@ int main()
 				for (const auto& iterLvL2 : pstResLvL2->vecResData) {
 					pResDirEntry = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
 					if (pResDirEntry->NameIsString) {
-						wstrData += std::format(L"    Entry: {}, Name: {}\r\n", ilvl2, iterLvL2.wstrResName);
+						wstrRes += std::format(L"    Entry: {}, Name: {}\r\n", ilvl2, iterLvL2.wstrResName);
 					}
 					else {
-						wstrData += std::format(L"    Entry: {}, Id: {}\r\n", ilvl2, pResDirEntry->Id);
+						wstrRes += std::format(L"    Entry: {}, Id: {}\r\n", ilvl2, pResDirEntry->Id);
 					}
 
 					if (pResDirEntry->DataIsDirectory) {
@@ -48,10 +59,10 @@ int main()
 						for (const auto& iterLvL3 : pstResLvL3->vecResData) {
 							pResDirEntry = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
 							if (pResDirEntry->NameIsString) {
-								wstrData += std::format(L"        Entry: {}, Name: {}\r\n", ilvl3, iterLvL3.wstrResName);
+								wstrRes += std::format(L"        Entry: {}, Name: {}\r\n", ilvl3, iterLvL3.wstrResName);
 							}
 							else {
-								wstrData += std::format(L"        Entry: {}, lang: {}\r\n", ilvl3, pResDirEntry->Id);
+								wstrRes += std::format(L"        Entry: {}, lang: {}\r\n", ilvl3, pResDirEntry->Id);
 							}
 							++ilvl3;
 						}
@@ -63,20 +74,20 @@ int main()
 		}
 	}
 	else {
-		wstrData += L"No Resources found.\r\n";
+		wstrRes += L"No Resources found.\r\n";
 	}
-	std::wcout << wstrData << L"\r\n";
+	std::wcout << wstrRes << L"\r\n";
 
-	std::string strData = "Imports************************************************:\r\n";
+	std::string strImports = "Imports************************************************:\r\n";
 	if (const auto peImp = pe.GetImport(); peImp) {
 		for (const auto& itModule : *peImp) { //Cycle through all imports.
-			strData += std::format("{}, Funcs: {}\r\n", itModule.strModuleName, itModule.vecImportFunc.size());
+			strImports += std::format("{}, Funcs: {}\r\n", itModule.strModuleName, itModule.vecImportFunc.size());
 		}
 	}
 	else {
-		strData += "No Imports found.\r\n";
+		strImports += "No Imports found.\r\n";
 	}
-	std::cout << strData << "\r\n";
+	std::cout << strImports << "\r\n";
 
 	return 0;
 }

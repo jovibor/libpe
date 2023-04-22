@@ -5,8 +5,6 @@ module;
 * Official git repository: https://github.com/jovibor/libpe           *
 * This software is available under the "MIT License".                 *
 **********************************************************************/
-#include <Windows.h>
-#include <WinTrust.h> //WIN_CERTIFICATE struct.
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -15,6 +13,8 @@ module;
 #include <strsafe.h>
 #include <unordered_map>
 #include <vector>
+#include <Windows.h>
+#include <WinTrust.h> //WIN_CERTIFICATE struct.
 
 export module libpe;
 
@@ -719,28 +719,28 @@ namespace libpe
 
 		const auto pRichStartVA = reinterpret_cast<PDWORD>(ullBaseAddr + 0x80);
 		auto pRichIter = pRichStartVA;
+		const auto ulDWORDs = (e_lfanew - 0x80) / sizeof(DWORD); //Maximum amount of DWORDs to check.
 
-		for (auto i = 0; i < ((e_lfanew - 0x80) / 4); ++i, ++pRichIter) {
-			//Check "Rich" (ANSI) sign, it's always at the end of the «Rich» header.
-			//Then take DWORD right after the "Rich" sign — it's a xor mask.
-			//Apply this mask to the first DWORD of «Rich» header, it must be "DanS" (ANSI) after xoring.
-			if ((*pRichIter == 0x68636952/*"Rich"*/) && ((*pRichStartVA ^ *(pRichIter + 1)) == 0x536E6144/*"Dans"*/)
+		for (auto i = 0UL; i < ulDWORDs; ++i, ++pRichIter) {
+			//Check for the "Rich" (ASCII) sign, it's always at the end of the «Rich» header.
+			//Then take a DWORD right after the "Rich" sign, it's a XOR mask.
+			//Apply this mask to the first DWORD of the «Rich» header, it must be a "DanS" (ASCII) after XORing.
+			if ((*pRichIter == 0x68636952/*"Rich"*/) && ((*pRichStartVA ^ *(pRichIter + 1)) == 0x536E6144/*"DanS"*/)
 				&& (reinterpret_cast<DWORD_PTR>(pRichIter) >= ullBaseAddr + 0x90)) { //To avoid too small (bogus) «Rich» header.
-				//Amount of all «Rich» DOUBLE_DWORD structs.
-				//First 16 bytes in «Rich» header are irrelevant. It's "DanS" itself and 12 more zeroed bytes.
-				//That's why we subtracting 0x90 to find out amount of all «Rich» structures:
+				//An amount of all «Rich» DOUBLE_DWORD structs.
+				//First 16 bytes in the «Rich» header are irrelevant, it's "DanS" itself and 12 zeroed bytes.
+				//That's why we subtracting 0x90, to find out the amount of all «Rich» structures:
 				//0x80 («Rich» start) + 16 (0xF) = 0x90.
-				const DWORD dwRichSize = static_cast<DWORD>((reinterpret_cast<DWORD_PTR>(pRichIter) - ullBaseAddr) - 0x90) / 8;
-				const DWORD dwRichXORMask = *(pRichIter + 1); //xor mask of «Rich» header.
-				pRichIter = reinterpret_cast<PDWORD>(ullBaseAddr + 0x90);//VA of «Rich» DOUBLE_DWORD structs start.
 
+				const auto dwRichQWORDs = static_cast<DWORD>((reinterpret_cast<DWORD_PTR>(pRichIter) - ullBaseAddr) - 0x90) / 8;
+				const auto dwRichXORMask = *(pRichIter + 1); //XOR mask of «Rich» header.
+				auto pRichData = reinterpret_cast<PDWORD>(ullBaseAddr + 0x90); //Beginning of the «Rich» DOUBLE_DWORD structs.
 				PERICHHDR_VEC vecRichHdr;
-				for (auto j = 0UL; j < dwRichSize; ++j) {
-					//Pushing double DWORD of «Rich» structure.
-					//Disassembling first DWORD by two WORDs.
-					vecRichHdr.emplace_back(static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(pRichIter) - GetBaseAddr()),
-						HIWORD(dwRichXORMask ^ *pRichIter), LOWORD(dwRichXORMask ^ *pRichIter), dwRichXORMask ^ *(pRichIter + 1));
-					pRichIter += 2; //Jump to the next DOUBLE_DWORD.
+				for (auto j = 0UL; j < dwRichQWORDs; ++j) {
+					//Pushing double DWORD of «Rich» structure, disassembling first DWORD by two WORDs.
+					vecRichHdr.emplace_back(static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(pRichData) - ullBaseAddr),
+						HIWORD(dwRichXORMask ^ *pRichData), LOWORD(dwRichXORMask ^ *pRichData), dwRichXORMask ^ *(pRichData + 1));
+					pRichData += 2; //Jump to the next DOUBLE_DWORD.
 				}
 				return vecRichHdr;
 			}
@@ -795,7 +795,7 @@ namespace libpe
 		}
 
 		PEDATADIR_VEC vecDataDirs;
-		for (auto iDir { 0U }; iDir < (dwRVAAndSizes > 15 ? 15 : dwRVAAndSizes); ++iDir, ++pDataDir) {
+		for (auto iDir = 0UL; iDir < (dwRVAAndSizes > 15 ? 15 : dwRVAAndSizes); ++iDir, ++pDataDir) {
 			std::string strSecName;
 			if (const auto pSecHdr = GetSecHdrFromRVA(pDataDir->VirtualAddress);
 				pSecHdr != nullptr && iDir != IMAGE_DIRECTORY_ENTRY_SECURITY) { //RVA of IMAGE_DIRECTORY_ENTRY_SECURITY is the file RAW offset.
@@ -845,14 +845,14 @@ namespace libpe
 			std::string strSecRealName;
 			if (pSecHdr->Name[0] == '/') {
 				//Deprecated, but still used "feature" of section name.
-				//https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_section_header
 				//«An 8-byte, null-padded UTF-8 string. There is no terminating null character 
 				//if the string is exactly eight characters long.
-				//For longer names, this member contains a forward slash (/) followed by an ASCII representation 
-				//of a decimal number that is an offset into the string table.»
-				//String Table dwells right after the end of Symbol Table.
-				//Each symbol in Symbol Table occupies exactly 18 bytes.
-				//So String Table's beginning can be calculated like this:
+				//For longer names, this member contains a forward slash (/) followed by an ASCII 
+				//representation of a decimal number that is an offset into the string table.»
+				//https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_section_header
+				//The String Table dwells right after the end of a Symbol Table.
+				//Each symbol in the Symbol Table occupies exactly 18 bytes.
+				//So the String Table's beginning can be calculated as:
 				//FileHeader.PointerToSymbolTable + FileHeader.NumberOfSymbols * 18;
 
 				const auto pStart = reinterpret_cast<const char*>(&pSecHdr->Name[1]);
@@ -1592,7 +1592,7 @@ namespace libpe
 			PELOADCONFIG stLCD32 { PtrToOffset(pLCD32) };
 			stLCD32.unLCD.stLCD32 = *pLCD32;
 
-			return std::optional<PELOADCONFIG>(std::move(stLCD32));
+			return { stLCD32 };
 		}
 		case EFileType::PE64:
 		{
@@ -1603,7 +1603,7 @@ namespace libpe
 			PELOADCONFIG stLCD64 { PtrToOffset(pLCD64) };
 			stLCD64.unLCD.stLCD64 = *pLCD64;
 
-			return std::optional<PELOADCONFIG>(std::move(stLCD64));
+			return { stLCD64 };
 		}
 		default:
 			return std::nullopt;
@@ -2107,7 +2107,7 @@ namespace libpe
 
 		std::vector<PERESFLAT> vecData;
 		vecData.reserve(sTotalRes);
-		for (auto& iterRoot : stResRoot.vecResData) {
+		for (const auto& iterRoot : stResRoot.vecResData) {
 			PERESFLAT stRes { };
 			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY
 			if (pResDirEntryRoot->NameIsString) {
@@ -2118,7 +2118,7 @@ namespace libpe
 			}
 
 			if (pResDirEntryRoot->DataIsDirectory) {
-				for (auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
+				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
 					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
 					if (pResDirEntry2->NameIsString) {
 						stRes.wsvNameStr = iterLvL2.wstrResName;
@@ -2128,7 +2128,7 @@ namespace libpe
 					}
 
 					if (pResDirEntry2->DataIsDirectory) {
-						for (auto& iterLvL3 : iterLvL2.stResLvL3.vecResData) {
+						for (const auto& iterLvL3 : iterLvL2.stResLvL3.vecResData) {
 							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
 							if (pResDirEntry3->NameIsString) {
 								stRes.wsvLangStr = iterLvL3.wstrResName;
