@@ -5,6 +5,8 @@ module;
 * Official git repository: https://github.com/jovibor/libpe           *
 * This software is available under the "MIT License".                 *
 **********************************************************************/
+#include <Windows.h>
+#include <WinTrust.h> //WIN_CERTIFICATE struct.
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -13,8 +15,6 @@ module;
 #include <strsafe.h>
 #include <unordered_map>
 #include <vector>
-#include <Windows.h>
-#include <WinTrust.h> //WIN_CERTIFICATE struct.
 
 export module libpe;
 
@@ -1237,7 +1237,7 @@ namespace libpe
 									stResLvL3 = { PtrToOffset(pResDirLvL3), *pResDirLvL3, std::move(vecResDataLvL3) };
 								}
 							}
-							else { //////Resource LvL2 RAW Data.
+							else { //Resource LvL2 RAW Data.
 								pResDataEntryLvL2 = reinterpret_cast<PIMAGE_RESOURCE_DATA_ENTRY>(reinterpret_cast<DWORD_PTR>(pResDirRoot)
 									+ static_cast<DWORD_PTR>(pResDirEntryLvL2->OffsetToData));
 								if (IsPtrSafe(pResDataEntryLvL2)) {
@@ -1933,7 +1933,6 @@ namespace libpe
 			return nullptr;
 		}
 
-
 		for (auto i = 0UL; i < wNumberOfSections; ++i, ++pSecHdr) {
 			if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pSecHdr) + sizeof(IMAGE_SECTION_HEADER)))
 				return nullptr;
@@ -2087,13 +2086,10 @@ namespace libpe
 	{
 		std::size_t sTotalRes { 0 }; //How many resources total?
 		for (const auto& iterRoot : stResRoot.vecResData) { //To reserve space in vector, count total amount of resources.
-			const auto pResDirEntry = &iterRoot.stResDirEntry; //Level Root
-			if (pResDirEntry->DataIsDirectory) {
-				const auto pstResLvL2 = &iterRoot.stResLvL2;
-				for (const auto& iterLvL2 : pstResLvL2->vecResData) {
-					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
-					if (pResDirEntry2->DataIsDirectory) {
-						sTotalRes += iterLvL2.stResLvL3.vecResData.size(); //Level 3
+			if (iterRoot.stResDirEntry.DataIsDirectory) { //Level Root.
+				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
+					if (iterLvL2.stResDirEntry.DataIsDirectory) { //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY.
+						sTotalRes += iterLvL2.stResLvL3.vecResData.size(); //Level 3.
 					}
 					else {
 						++sTotalRes;
@@ -2109,7 +2105,7 @@ namespace libpe
 		vecData.reserve(sTotalRes);
 		for (const auto& iterRoot : stResRoot.vecResData) {
 			PERESFLAT stRes { };
-			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY
+			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY.
 			if (pResDirEntryRoot->NameIsString) {
 				stRes.wsvTypeStr = iterRoot.wstrResName;
 			}
@@ -2119,7 +2115,7 @@ namespace libpe
 
 			if (pResDirEntryRoot->DataIsDirectory) {
 				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
-					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
+					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY.
 					if (pResDirEntry2->NameIsString) {
 						stRes.wsvNameStr = iterLvL2.wstrResName;
 					}
@@ -2129,7 +2125,7 @@ namespace libpe
 
 					if (pResDirEntry2->DataIsDirectory) {
 						for (const auto& iterLvL3 : iterLvL2.stResLvL3.vecResData) {
-							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
+							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY.
 							if (pResDirEntry3->NameIsString) {
 								stRes.wsvLangStr = iterLvL3.wstrResName;
 							}
