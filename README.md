@@ -346,9 +346,15 @@ using PEEXCEPTION_VEC = std::vector<PEEXCEPTION>;
 ```
 Returns an array of file's **Security** entries.
 ```cpp
+struct PEWIN_CERTIFICATE { //Full replica of the WIN_CERTIFICATE struct from the <WinTrust.h>.
+    DWORD dwLength;
+    WORD  wRevision;
+    WORD  wCertificateType;
+    BYTE  bCertificate[1];
+};
 struct PESECURITY {
-    DWORD           dwOffset;  //File's raw offset of the security descriptor.
-    WIN_CERTIFICATE stWinSert; //Standard WIN_CERTIFICATE header.
+    DWORD             dwOffset;  //File's raw offset of this security descriptor.
+    PEWIN_CERTIFICATE stWinSert; //Standard WIN_CERTIFICATE struct.
 };
 using PESECURITY_VEC = std::vector<PESECURITY>;
 ```

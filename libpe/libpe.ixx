@@ -6,7 +6,6 @@ module;
 * This software is available under the "MIT License".                 *
 **********************************************************************/
 #include <Windows.h>
-#include <WinTrust.h> //WIN_CERTIFICATE struct.
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -340,20 +339,26 @@ namespace libpe
 	export using PEEXCEPTION_VEC = std::vector<PEEXCEPTION>;
 
 	//Security table.
+	export struct PEWIN_CERTIFICATE { //Full replica of the WIN_CERTIFICATE struct from the <WinTrust.h>.
+		DWORD dwLength;
+		WORD  wRevision;
+		WORD  wCertificateType;
+		BYTE  bCertificate[1];
+	};
 	export struct PESECURITY {
-		DWORD           dwOffset;  //File's raw offset of this security descriptor.
-		WIN_CERTIFICATE stWinSert; //Standard WIN_CERTIFICATE header.
+		DWORD             dwOffset;  //File's raw offset of this security descriptor.
+		PEWIN_CERTIFICATE stWinSert; //Standard WIN_CERTIFICATE struct.
 	};
 	export using PESECURITY_VEC = std::vector<PESECURITY>;
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapWinCertRevision {
-		{ WIN_CERT_REVISION_1_0, L"WIN_CERT_REVISION_1_0" },
-		{ WIN_CERT_REVISION_2_0, L"WIN_CERT_REVISION_2_0" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertRevision {
+		{ static_cast<WORD>(0x0100U), L"WIN_CERT_REVISION_1_0" },
+		{ static_cast<WORD>(0x0200U), L"WIN_CERT_REVISION_2_0" }
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapWinCertType {
-		{ WIN_CERT_TYPE_X509, L"WIN_CERT_TYPE_X509" },
-		{ WIN_CERT_TYPE_PKCS_SIGNED_DATA, L"WIN_CERT_TYPE_PKCS_SIGNED_DATA" },
-		{ WIN_CERT_TYPE_RESERVED_1, L"WIN_CERT_TYPE_RESERVED_1" },
-		{ WIN_CERT_TYPE_TS_STACK_SIGNED, L"WIN_CERT_TYPE_TS_STACK_SIGNED" },
+	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertType {
+		{ static_cast<WORD>(0x0001U), L"WIN_CERT_TYPE_X509" },
+		{ static_cast<WORD>(0x0002U), L"WIN_CERT_TYPE_PKCS_SIGNED_DATA" },
+		{ static_cast<WORD>(0x0003U), L"WIN_CERT_TYPE_RESERVED_1" },
+		{ static_cast<WORD>(0x0004U), L"WIN_CERT_TYPE_TS_STACK_SIGNED" }
 	};
 
 	//Relocation table.
@@ -1327,7 +1332,7 @@ namespace libpe
 
 		const auto dwSecurityDirOffset = GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_SECURITY);
 		const auto dwSecurityDirSize = GetDirEntrySize(IMAGE_DIRECTORY_ENTRY_SECURITY);
-		if (!dwSecurityDirOffset || !dwSecurityDirSize)
+		if (dwSecurityDirOffset == 0 || dwSecurityDirSize == 0)
 			return std::nullopt;
 
 		//Checks for bogus file offsets that can cause DWORD_PTR overflow.
@@ -1338,24 +1343,24 @@ namespace libpe
 		if (IsSumOverflow(dwSecurityDirStartVA, static_cast<DWORD_PTR>(dwSecurityDirSize)))
 			return std::nullopt;
 
-		const DWORD_PTR dwSecurityDirEndVA = dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwSecurityDirSize);
+		const auto dwSecurityDirEndVA = dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwSecurityDirSize);
 
 		if (!IsPtrSafe(dwSecurityDirStartVA) || !IsPtrSafe(dwSecurityDirEndVA, true))
 			return std::nullopt;
 
 		PESECURITY_VEC vecSecurity;
 		while (dwSecurityDirStartVA < dwSecurityDirEndVA) {
-			auto pCertificate = reinterpret_cast<LPWIN_CERTIFICATE>(dwSecurityDirStartVA);
-			const auto dwCertSize = pCertificate->dwLength - static_cast<DWORD>(offsetof(WIN_CERTIFICATE, bCertificate));
+			const auto pCertificate = reinterpret_cast<PEWIN_CERTIFICATE*>(dwSecurityDirStartVA);
+			const auto dwCertSize = pCertificate->dwLength - static_cast<DWORD>(offsetof(PEWIN_CERTIFICATE, bCertificate));
 			if (!IsPtrSafe(dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwCertSize)))
 				break;
 
 			vecSecurity.emplace_back(PtrToOffset(pCertificate), *pCertificate);
 
-			//Get next certificate entry, all entries start at 8 aligned address.
-			auto dwLength = pCertificate->dwLength;
-			dwLength += (8 - (dwLength & 7)) & 7;
-			dwSecurityDirStartVA = dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwLength);
+			//Get next certificate entry, all entries start at 0x8 aligned address.
+			const auto dwRemainder = (8 - (pCertificate->dwLength & 7)) & 7;
+			const auto dwLength = pCertificate->dwLength + dwRemainder;
+			dwSecurityDirStartVA += static_cast<DWORD_PTR>(dwLength);
 			if (!IsPtrSafe(dwSecurityDirStartVA))
 				break;
 		}

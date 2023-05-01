@@ -5,15 +5,25 @@
 import libpe;
 using namespace libpe;
 
-int main()
+int wmain(int argc, wchar_t* argv[])
 {
+	std::wstring_view wsvFile { L"C:\\Windows\\notepad.exe" }; //Default file.
+	if (argc > 1) {
+		wsvFile = argv[1];
+	}
+
 	libpe::Clibpe pe;
-	if (pe.OpenFile(L"C:\\Windows\\notepad.exe") != PEOK) {
+	if (pe.OpenFile(wsvFile.data()) != PEOK) {
 		std::cout << "Open file failed.";
 		return -1;
 	}
 
-	std::string strRich = "Rich***************************************************:\r\n";
+	constexpr auto svFormat = "{:*^{}}";
+	constexpr auto wsvFormat = L"{:*^{}}";
+	constexpr auto uiWidth = 65UL;
+
+	std::string strRich = std::format(svFormat, "Rich", uiWidth);
+	strRich += "\r\n";
 	if (const auto peRich = pe.GetRichHeader(); peRich) {
 		for (const auto& ref : *peRich) {
 			strRich += std::format("ID: {:04X}, Ver: {:05}, Count: {}\r\n", ref.wId, ref.wVersion, ref.dwCount);
@@ -24,20 +34,21 @@ int main()
 	}
 	std::cout << strRich << "\r\n";
 
-	std::wstring wstrRes = L"Resources**********************************************:\r\n";
+	std::wstring wstrResources = std::format(wsvFormat, L"Resources", uiWidth);
+	wstrResources += L"\r\n";
 	if (const auto peResRoot = pe.GetResources(); peResRoot) {
 		for (const auto& iterRoot : peResRoot->vecResData) { //Main loop to extract Resources.
 			auto ilvlRoot = 0;
 			auto pResDirEntry = &iterRoot.stResDirEntry; //ROOT IMAGE_RESOURCE_DIRECTORY_ENTRY
 			if (pResDirEntry->NameIsString) {
-				wstrRes += std::format(L"Entry: {} [Name: {}]\r\n", ilvlRoot, iterRoot.wstrResName);
+				wstrResources += std::format(L"Entry: {} [Name: {}]\r\n", ilvlRoot, iterRoot.wstrResName);
 			}
 			else {
 				if (const auto iter = MapResID.find(pResDirEntry->Id); iter != MapResID.end()) {
-					wstrRes += std::format(L"Entry: {} [Id: {}, {}]\r\n", ilvlRoot, pResDirEntry->Id, iter->second);
+					wstrResources += std::format(L"Entry: {} [Id: {}, {}]\r\n", ilvlRoot, pResDirEntry->Id, iter->second);
 				}
 				else {
-					wstrRes += std::format(L"Entry: {} [Id: {}]\r\n", ilvlRoot, pResDirEntry->Id);
+					wstrResources += std::format(L"Entry: {} [Id: {}]\r\n", ilvlRoot, pResDirEntry->Id);
 				}
 			}
 
@@ -47,10 +58,10 @@ int main()
 				for (const auto& iterLvL2 : pstResLvL2->vecResData) {
 					pResDirEntry = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY
 					if (pResDirEntry->NameIsString) {
-						wstrRes += std::format(L"    Entry: {}, Name: {}\r\n", ilvl2, iterLvL2.wstrResName);
+						wstrResources += std::format(L"    Entry: {}, Name: {}\r\n", ilvl2, iterLvL2.wstrResName);
 					}
 					else {
-						wstrRes += std::format(L"    Entry: {}, Id: {}\r\n", ilvl2, pResDirEntry->Id);
+						wstrResources += std::format(L"    Entry: {}, Id: {}\r\n", ilvl2, pResDirEntry->Id);
 					}
 
 					if (pResDirEntry->DataIsDirectory) {
@@ -59,10 +70,10 @@ int main()
 						for (const auto& iterLvL3 : pstResLvL3->vecResData) {
 							pResDirEntry = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY
 							if (pResDirEntry->NameIsString) {
-								wstrRes += std::format(L"        Entry: {}, Name: {}\r\n", ilvl3, iterLvL3.wstrResName);
+								wstrResources += std::format(L"        Entry: {}, Name: {}\r\n", ilvl3, iterLvL3.wstrResName);
 							}
 							else {
-								wstrRes += std::format(L"        Entry: {}, lang: {}\r\n", ilvl3, pResDirEntry->Id);
+								wstrResources += std::format(L"        Entry: {}, lang: {}\r\n", ilvl3, pResDirEntry->Id);
 							}
 							++ilvl3;
 						}
@@ -74,11 +85,12 @@ int main()
 		}
 	}
 	else {
-		wstrRes += L"No Resources found.\r\n";
+		wstrResources += L"No Resources found.\r\n";
 	}
-	std::wcout << wstrRes << L"\r\n";
+	std::wcout << wstrResources << L"\r\n";
 
-	std::string strImports = "Imports************************************************:\r\n";
+	std::string strImports = std::format(svFormat, "Imports", uiWidth);
+	strImports += "\r\n";
 	if (const auto peImp = pe.GetImport(); peImp) {
 		for (const auto& itModule : *peImp) { //Cycle through all imports.
 			strImports += std::format("{}, Funcs: {}\r\n", itModule.strModuleName, itModule.vecImportFunc.size());
@@ -88,6 +100,20 @@ int main()
 		strImports += "No Imports found.\r\n";
 	}
 	std::cout << strImports << "\r\n";
+
+	std::string strSecurity = std::format(svFormat, "Security Directory", uiWidth);
+	strSecurity += "\r\n";
+	if (const auto peSecur = pe.GetSecurity(); peSecur) {
+		for (const auto& itSecur : *peSecur) {
+			const auto& refWinSert = itSecur.stWinSert;
+			strSecurity += std::format("Offset: {}, Length: {}, Revision: {}, Cert Type: {}\r\n",
+				itSecur.dwOffset, refWinSert.dwLength, refWinSert.wRevision, refWinSert.wCertificateType);
+		}
+	}
+	else {
+		strSecurity += "No Security directory found.\r\n";
+	}
+	std::cout << strSecurity << "\r\n";
 
 	return 0;
 }
