@@ -18,12 +18,11 @@ int wmain(int argc, wchar_t* argv[])
 		return -1;
 	}
 
-	constexpr auto svFormat = "{:*^{}}";
-	constexpr auto wsvFormat = L"{:*^{}}";
-	constexpr auto uiWidth = 65UL;
+	constexpr auto svFormat = "{:*^{}}\r\n";
+	constexpr auto wsvFormat = L"{:*^{}}\r\n";
+	constexpr auto uiWidth = 100UL;
 
 	std::string strRich = std::format(svFormat, "Rich", uiWidth);
-	strRich += "\r\n";
 	if (const auto peRich = pe.GetRichHeader(); peRich) {
 		for (const auto& ref : *peRich) {
 			strRich += std::format("ID: {:04X}, Ver: {:05}, Count: {}\r\n", ref.wId, ref.wVersion, ref.dwCount);
@@ -35,7 +34,6 @@ int wmain(int argc, wchar_t* argv[])
 	std::cout << strRich << "\r\n";
 
 	std::wstring wstrResources = std::format(wsvFormat, L"Resources", uiWidth);
-	wstrResources += L"\r\n";
 	if (const auto peResRoot = pe.GetResources(); peResRoot) {
 		for (const auto& iterRoot : peResRoot->vecResData) { //Main loop to extract Resources.
 			auto ilvlRoot = 0;
@@ -90,7 +88,6 @@ int wmain(int argc, wchar_t* argv[])
 	std::wcout << wstrResources << L"\r\n";
 
 	std::string strImports = std::format(svFormat, "Imports", uiWidth);
-	strImports += "\r\n";
 	if (const auto peImp = pe.GetImport(); peImp) {
 		for (const auto& itModule : *peImp) { //Cycle through all imports.
 			strImports += std::format("{}, Funcs: {}\r\n", itModule.strModuleName, itModule.vecImportFunc.size());
@@ -102,7 +99,6 @@ int wmain(int argc, wchar_t* argv[])
 	std::cout << strImports << "\r\n";
 
 	std::string strSecurity = std::format(svFormat, "Security Directory", uiWidth);
-	strSecurity += "\r\n";
 	if (const auto peSecur = pe.GetSecurity(); peSecur) {
 		for (const auto& itSecur : *peSecur) {
 			const auto& refWinSert = itSecur.stWinSert;

@@ -40,94 +40,94 @@ namespace libpe
 			IMAGE_NT_HEADERS64 stNTHdr64; //x64 Header.
 		} unHdr;
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapFileHdrMachine {
-		{ IMAGE_FILE_MACHINE_UNKNOWN, L"IMAGE_FILE_MACHINE_UNKNOWN" },
-		{ IMAGE_FILE_MACHINE_TARGET_HOST, L"IMAGE_FILE_MACHINE_TARGET_HOST" },
-		{ IMAGE_FILE_MACHINE_I386, L"IMAGE_FILE_MACHINE_I386" },
-		{ IMAGE_FILE_MACHINE_R3000, L"IMAGE_FILE_MACHINE_R3000" },
-		{ IMAGE_FILE_MACHINE_R4000, L"IMAGE_FILE_MACHINE_R4000" },
-		{ IMAGE_FILE_MACHINE_R10000, L"IMAGE_FILE_MACHINE_R10000" },
-		{ IMAGE_FILE_MACHINE_WCEMIPSV2, L"IMAGE_FILE_MACHINE_WCEMIPSV2" },
-		{ IMAGE_FILE_MACHINE_ALPHA, L"IMAGE_FILE_MACHINE_ALPHA" },
-		{ IMAGE_FILE_MACHINE_SH3, L"IMAGE_FILE_MACHINE_SH3" },
-		{ IMAGE_FILE_MACHINE_SH3DSP, L"IMAGE_FILE_MACHINE_SH3DSP" },
-		{ IMAGE_FILE_MACHINE_SH3E, L"IMAGE_FILE_MACHINE_SH3E" },
-		{ IMAGE_FILE_MACHINE_SH4, L"IMAGE_FILE_MACHINE_SH4" },
-		{ IMAGE_FILE_MACHINE_SH5, L"IMAGE_FILE_MACHINE_SH5" },
-		{ IMAGE_FILE_MACHINE_ARM, L"IMAGE_FILE_MACHINE_ARM" },
-		{ IMAGE_FILE_MACHINE_THUMB, L"IMAGE_FILE_MACHINE_THUMB" },
-		{ IMAGE_FILE_MACHINE_ARMNT, L"IMAGE_FILE_MACHINE_ARMNT" },
-		{ IMAGE_FILE_MACHINE_AM33, L"IMAGE_FILE_MACHINE_AM33" },
-		{ IMAGE_FILE_MACHINE_POWERPC, L"IMAGE_FILE_MACHINE_POWERPC" },
-		{ IMAGE_FILE_MACHINE_POWERPCFP, L"IMAGE_FILE_MACHINE_POWERPCFP" },
-		{ IMAGE_FILE_MACHINE_IA64, L"IMAGE_FILE_MACHINE_IA64" },
-		{ IMAGE_FILE_MACHINE_MIPS16, L"IMAGE_FILE_MACHINE_MIPS16" },
-		{ IMAGE_FILE_MACHINE_ALPHA64, L"IMAGE_FILE_MACHINE_ALPHA64" },
-		{ IMAGE_FILE_MACHINE_MIPSFPU, L"IMAGE_FILE_MACHINE_MIPSFPU" },
-		{ IMAGE_FILE_MACHINE_MIPSFPU16, L"IMAGE_FILE_MACHINE_MIPSFPU16" },
-		{ IMAGE_FILE_MACHINE_TRICORE, L"IMAGE_FILE_MACHINE_TRICORE" },
-		{ IMAGE_FILE_MACHINE_CEF, L"IMAGE_FILE_MACHINE_CEF" },
-		{ IMAGE_FILE_MACHINE_EBC, L"IMAGE_FILE_MACHINE_EBC" },
-		{ IMAGE_FILE_MACHINE_AMD64, L"IMAGE_FILE_MACHINE_AMD64" },
-		{ IMAGE_FILE_MACHINE_M32R, L"IMAGE_FILE_MACHINE_M32R" },
-		{ IMAGE_FILE_MACHINE_ARM64, L"IMAGE_FILE_MACHINE_ARM64" },
-		{ IMAGE_FILE_MACHINE_CEE, L"IMAGE_FILE_MACHINE_CEE" },
+	export inline const std::unordered_map<WORD, std::wstring_view> MapFileHdrMachine { //IMAGE_FILE_HEADER::Machine.
+		{ static_cast<WORD>(0), L"IMAGE_FILE_MACHINE_UNKNOWN" },
+		{ static_cast<WORD>(0x0001), L"IMAGE_FILE_MACHINE_TARGET_HOST" },
+		{ static_cast<WORD>(0x014c), L"IMAGE_FILE_MACHINE_I386" },
+		{ static_cast<WORD>(0x0162), L"IMAGE_FILE_MACHINE_R3000" },
+		{ static_cast<WORD>(0x0166), L"IMAGE_FILE_MACHINE_R4000" },
+		{ static_cast<WORD>(0x0168), L"IMAGE_FILE_MACHINE_R10000" },
+		{ static_cast<WORD>(0x0169), L"IMAGE_FILE_MACHINE_WCEMIPSV2" },
+		{ static_cast<WORD>(0x0184), L"IMAGE_FILE_MACHINE_ALPHA" },
+		{ static_cast<WORD>(0x01a2), L"IMAGE_FILE_MACHINE_SH3" },
+		{ static_cast<WORD>(0x01a3), L"IMAGE_FILE_MACHINE_SH3DSP" },
+		{ static_cast<WORD>(0x01a4), L"IMAGE_FILE_MACHINE_SH3E" },
+		{ static_cast<WORD>(0x01a6), L"IMAGE_FILE_MACHINE_SH4" },
+		{ static_cast<WORD>(0x01a8), L"IMAGE_FILE_MACHINE_SH5" },
+		{ static_cast<WORD>(0x01c0), L"IMAGE_FILE_MACHINE_ARM" },
+		{ static_cast<WORD>(0x01c2), L"IMAGE_FILE_MACHINE_THUMB" },
+		{ static_cast<WORD>(0x01c4), L"IMAGE_FILE_MACHINE_ARMNT" },
+		{ static_cast<WORD>(0x01d3), L"IMAGE_FILE_MACHINE_AM33" },
+		{ static_cast<WORD>(0x01F0), L"IMAGE_FILE_MACHINE_POWERPC" },
+		{ static_cast<WORD>(0x01f1), L"IMAGE_FILE_MACHINE_POWERPCFP" },
+		{ static_cast<WORD>(0x0200), L"IMAGE_FILE_MACHINE_IA64" },
+		{ static_cast<WORD>(0x0266), L"IMAGE_FILE_MACHINE_MIPS16" },
+		{ static_cast<WORD>(0x0284), L"IMAGE_FILE_MACHINE_ALPHA64" },
+		{ static_cast<WORD>(0x0366), L"IMAGE_FILE_MACHINE_MIPSFPU" },
+		{ static_cast<WORD>(0x0466), L"IMAGE_FILE_MACHINE_MIPSFPU16" },
+		{ static_cast<WORD>(0x0520), L"IMAGE_FILE_MACHINE_TRICORE" },
+		{ static_cast<WORD>(0x0CEF), L"IMAGE_FILE_MACHINE_CEF" },
+		{ static_cast<WORD>(0x0EBC), L"IMAGE_FILE_MACHINE_EBC" },
+		{ static_cast<WORD>(0x8664), L"IMAGE_FILE_MACHINE_AMD64" },
+		{ static_cast<WORD>(0x9041), L"IMAGE_FILE_MACHINE_M32R" },
+		{ static_cast<WORD>(0xAA64), L"IMAGE_FILE_MACHINE_ARM64" },
+		{ static_cast<WORD>(0xC0EE), L"IMAGE_FILE_MACHINE_CEE" }
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapFileHdrCharact {
-		{ IMAGE_FILE_RELOCS_STRIPPED, L"IMAGE_FILE_RELOCS_STRIPPED" },
-		{ IMAGE_FILE_EXECUTABLE_IMAGE, L"IMAGE_FILE_EXECUTABLE_IMAGE" },
-		{ IMAGE_FILE_LINE_NUMS_STRIPPED, L"IMAGE_FILE_LINE_NUMS_STRIPPED" },
-		{ IMAGE_FILE_LOCAL_SYMS_STRIPPED, L"IMAGE_FILE_LOCAL_SYMS_STRIPPED" },
-		{ IMAGE_FILE_AGGRESIVE_WS_TRIM, L"IMAGE_FILE_AGGRESIVE_WS_TRIM" },
-		{ IMAGE_FILE_LARGE_ADDRESS_AWARE, L"IMAGE_FILE_LARGE_ADDRESS_AWARE" },
-		{ IMAGE_FILE_BYTES_REVERSED_LO, L"IMAGE_FILE_BYTES_REVERSED_LO" },
-		{ IMAGE_FILE_32BIT_MACHINE, L"IMAGE_FILE_32BIT_MACHINE" },
-		{ IMAGE_FILE_DEBUG_STRIPPED, L"IMAGE_FILE_DEBUG_STRIPPED" },
-		{ IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP, L"IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP" },
-		{ IMAGE_FILE_NET_RUN_FROM_SWAP, L"IMAGE_FILE_NET_RUN_FROM_SWAP" },
-		{ IMAGE_FILE_SYSTEM, L"IMAGE_FILE_SYSTEM" },
-		{ IMAGE_FILE_DLL, L"IMAGE_FILE_DLL" },
-		{ IMAGE_FILE_UP_SYSTEM_ONLY, L"IMAGE_FILE_UP_SYSTEM_ONLY" },
-		{ IMAGE_FILE_BYTES_REVERSED_HI, L"IMAGE_FILE_BYTES_REVERSED_HI" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapFileHdrCharact { //IMAGE_FILE_HEADER::Characteristics.
+		{ static_cast<WORD>(0x0001), L"IMAGE_FILE_RELOCS_STRIPPED" },
+		{ static_cast<WORD>(0x0002), L"IMAGE_FILE_EXECUTABLE_IMAGE" },
+		{ static_cast<WORD>(0x0004), L"IMAGE_FILE_LINE_NUMS_STRIPPED" },
+		{ static_cast<WORD>(0x0008), L"IMAGE_FILE_LOCAL_SYMS_STRIPPED" },
+		{ static_cast<WORD>(0x0010), L"IMAGE_FILE_AGGRESIVE_WS_TRIM" },
+		{ static_cast<WORD>(0x0020), L"IMAGE_FILE_LARGE_ADDRESS_AWARE" },
+		{ static_cast<WORD>(0x0080), L"IMAGE_FILE_BYTES_REVERSED_LO" },
+		{ static_cast<WORD>(0x0100), L"IMAGE_FILE_32BIT_MACHINE" },
+		{ static_cast<WORD>(0x0200), L"IMAGE_FILE_DEBUG_STRIPPED" },
+		{ static_cast<WORD>(0x0400), L"IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP" },
+		{ static_cast<WORD>(0x0800), L"IMAGE_FILE_NET_RUN_FROM_SWAP" },
+		{ static_cast<WORD>(0x1000), L"IMAGE_FILE_SYSTEM" },
+		{ static_cast<WORD>(0x2000), L"IMAGE_FILE_DLL" },
+		{ static_cast<WORD>(0x4000), L"IMAGE_FILE_UP_SYSTEM_ONLY" },
+		{ static_cast<WORD>(0x8000), L"IMAGE_FILE_BYTES_REVERSED_HI" }
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapOptHdrMagic {
-		{ IMAGE_NT_OPTIONAL_HDR32_MAGIC, L"IMAGE_NT_OPTIONAL_HDR32_MAGIC" },
-		{ IMAGE_NT_OPTIONAL_HDR64_MAGIC, L"IMAGE_NT_OPTIONAL_HDR64_MAGIC" },
-		{ IMAGE_ROM_OPTIONAL_HDR_MAGIC, L"IMAGE_ROM_OPTIONAL_HDR_MAGIC" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapOptHdrMagic { //IMAGE_OPTIONAL_HEADER::Magic.
+		{ static_cast<WORD>(0x10b), L"IMAGE_NT_OPTIONAL_HDR32_MAGIC" },
+		{ static_cast<WORD>(0x20b), L"IMAGE_NT_OPTIONAL_HDR64_MAGIC" },
+		{ static_cast<WORD>(0x107), L"IMAGE_ROM_OPTIONAL_HDR_MAGIC" }
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapOptHdrSubsystem {
-		{ IMAGE_SUBSYSTEM_UNKNOWN, L"IMAGE_SUBSYSTEM_UNKNOWN" },
-		{ IMAGE_SUBSYSTEM_NATIVE, L"IMAGE_SUBSYSTEM_NATIVE" },
-		{ IMAGE_SUBSYSTEM_WINDOWS_GUI, L"IMAGE_SUBSYSTEM_WINDOWS_GUI" },
-		{ IMAGE_SUBSYSTEM_WINDOWS_CUI, L"IMAGE_SUBSYSTEM_WINDOWS_CUI" },
-		{ IMAGE_SUBSYSTEM_OS2_CUI, L"IMAGE_SUBSYSTEM_OS2_CUI" },
-		{ IMAGE_SUBSYSTEM_POSIX_CUI, L"IMAGE_SUBSYSTEM_POSIX_CUI" },
-		{ IMAGE_SUBSYSTEM_NATIVE_WINDOWS, L"IMAGE_SUBSYSTEM_NATIVE_WINDOWS" },
-		{ IMAGE_SUBSYSTEM_WINDOWS_CE_GUI, L"IMAGE_SUBSYSTEM_WINDOWS_CE_GUI" },
-		{ IMAGE_SUBSYSTEM_EFI_APPLICATION, L"IMAGE_SUBSYSTEM_EFI_APPLICATION" },
-		{ IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER, L"IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER" },
-		{ IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER, L"IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER" },
-		{ IMAGE_SUBSYSTEM_EFI_ROM, L"IMAGE_SUBSYSTEM_EFI_ROM" },
-		{ IMAGE_SUBSYSTEM_XBOX, L"IMAGE_SUBSYSTEM_XBOX" },
-		{ IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION, L"IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION" },
-		{ IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG, L"IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapOptHdrSubsystem { //IMAGE_OPTIONAL_HEADER::Subsystem.
+		{ static_cast<WORD>(0), L"IMAGE_SUBSYSTEM_UNKNOWN" },
+		{ static_cast<WORD>(1), L"IMAGE_SUBSYSTEM_NATIVE" },
+		{ static_cast<WORD>(2), L"IMAGE_SUBSYSTEM_WINDOWS_GUI" },
+		{ static_cast<WORD>(3), L"IMAGE_SUBSYSTEM_WINDOWS_CUI" },
+		{ static_cast<WORD>(5), L"IMAGE_SUBSYSTEM_OS2_CUI" },
+		{ static_cast<WORD>(7), L"IMAGE_SUBSYSTEM_POSIX_CUI" },
+		{ static_cast<WORD>(8), L"IMAGE_SUBSYSTEM_NATIVE_WINDOWS" },
+		{ static_cast<WORD>(9), L"IMAGE_SUBSYSTEM_WINDOWS_CE_GUI" },
+		{ static_cast<WORD>(10), L"IMAGE_SUBSYSTEM_EFI_APPLICATION" },
+		{ static_cast<WORD>(11), L"IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER" },
+		{ static_cast<WORD>(12), L"IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER" },
+		{ static_cast<WORD>(13), L"IMAGE_SUBSYSTEM_EFI_ROM" },
+		{ static_cast<WORD>(14), L"IMAGE_SUBSYSTEM_XBOX" },
+		{ static_cast<WORD>(16), L"IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION" },
+		{ static_cast<WORD>(17), L"IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG" }
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapOptHdrDllCharact {
-		{ 0x0001, L"IMAGE_LIBRARY_PROCESS_INIT" },
-		{ 0x0002, L"IMAGE_LIBRARY_PROCESS_TERM" },
-		{ 0x0004, L"IMAGE_LIBRARY_THREAD_INIT" },
-		{ 0x0008, L"IMAGE_LIBRARY_THREAD_TERM" },
-		{ IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA, L"IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA" },
-		{ IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE, L"IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE" },
-		{ IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY, L"IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY" },
-		{ IMAGE_DLLCHARACTERISTICS_NX_COMPAT, L"IMAGE_DLLCHARACTERISTICS_NX_COMPAT" },
-		{ IMAGE_DLLCHARACTERISTICS_NO_ISOLATION, L"IMAGE_DLLCHARACTERISTICS_NO_ISOLATION" },
-		{ IMAGE_DLLCHARACTERISTICS_NO_SEH, L"IMAGE_DLLCHARACTERISTICS_NO_SEH" },
-		{ IMAGE_DLLCHARACTERISTICS_NO_BIND, L"IMAGE_DLLCHARACTERISTICS_NO_BIND" },
-		{ IMAGE_DLLCHARACTERISTICS_APPCONTAINER, L"IMAGE_DLLCHARACTERISTICS_APPCONTAINER" },
-		{ IMAGE_DLLCHARACTERISTICS_WDM_DRIVER, L"IMAGE_DLLCHARACTERISTICS_WDM_DRIVER" },
-		{ IMAGE_DLLCHARACTERISTICS_GUARD_CF, L"IMAGE_DLLCHARACTERISTICS_GUARD_CF" },
-		{ IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE, L"IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapOptHdrDllCharact { //IMAGE_OPTIONAL_HEADER::DllCharacteristics.
+		{ static_cast<WORD>(0x0001), L"IMAGE_LIBRARY_PROCESS_INIT" },
+		{ static_cast<WORD>(0x0002), L"IMAGE_LIBRARY_PROCESS_TERM" },
+		{ static_cast<WORD>(0x0004), L"IMAGE_LIBRARY_THREAD_INIT" },
+		{ static_cast<WORD>(0x0008), L"IMAGE_LIBRARY_THREAD_TERM" },
+		{ static_cast<WORD>(0x0020), L"IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA" },
+		{ static_cast<WORD>(0x0040), L"IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE" },
+		{ static_cast<WORD>(0x0080), L"IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY" },
+		{ static_cast<WORD>(0x0100), L"IMAGE_DLLCHARACTERISTICS_NX_COMPAT" },
+		{ static_cast<WORD>(0x0200), L"IMAGE_DLLCHARACTERISTICS_NO_ISOLATION" },
+		{ static_cast<WORD>(0x0400), L"IMAGE_DLLCHARACTERISTICS_NO_SEH" },
+		{ static_cast<WORD>(0x0800), L"IMAGE_DLLCHARACTERISTICS_NO_BIND" },
+		{ static_cast<WORD>(0x1000), L"IMAGE_DLLCHARACTERISTICS_APPCONTAINER" },
+		{ static_cast<WORD>(0x2000), L"IMAGE_DLLCHARACTERISTICS_WDM_DRIVER" },
+		{ static_cast<WORD>(0x4000), L"IMAGE_DLLCHARACTERISTICS_GUARD_CF" },
+		{ static_cast<WORD>(0x8000), L"IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE" }
 	};
 
 	//Data directories.
@@ -149,50 +149,50 @@ namespace libpe
 	};
 	export using PESECHDR_VEC = std::vector<PESECHDR>;
 
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapSecHdrCharact {
+	export inline const std::unordered_map<DWORD, std::wstring_view> MapSecHdrCharact { //IMAGE_SECTION_HEADER::Characteristics.
 		{ 0x00000000, L"IMAGE_SCN_TYPE_REG (Reserved)" },
 		{ 0x00000001, L"IMAGE_SCN_TYPE_DSECT (Reserved)" },
 		{ 0x00000002, L"IMAGE_SCN_TYPE_NOLOAD (Reserved)" },
 		{ 0x00000004, L"IMAGE_SCN_TYPE_GROUP (Reserved)" },
-		{ IMAGE_SCN_TYPE_NO_PAD, L"IMAGE_SCN_TYPE_NO_PAD (Reserved)" },
+		{ 0x00000008, L"IMAGE_SCN_TYPE_NO_PAD (Reserved)" },
 		{ 0x00000010, L"IMAGE_SCN_TYPE_COPY (Reserved)" },
-		{ IMAGE_SCN_CNT_CODE, L"IMAGE_SCN_CNT_CODE (Section contains code)" },
-		{ IMAGE_SCN_CNT_INITIALIZED_DATA, L"IMAGE_SCN_CNT_INITIALIZED_DATA (Section contains initialized data)" },
-		{ IMAGE_SCN_CNT_UNINITIALIZED_DATA, L"IMAGE_SCN_CNT_UNINITIALIZED_DATA (Section contains uninitialized data)" },
-		{ IMAGE_SCN_LNK_OTHER, L"IMAGE_SCN_LNK_OTHER (Reserved)" },
-		{ IMAGE_SCN_LNK_INFO, L"IMAGE_SCN_LNK_INFO (Section contains comments or some other type of information)" },
+		{ 0x00000020, L"IMAGE_SCN_CNT_CODE (Section contains code)" },
+		{ 0x00000040, L"IMAGE_SCN_CNT_INITIALIZED_DATA (Section contains initialized data)" },
+		{ 0x00000080, L"IMAGE_SCN_CNT_UNINITIALIZED_DATA (Section contains uninitialized data)" },
+		{ 0x00000100, L"IMAGE_SCN_LNK_OTHER (Reserved)" },
+		{ 0x00000200, L"IMAGE_SCN_LNK_INFO (Section contains comments or some other type of information)" },
 		{ 0x00000400, L"IMAGE_SCN_TYPE_OVER (Reserved)" },
-		{ IMAGE_SCN_LNK_REMOVE, L"IMAGE_SCN_LNK_REMOVE (Section contents will not become part of image)" },
-		{ IMAGE_SCN_LNK_COMDAT, L"IMAGE_SCN_LNK_COMDAT (Section contents comdat)" },
-		{ IMAGE_SCN_NO_DEFER_SPEC_EXC, L"IMAGE_SCN_NO_DEFER_SPEC_EXC (Reset speculative exceptions handling bits in the TLB entries for this section)" },
-		{ IMAGE_SCN_GPREL, L"IMAGE_SCN_GPREL (Section content can be accessed relative to GP)" },
+		{ 0x00000800, L"IMAGE_SCN_LNK_REMOVE (Section contents will not become part of image)" },
+		{ 0x00001000, L"IMAGE_SCN_LNK_COMDAT (Section contents comdat)" },
+		{ 0x00004000, L"IMAGE_SCN_NO_DEFER_SPEC_EXC (Reset speculative exceptions handling bits in the TLB entries for this section)" },
+		{ 0x00008000, L"IMAGE_SCN_GPREL (Section content can be accessed relative to GP)" },
 		{ 0x00010000, L"IMAGE_SCN_MEM_SYSHEAP (Obsolete)" },
-		{ IMAGE_SCN_MEM_PURGEABLE, L"IMAGE_SCN_MEM_PURGEABLE" },
-		{ IMAGE_SCN_MEM_LOCKED, L"IMAGE_SCN_MEM_LOCKED" },
-		{ IMAGE_SCN_MEM_PRELOAD, L"IMAGE_SCN_MEM_PRELOAD" },
-		{ IMAGE_SCN_ALIGN_1BYTES, L"IMAGE_SCN_ALIGN_1BYTES" },
-		{ IMAGE_SCN_ALIGN_2BYTES, L"IMAGE_SCN_ALIGN_2BYTES" },
-		{ IMAGE_SCN_ALIGN_4BYTES, L"IMAGE_SCN_ALIGN_4BYTES" },
-		{ IMAGE_SCN_ALIGN_8BYTES, L"IMAGE_SCN_ALIGN_8BYTES" },
-		{ IMAGE_SCN_ALIGN_16BYTES, L"IMAGE_SCN_ALIGN_16BYTES (Default alignment if no others are specified)" },
-		{ IMAGE_SCN_ALIGN_32BYTES, L"IMAGE_SCN_ALIGN_32BYTES" },
-		{ IMAGE_SCN_ALIGN_64BYTES, L"IMAGE_SCN_ALIGN_64BYTES" },
-		{ IMAGE_SCN_ALIGN_128BYTES, L"IMAGE_SCN_ALIGN_128BYTES" },
-		{ IMAGE_SCN_ALIGN_256BYTES, L"IMAGE_SCN_ALIGN_256BYTES" },
-		{ IMAGE_SCN_ALIGN_512BYTES, L"IMAGE_SCN_ALIGN_512BYTES" },
-		{ IMAGE_SCN_ALIGN_1024BYTES, L"IMAGE_SCN_ALIGN_1024BYTES" },
-		{ IMAGE_SCN_ALIGN_2048BYTES, L"IMAGE_SCN_ALIGN_2048BYTES" },
-		{ IMAGE_SCN_ALIGN_4096BYTES, L"IMAGE_SCN_ALIGN_4096BYTES" },
-		{ IMAGE_SCN_ALIGN_8192BYTES, L"IMAGE_SCN_ALIGN_8192BYTES" },
-		{ IMAGE_SCN_ALIGN_MASK, L"IMAGE_SCN_ALIGN_MASK" },
-		{ IMAGE_SCN_LNK_NRELOC_OVFL, L"IMAGE_SCN_LNK_NRELOC_OVFL (Section contains extended relocations)" },
-		{ IMAGE_SCN_MEM_DISCARDABLE, L"IMAGE_SCN_MEM_DISCARDABLE (Section can be discarded)" },
-		{ IMAGE_SCN_MEM_NOT_CACHED, L"IMAGE_SCN_MEM_NOT_CACHED (Section is not cachable)" },
-		{ IMAGE_SCN_MEM_NOT_PAGED, L"IMAGE_SCN_MEM_NOT_PAGED (Section is not pageable)" },
-		{ IMAGE_SCN_MEM_SHARED, L"IMAGE_SCN_MEM_SHARED (Section is shareable)" },
-		{ IMAGE_SCN_MEM_EXECUTE, L"IMAGE_SCN_MEM_EXECUTE (Section is executable)" },
-		{ IMAGE_SCN_MEM_READ, L"IMAGE_SCN_MEM_READ (Section is readable)" },
-		{ IMAGE_SCN_MEM_WRITE, L"IMAGE_SCN_MEM_WRITE (Section is writeable)" }
+		{ 0x00020000, L"IMAGE_SCN_MEM_PURGEABLE" },
+		{ 0x00040000, L"IMAGE_SCN_MEM_LOCKED" },
+		{ 0x00080000, L"IMAGE_SCN_MEM_PRELOAD" },
+		{ 0x00100000, L"IMAGE_SCN_ALIGN_1BYTES" },
+		{ 0x00200000, L"IMAGE_SCN_ALIGN_2BYTES" },
+		{ 0x00300000, L"IMAGE_SCN_ALIGN_4BYTES" },
+		{ 0x00400000, L"IMAGE_SCN_ALIGN_8BYTES" },
+		{ 0x00500000, L"IMAGE_SCN_ALIGN_16BYTES (Default alignment if no others are specified)" },
+		{ 0x00600000, L"IMAGE_SCN_ALIGN_32BYTES" },
+		{ 0x00700000, L"IMAGE_SCN_ALIGN_64BYTES" },
+		{ 0x00800000, L"IMAGE_SCN_ALIGN_128BYTES" },
+		{ 0x00900000, L"IMAGE_SCN_ALIGN_256BYTES" },
+		{ 0x00A00000, L"IMAGE_SCN_ALIGN_512BYTES" },
+		{ 0x00B00000, L"IMAGE_SCN_ALIGN_1024BYTES" },
+		{ 0x00C00000, L"IMAGE_SCN_ALIGN_2048BYTES" },
+		{ 0x00D00000, L"IMAGE_SCN_ALIGN_4096BYTES" },
+		{ 0x00E00000, L"IMAGE_SCN_ALIGN_8192BYTES" },
+		{ 0x00F00000, L"IMAGE_SCN_ALIGN_MASK" },
+		{ 0x01000000, L"IMAGE_SCN_LNK_NRELOC_OVFL (Section contains extended relocations)" },
+		{ 0x02000000, L"IMAGE_SCN_MEM_DISCARDABLE (Section can be discarded)" },
+		{ 0x04000000, L"IMAGE_SCN_MEM_NOT_CACHED (Section is not cachable)" },
+		{ 0x08000000, L"IMAGE_SCN_MEM_NOT_PAGED (Section is not pageable)" },
+		{ 0x10000000, L"IMAGE_SCN_MEM_SHARED (Section is shareable)" },
+		{ 0x20000000, L"IMAGE_SCN_MEM_EXECUTE (Section is executable)" },
+		{ 0x40000000, L"IMAGE_SCN_MEM_READ (Section is readable)" },
+		{ 0x80000000, L"IMAGE_SCN_MEM_WRITE (Section is writeable)" }
 	};
 
 	//Export table.
@@ -303,31 +303,31 @@ namespace libpe
 		WORD                       wLangID { };    //Resource Lang ID.
 	};
 	export using PERESFLAT_VEC = std::vector<PERESFLAT>;
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapResID {
-		{ 1, L"RT_CURSOR" },
-		{ 2, L"RT_BITMAP" },
-		{ 3, L"RT_ICON" },
-		{ 4, L"RT_MENU" },
-		{ 5, L"RT_DIALOG" },
-		{ 6, L"RT_STRING" },
-		{ 7, L"RT_FONTDIR" },
-		{ 8, L"RT_FONT" },
-		{ 9, L"RT_ACCELERATOR" },
-		{ 10, L"RT_RCDATA" },
-		{ 11, L"RT_MESSAGETABLE" },
-		{ 12, L"RT_GROUP_CURSOR" },
-		{ 14, L"RT_GROUP_ICON" },
-		{ 16, L"RT_VERSION" },
-		{ 17, L"RT_DLGINCLUDE" },
-		{ 19, L"RT_PLUGPLAY" },
-		{ 20, L"RT_VXD" },
-		{ 21, L"RT_ANICURSOR" },
-		{ 22, L"RT_ANIICON" },
-		{ 23, L"RT_HTML" },
-		{ 24, L"RT_MANIFEST" },
-		{ 28, L"RT_RIBBON_XML" },
-		{ 240, L"RT_DLGINIT" },
-		{ 241, L"RT_TOOLBAR" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapResID {
+		{ static_cast<WORD>(1), L"RT_CURSOR" },
+		{ static_cast<WORD>(2), L"RT_BITMAP" },
+		{ static_cast<WORD>(3), L"RT_ICON" },
+		{ static_cast<WORD>(4), L"RT_MENU" },
+		{ static_cast<WORD>(5), L"RT_DIALOG" },
+		{ static_cast<WORD>(6), L"RT_STRING" },
+		{ static_cast<WORD>(7), L"RT_FONTDIR" },
+		{ static_cast<WORD>(8), L"RT_FONT" },
+		{ static_cast<WORD>(9), L"RT_ACCELERATOR" },
+		{ static_cast<WORD>(10), L"RT_RCDATA" },
+		{ static_cast<WORD>(11), L"RT_MESSAGETABLE" },
+		{ static_cast<WORD>(12), L"RT_GROUP_CURSOR" },
+		{ static_cast<WORD>(14), L"RT_GROUP_ICON" },
+		{ static_cast<WORD>(16), L"RT_VERSION" },
+		{ static_cast<WORD>(17), L"RT_DLGINCLUDE" },
+		{ static_cast<WORD>(19), L"RT_PLUGPLAY" },
+		{ static_cast<WORD>(20), L"RT_VXD" },
+		{ static_cast<WORD>(21), L"RT_ANICURSOR" },
+		{ static_cast<WORD>(22), L"RT_ANIICON" },
+		{ static_cast<WORD>(23), L"RT_HTML" },
+		{ static_cast<WORD>(24), L"RT_MANIFEST" },
+		{ static_cast<WORD>(28), L"RT_RIBBON_XML" },
+		{ static_cast<WORD>(240), L"RT_DLGINIT" },
+		{ static_cast<WORD>(241), L"RT_TOOLBAR" }
 	};
 	/*********************************Resources End*****************************************/
 
@@ -350,15 +350,15 @@ namespace libpe
 		PEWIN_CERTIFICATE stWinSert; //Standard WIN_CERTIFICATE struct.
 	};
 	export using PESECURITY_VEC = std::vector<PESECURITY>;
-	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertRevision {
-		{ static_cast<WORD>(0x0100U), L"WIN_CERT_REVISION_1_0" },
-		{ static_cast<WORD>(0x0200U), L"WIN_CERT_REVISION_2_0" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertRevision { //WIN_CERTIFICATE::wRevision.
+		{ static_cast<WORD>(0x0100), L"WIN_CERT_REVISION_1_0" },
+		{ static_cast<WORD>(0x0200), L"WIN_CERT_REVISION_2_0" }
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertType {
-		{ static_cast<WORD>(0x0001U), L"WIN_CERT_TYPE_X509" },
-		{ static_cast<WORD>(0x0002U), L"WIN_CERT_TYPE_PKCS_SIGNED_DATA" },
-		{ static_cast<WORD>(0x0003U), L"WIN_CERT_TYPE_RESERVED_1" },
-		{ static_cast<WORD>(0x0004U), L"WIN_CERT_TYPE_TS_STACK_SIGNED" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertType { //WIN_CERTIFICATE::wCertificateType.
+		{ static_cast<WORD>(0x0001), L"WIN_CERT_TYPE_X509" },
+		{ static_cast<WORD>(0x0002), L"WIN_CERT_TYPE_PKCS_SIGNED_DATA" },
+		{ static_cast<WORD>(0x0003), L"WIN_CERT_TYPE_RESERVED_1" },
+		{ static_cast<WORD>(0x0004), L"WIN_CERT_TYPE_TS_STACK_SIGNED" }
 	};
 
 	//Relocation table.
@@ -367,18 +367,18 @@ namespace libpe
 		WORD  wRelocType;   //Relocation type.
 		WORD  wRelocOffset; //Relocation offset (Offset the relocation must be applied to.)
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapRelocType {
-		{ IMAGE_REL_BASED_ABSOLUTE, L"IMAGE_REL_BASED_ABSOLUTE" },
-		{ IMAGE_REL_BASED_HIGH, L"IMAGE_REL_BASED_HIGH" },
-		{ IMAGE_REL_BASED_LOW, L"IMAGE_REL_BASED_LOW" },
-		{ IMAGE_REL_BASED_HIGHLOW, L"IMAGE_REL_BASED_HIGHLOW" },
-		{ IMAGE_REL_BASED_HIGHADJ, L"IMAGE_REL_BASED_HIGHADJ" },
-		{ IMAGE_REL_BASED_MACHINE_SPECIFIC_5, L"IMAGE_REL_BASED_MACHINE_SPECIFIC_5" },
-		{ IMAGE_REL_BASED_RESERVED, L"IMAGE_REL_BASED_RESERVED" },
-		{ IMAGE_REL_BASED_MACHINE_SPECIFIC_7, L"IMAGE_REL_BASED_MACHINE_SPECIFIC_7" },
-		{ IMAGE_REL_BASED_MACHINE_SPECIFIC_8, L"IMAGE_REL_BASED_MACHINE_SPECIFIC_8" },
-		{ IMAGE_REL_BASED_MACHINE_SPECIFIC_9, L"IMAGE_REL_BASED_MACHINE_SPECIFIC_9" },
-		{ IMAGE_REL_BASED_DIR64, L"IMAGE_REL_BASED_DIR64" }
+	export inline const std::unordered_map<WORD, std::wstring_view> MapRelocType { //PERELOCDATA::wRelocType.
+		{ static_cast<WORD>(0), L"IMAGE_REL_BASED_ABSOLUTE" },
+		{ static_cast<WORD>(1), L"IMAGE_REL_BASED_HIGH" },
+		{ static_cast<WORD>(2), L"IMAGE_REL_BASED_LOW" },
+		{ static_cast<WORD>(3), L"IMAGE_REL_BASED_HIGHLOW" },
+		{ static_cast<WORD>(4), L"IMAGE_REL_BASED_HIGHADJ" },
+		{ static_cast<WORD>(5), L"IMAGE_REL_BASED_MACHINE_SPECIFIC_5" },
+		{ static_cast<WORD>(6), L"IMAGE_REL_BASED_RESERVED" },
+		{ static_cast<WORD>(7), L"IMAGE_REL_BASED_MACHINE_SPECIFIC_7" },
+		{ static_cast<WORD>(8), L"IMAGE_REL_BASED_MACHINE_SPECIFIC_8" },
+		{ static_cast<WORD>(9), L"IMAGE_REL_BASED_MACHINE_SPECIFIC_9" },
+		{ static_cast<WORD>(10), L"IMAGE_REL_BASED_DIR64" }
 	};
 	export struct PERELOC {
 		DWORD                    dwOffset;     //File's raw offset of this Relocation descriptor.
@@ -405,24 +405,24 @@ namespace libpe
 		PEDEBUGDBGHDR         stDebugHdrInfo; //Debug info header.
 	};
 	export using PEDEBUG_VEC = std::vector<PEDEBUG>;
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapDbgType {
-		{ IMAGE_DEBUG_TYPE_UNKNOWN, L"IMAGE_DEBUG_TYPE_UNKNOWN" },
-		{ IMAGE_DEBUG_TYPE_COFF, L"IMAGE_DEBUG_TYPE_COFF" },
-		{ IMAGE_DEBUG_TYPE_CODEVIEW, L"IMAGE_DEBUG_TYPE_CODEVIEW" },
-		{ IMAGE_DEBUG_TYPE_FPO, L"IMAGE_DEBUG_TYPE_FPO" },
-		{ IMAGE_DEBUG_TYPE_MISC, L"IMAGE_DEBUG_TYPE_MISC" },
-		{ IMAGE_DEBUG_TYPE_EXCEPTION, L"IMAGE_DEBUG_TYPE_EXCEPTION" },
-		{ IMAGE_DEBUG_TYPE_FIXUP, L"IMAGE_DEBUG_TYPE_FIXUP" },
-		{ IMAGE_DEBUG_TYPE_OMAP_TO_SRC, L"IMAGE_DEBUG_TYPE_OMAP_TO_SRC" },
-		{ IMAGE_DEBUG_TYPE_OMAP_FROM_SRC, L"IMAGE_DEBUG_TYPE_OMAP_FROM_SRC" },
-		{ IMAGE_DEBUG_TYPE_BORLAND, L"IMAGE_DEBUG_TYPE_BORLAND" },
-		{ IMAGE_DEBUG_TYPE_RESERVED10, L"IMAGE_DEBUG_TYPE_RESERVED10" },
-		{ IMAGE_DEBUG_TYPE_CLSID, L"IMAGE_DEBUG_TYPE_CLSID" },
-		{ IMAGE_DEBUG_TYPE_VC_FEATURE, L"IMAGE_DEBUG_TYPE_VC_FEATURE" },
-		{ IMAGE_DEBUG_TYPE_POGO, L"IMAGE_DEBUG_TYPE_POGO" },
-		{ IMAGE_DEBUG_TYPE_ILTCG, L"IMAGE_DEBUG_TYPE_ILTCG" },
-		{ IMAGE_DEBUG_TYPE_MPX, L"IMAGE_DEBUG_TYPE_MPX" },
-		{ IMAGE_DEBUG_TYPE_REPRO, L"IMAGE_DEBUG_TYPE_REPRO" }
+	export inline const std::unordered_map<DWORD, std::wstring_view> MapDbgType { //IMAGE_DEBUG_DIRECTORY::Type.
+		{ 0UL, L"IMAGE_DEBUG_TYPE_UNKNOWN" },
+		{ 1UL, L"IMAGE_DEBUG_TYPE_COFF" },
+		{ 2UL, L"IMAGE_DEBUG_TYPE_CODEVIEW" },
+		{ 3UL, L"IMAGE_DEBUG_TYPE_FPO" },
+		{ 4UL, L"IMAGE_DEBUG_TYPE_MISC" },
+		{ 5UL, L"IMAGE_DEBUG_TYPE_EXCEPTION" },
+		{ 6UL, L"IMAGE_DEBUG_TYPE_FIXUP" },
+		{ 7UL, L"IMAGE_DEBUG_TYPE_OMAP_TO_SRC" },
+		{ 8UL, L"IMAGE_DEBUG_TYPE_OMAP_FROM_SRC" },
+		{ 9UL, L"IMAGE_DEBUG_TYPE_BORLAND" },
+		{ 10UL, L"IMAGE_DEBUG_TYPE_RESERVED10" },
+		{ 11UL, L"IMAGE_DEBUG_TYPE_CLSID" },
+		{ 12UL, L"IMAGE_DEBUG_TYPE_VC_FEATURE" },
+		{ 13UL, L"IMAGE_DEBUG_TYPE_POGO" },
+		{ 14UL, L"IMAGE_DEBUG_TYPE_ILTCG" },
+		{ 15UL, L"IMAGE_DEBUG_TYPE_MPX" },
+		{ 16UL, L"IMAGE_DEBUG_TYPE_REPRO" }
 	};
 
 	//TLS table.
@@ -434,22 +434,22 @@ namespace libpe
 		} unTLS;
 		std::vector<DWORD> vecTLSCallbacks;   //Array of the TLS callbacks.
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapTLSCharact {
-		{ IMAGE_SCN_ALIGN_1BYTES, L"IMAGE_SCN_ALIGN_1BYTES" },
-		{ IMAGE_SCN_ALIGN_2BYTES, L"IMAGE_SCN_ALIGN_2BYTES" },
-		{ IMAGE_SCN_ALIGN_4BYTES, L"IMAGE_SCN_ALIGN_4BYTES" },
-		{ IMAGE_SCN_ALIGN_8BYTES, L"IMAGE_SCN_ALIGN_8BYTES" },
-		{ IMAGE_SCN_ALIGN_16BYTES, L"IMAGE_SCN_ALIGN_16BYTES" },
-		{ IMAGE_SCN_ALIGN_32BYTES, L"IMAGE_SCN_ALIGN_32BYTES" },
-		{ IMAGE_SCN_ALIGN_64BYTES, L"IMAGE_SCN_ALIGN_64BYTES" },
-		{ IMAGE_SCN_ALIGN_128BYTES, L"IMAGE_SCN_ALIGN_128BYTES" },
-		{ IMAGE_SCN_ALIGN_256BYTES, L"IMAGE_SCN_ALIGN_256BYTES" },
-		{ IMAGE_SCN_ALIGN_512BYTES, L"IMAGE_SCN_ALIGN_512BYTES" },
-		{ IMAGE_SCN_ALIGN_1024BYTES, L"IMAGE_SCN_ALIGN_1024BYTES" },
-		{ IMAGE_SCN_ALIGN_2048BYTES, L"IMAGE_SCN_ALIGN_2048BYTES" },
-		{ IMAGE_SCN_ALIGN_4096BYTES, L"IMAGE_SCN_ALIGN_4096BYTES" },
-		{ IMAGE_SCN_ALIGN_8192BYTES, L"IMAGE_SCN_ALIGN_8192BYTES" },
-		{ IMAGE_SCN_ALIGN_MASK, L"IMAGE_SCN_ALIGN_MASK" }
+	export inline const std::unordered_map<DWORD, std::wstring_view> MapTLSCharact { //IMAGE_TLS_DIRECTORY::Characteristics.
+		{ 0x00100000UL, L"IMAGE_SCN_ALIGN_1BYTES" },
+		{ 0x00200000UL, L"IMAGE_SCN_ALIGN_2BYTES" },
+		{ 0x00300000UL, L"IMAGE_SCN_ALIGN_4BYTES" },
+		{ 0x00400000UL, L"IMAGE_SCN_ALIGN_8BYTES" },
+		{ 0x00500000UL, L"IMAGE_SCN_ALIGN_16BYTES" },
+		{ 0x00600000UL, L"IMAGE_SCN_ALIGN_32BYTES" },
+		{ 0x00700000UL, L"IMAGE_SCN_ALIGN_64BYTES" },
+		{ 0x00800000UL, L"IMAGE_SCN_ALIGN_128BYTES" },
+		{ 0x00900000UL, L"IMAGE_SCN_ALIGN_256BYTES" },
+		{ 0x00A00000UL, L"IMAGE_SCN_ALIGN_512BYTES" },
+		{ 0x00B00000UL, L"IMAGE_SCN_ALIGN_1024BYTES" },
+		{ 0x00C00000UL, L"IMAGE_SCN_ALIGN_2048BYTES" },
+		{ 0x00D00000UL, L"IMAGE_SCN_ALIGN_4096BYTES" },
+		{ 0x00E00000UL, L"IMAGE_SCN_ALIGN_8192BYTES" },
+		{ 0x00F00000UL, L"IMAGE_SCN_ALIGN_MASK" }
 	};
 
 	//LoadConfigDirectory.
@@ -460,21 +460,21 @@ namespace libpe
 			IMAGE_LOAD_CONFIG_DIRECTORY64 stLCD64; //x64 LCD descriptor.
 		} unLCD;
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapLCDGuardFlags {
-		{ IMAGE_GUARD_CF_INSTRUMENTED, L"IMAGE_GUARD_CF_INSTRUMENTED (Module performs control flow integrity checks using system-supplied support)" },
-		{ IMAGE_GUARD_CFW_INSTRUMENTED, L"IMAGE_GUARD_CFW_INSTRUMENTED (Module performs control flow and write integrity checks)" },
-		{ IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT, L"IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT (Module contains valid control flow target metadata)" },
-		{ IMAGE_GUARD_SECURITY_COOKIE_UNUSED, L"IMAGE_GUARD_SECURITY_COOKIE_UNUSED (Module does not make use of the /GS security cookie)" },
-		{ IMAGE_GUARD_PROTECT_DELAYLOAD_IAT, L"IMAGE_GUARD_PROTECT_DELAYLOAD_IAT (Module supports read only delay load IAT)" },
-		{ IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION, L"IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION (Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected)" },
-		{ IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT, L"IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT (Module contains suppressed export information. This also infers that the address taken IAT table is also present in the load config.)" },
-		{ IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION, L"IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION (Module enables suppression of exports)" },
-		{ IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT, L"IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT (Module contains longjmp target information)" },
-		{ IMAGE_GUARD_RF_INSTRUMENTED, L"IMAGE_GUARD_RF_INSTRUMENTED (Module contains return flow instrumentation and metadata)" },
-		{ IMAGE_GUARD_RF_ENABLE, L"IMAGE_GUARD_RF_ENABLE (Module requests that the OS enable return flow protection)" },
-		{ IMAGE_GUARD_RF_STRICT, L"IMAGE_GUARD_RF_STRICT (Module requests that the OS enable return flow protection in strict mode)" },
-		{ IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK, L"IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK (Stride of Guard CF function table encoded in these bits (additional count of bytes per element))" },
-		{ IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT, L"IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT (Shift to right-justify Guard CF function table stride)" }
+	export inline const std::unordered_map<DWORD, std::wstring_view> MapLCDGuardFlags { //IMAGE_LOAD_CONFIG_DIRECTORY::GuardFlags.
+		{ 0x00000100UL, L"IMAGE_GUARD_CF_INSTRUMENTED (Module performs control flow integrity checks using system-supplied support)" },
+		{ 0x00000200UL, L"IMAGE_GUARD_CFW_INSTRUMENTED (Module performs control flow and write integrity checks)" },
+		{ 0x00000400UL, L"IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT (Module contains valid control flow target metadata)" },
+		{ 0x00000800UL, L"IMAGE_GUARD_SECURITY_COOKIE_UNUSED (Module does not make use of the /GS security cookie)" },
+		{ 0x00001000UL, L"IMAGE_GUARD_PROTECT_DELAYLOAD_IAT (Module supports read only delay load IAT)" },
+		{ 0x00002000UL, L"IMAGE_GUARD_DELAYLOAD_IAT_IN_ITS_OWN_SECTION (Delayload import table in its own .didat section (with nothing else in it) that can be freely reprotected)" },
+		{ 0x00004000UL, L"IMAGE_GUARD_CF_EXPORT_SUPPRESSION_INFO_PRESENT (Module contains suppressed export information. This also infers that the address taken IAT table is also present in the load config.)" },
+		{ 0x00008000UL, L"IMAGE_GUARD_CF_ENABLE_EXPORT_SUPPRESSION (Module enables suppression of exports)" },
+		{ 0x00010000UL, L"IMAGE_GUARD_CF_LONGJUMP_TABLE_PRESENT (Module contains longjmp target information)" },
+		{ 0x00020000UL, L"IMAGE_GUARD_RF_INSTRUMENTED (Module contains return flow instrumentation and metadata)" },
+		{ 0x00040000UL, L"IMAGE_GUARD_RF_ENABLE (Module requests that the OS enable return flow protection)" },
+		{ 0x00080000UL, L"IMAGE_GUARD_RF_STRICT (Module requests that the OS enable return flow protection in strict mode)" },
+		{ 0xF0000000UL, L"IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK (Stride of Guard CF function table encoded in these bits (additional count of bytes per element))" },
+		{ 28UL, L"IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT (Shift to right-justify Guard CF function table stride)" }
 	};
 
 	//Bound import table.
@@ -523,14 +523,14 @@ namespace libpe
 		DWORD              dwOffset; //File's raw offset of the IMAGE_COR20_HEADER descriptor.
 		IMAGE_COR20_HEADER stCorHdr; //Standard IMAGE_COR20_HEADER struct.
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapCOR20Flags {
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_ILONLY, L"COMIMAGE_FLAGS_ILONLY" },
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_32BITREQUIRED, L"COMIMAGE_FLAGS_32BITREQUIRED" },
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_IL_LIBRARY, L"COMIMAGE_FLAGS_IL_LIBRARY" },
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_STRONGNAMESIGNED, L"COMIMAGE_FLAGS_STRONGNAMESIGNED" },
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_NATIVE_ENTRYPOINT, L"COMIMAGE_FLAGS_NATIVE_ENTRYPOINT" },
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_TRACKDEBUGDATA, L"COMIMAGE_FLAGS_TRACKDEBUGDATA" },
-		{ ReplacesCorHdrNumericDefines::COMIMAGE_FLAGS_32BITPREFERRED, L"COMIMAGE_FLAGS_32BITPREFERRED" }
+	export inline const std::unordered_map<DWORD, std::wstring_view> MapCOR20Flags { //IMAGE_COR20_HEADER::Flags.
+		{ 1UL, L"COMIMAGE_FLAGS_ILONLY" },
+		{ 2UL, L"COMIMAGE_FLAGS_32BITREQUIRED" },
+		{ 4UL, L"COMIMAGE_FLAGS_IL_LIBRARY" },
+		{ 8UL, L"COMIMAGE_FLAGS_STRONGNAMESIGNED" },
+		{ 16UL, L"COMIMAGE_FLAGS_NATIVE_ENTRYPOINT" },
+		{ 65536UL, L"COMIMAGE_FLAGS_TRACKDEBUGDATA" },
+		{ 131072UL, L"COMIMAGE_FLAGS_32BITPREFERRED" }
 	};
 
 	export enum class EFileType : std::uint8_t {
