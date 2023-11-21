@@ -162,7 +162,6 @@
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <OmitFramePointers>true</OmitFramePointers>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <ConformanceMode>true</ConformanceMode>
       <ForcedIncludeFiles>
       </ForcedIncludeFiles>

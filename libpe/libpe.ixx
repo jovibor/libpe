@@ -14,33 +14,32 @@ module;
 #include <strsafe.h>
 #include <unordered_map>
 #include <vector>
-
 export module libpe;
 
-namespace libpe
+export namespace libpe
 {
-	export constexpr auto LIBPE_VERSION_MAJOR = 2;
-	export constexpr auto LIBPE_VERSION_MINOR = 0;
-	export constexpr auto LIBPE_VERSION_PATCH = 0;
+	constexpr auto LIBPE_VERSION_MAJOR = 2;
+	constexpr auto LIBPE_VERSION_MINOR = 0;
+	constexpr auto LIBPE_VERSION_PATCH = 0;
 
 	//Rich.
-	export struct PERICHHDR {
+	struct PERICHHDR {
 		DWORD dwOffset; //File's raw offset of this entry.
 		WORD  wId;      //Entry Id.
 		WORD  wVersion; //Entry version.
 		DWORD dwCount;  //Amount of occurrences.
 	};
-	export using PERICHHDR_VEC = std::vector<PERICHHDR>;
+	using PERICHHDR_VEC = std::vector<PERICHHDR>;
 
 	//NT header.
-	export struct PENTHDR {
+	struct PENTHDR {
 		DWORD dwOffset;   //File's raw offset of this header.
 		union UNPENTHDR { //Union of either x86 or x64 NT header.
 			IMAGE_NT_HEADERS32 stNTHdr32; //x86 Header.
 			IMAGE_NT_HEADERS64 stNTHdr64; //x64 Header.
 		} unHdr;
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapFileHdrMachine { //IMAGE_FILE_HEADER::Machine.
+	const std::unordered_map<WORD, std::wstring_view> MapFileHdrMachine { //IMAGE_FILE_HEADER::Machine.
 		{ static_cast<WORD>(0), L"IMAGE_FILE_MACHINE_UNKNOWN" },
 		{ static_cast<WORD>(0x0001), L"IMAGE_FILE_MACHINE_TARGET_HOST" },
 		{ static_cast<WORD>(0x014c), L"IMAGE_FILE_MACHINE_I386" },
@@ -73,7 +72,7 @@ namespace libpe
 		{ static_cast<WORD>(0xAA64), L"IMAGE_FILE_MACHINE_ARM64" },
 		{ static_cast<WORD>(0xC0EE), L"IMAGE_FILE_MACHINE_CEE" }
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapFileHdrCharact { //IMAGE_FILE_HEADER::Characteristics.
+	const std::unordered_map<WORD, std::wstring_view> MapFileHdrCharact { //IMAGE_FILE_HEADER::Characteristics.
 		{ static_cast<WORD>(0x0001), L"IMAGE_FILE_RELOCS_STRIPPED" },
 		{ static_cast<WORD>(0x0002), L"IMAGE_FILE_EXECUTABLE_IMAGE" },
 		{ static_cast<WORD>(0x0004), L"IMAGE_FILE_LINE_NUMS_STRIPPED" },
@@ -90,12 +89,12 @@ namespace libpe
 		{ static_cast<WORD>(0x4000), L"IMAGE_FILE_UP_SYSTEM_ONLY" },
 		{ static_cast<WORD>(0x8000), L"IMAGE_FILE_BYTES_REVERSED_HI" }
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapOptHdrMagic { //IMAGE_OPTIONAL_HEADER::Magic.
+	const std::unordered_map<WORD, std::wstring_view> MapOptHdrMagic { //IMAGE_OPTIONAL_HEADER::Magic.
 		{ static_cast<WORD>(0x10b), L"IMAGE_NT_OPTIONAL_HDR32_MAGIC" },
 		{ static_cast<WORD>(0x20b), L"IMAGE_NT_OPTIONAL_HDR64_MAGIC" },
 		{ static_cast<WORD>(0x107), L"IMAGE_ROM_OPTIONAL_HDR_MAGIC" }
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapOptHdrSubsystem { //IMAGE_OPTIONAL_HEADER::Subsystem.
+	const std::unordered_map<WORD, std::wstring_view> MapOptHdrSubsystem { //IMAGE_OPTIONAL_HEADER::Subsystem.
 		{ static_cast<WORD>(0), L"IMAGE_SUBSYSTEM_UNKNOWN" },
 		{ static_cast<WORD>(1), L"IMAGE_SUBSYSTEM_NATIVE" },
 		{ static_cast<WORD>(2), L"IMAGE_SUBSYSTEM_WINDOWS_GUI" },
@@ -112,7 +111,7 @@ namespace libpe
 		{ static_cast<WORD>(16), L"IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION" },
 		{ static_cast<WORD>(17), L"IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG" }
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapOptHdrDllCharact { //IMAGE_OPTIONAL_HEADER::DllCharacteristics.
+	const std::unordered_map<WORD, std::wstring_view> MapOptHdrDllCharact { //IMAGE_OPTIONAL_HEADER::DllCharacteristics.
 		{ static_cast<WORD>(0x0001), L"IMAGE_LIBRARY_PROCESS_INIT" },
 		{ static_cast<WORD>(0x0002), L"IMAGE_LIBRARY_PROCESS_TERM" },
 		{ static_cast<WORD>(0x0004), L"IMAGE_LIBRARY_THREAD_INIT" },
@@ -131,25 +130,25 @@ namespace libpe
 	};
 
 	//Data directories.
-	export struct PEDATADIR {
+	struct PEDATADIR {
 		IMAGE_DATA_DIRECTORY stDataDir;  //Standard header.
 		std::string          strSection; //Name of the section this directory resides in (points to).
 	};
-	export using PEDATADIR_VEC = std::vector<PEDATADIR>;
+	using PEDATADIR_VEC = std::vector<PEDATADIR>;
 
 	//Sections headers.
 	//For more info check:
 	//docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_section_header#members
 	//«An 8-byte, null-padded UTF-8 string. For longer names, this member contains a forward slash (/) 
 	//followed by an ASCII representation of a decimal number that is an offset into the string table.»
-	export struct PESECHDR {
+	struct PESECHDR {
 		DWORD                dwOffset;   //File's raw offset of this section header descriptor.
 		IMAGE_SECTION_HEADER stSecHdr;   //Standard section header.
 		std::string          strSecName; //Section full name.
 	};
-	export using PESECHDR_VEC = std::vector<PESECHDR>;
+	using PESECHDR_VEC = std::vector<PESECHDR>;
 
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapSecHdrCharact { //IMAGE_SECTION_HEADER::Characteristics.
+	const std::unordered_map<DWORD, std::wstring_view> MapSecHdrCharact { //IMAGE_SECTION_HEADER::Characteristics.
 		{ 0x00000000, L"IMAGE_SCN_TYPE_REG (Reserved)" },
 		{ 0x00000001, L"IMAGE_SCN_TYPE_DSECT (Reserved)" },
 		{ 0x00000002, L"IMAGE_SCN_TYPE_NOLOAD (Reserved)" },
@@ -196,14 +195,14 @@ namespace libpe
 	};
 
 	//Export table.
-	export struct PEEXPORTFUNC {
+	struct PEEXPORTFUNC {
 		DWORD       dwFuncRVA;        //Function RVA.
 		DWORD       dwOrdinal;        //Function ordinal.
 		DWORD       dwNameRVA;        //Name RVA.
 		std::string strFuncName;      //Function name.
 		std::string strForwarderName; //Function forwarder name.
 	};
-	export struct PEEXPORT {
+	struct PEEXPORT {
 		DWORD                     dwOffset;      //File's raw offset of the Export header descriptor.
 		IMAGE_EXPORT_DIRECTORY    stExportDesc;  //Standard export header descriptor.
 		std::string               strModuleName; //Actual module name.
@@ -211,7 +210,7 @@ namespace libpe
 	};
 
 	//Import table:
-	export struct PEIMPORTFUNC {
+	struct PEIMPORTFUNC {
 		union UNPEIMPORTTHUNK {
 			IMAGE_THUNK_DATA32 stThunk32; //x86 standard thunk.
 			IMAGE_THUNK_DATA64 stThunk64; //x64 standard thunk.
@@ -219,13 +218,13 @@ namespace libpe
 		IMAGE_IMPORT_BY_NAME stImpByName; //Standard IMAGE_IMPORT_BY_NAME struct
 		std::string          strFuncName; //Function name.
 	};
-	export struct PEIMPORT {
+	struct PEIMPORT {
 		DWORD                     dwOffset;      //File's raw offset of this Import descriptor.
 		IMAGE_IMPORT_DESCRIPTOR   stImportDesc;  //Standard Import descriptor.
 		std::string               strModuleName; //Imported module name.
 		std::vector<PEIMPORTFUNC> vecImportFunc; //Array of imported functions.
 	};
-	export using PEIMPORT_VEC = std::vector<PEIMPORT>;
+	using PEIMPORT_VEC = std::vector<PEIMPORT>;
 
 	/**************************************Resources by Levels*******************************************
 	* There are 3 levels of resources: 1. Type 2. Name 3. Language.										*
@@ -243,57 +242,57 @@ namespace libpe
 	****************************************************************************************************/
 
 	//Level 3/Lang (the lowest) resources.
-	export struct PERESLVL3DATA {
+	struct PERESLVL3DATA {
 		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level 3 (Lang) standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
 		std::wstring                   wstrResName;    //Level 3 (Lang) resource name.
 		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level 3 (Lang) standard IMAGE_RESOURCE_DATA_ENTRY struct.
 		std::vector<std::byte>         vecRawResData;  //Level 3 (Lang) resource raw data.
 	};
-	export using PERESLANGDATA = PERESLVL3DATA;
+	using PERESLANGDATA = PERESLVL3DATA;
 
-	export struct PERESLVL3 {
+	struct PERESLVL3 {
 		DWORD                      dwOffset;   //File's raw offset of this level 3 IMAGE_RESOURCE_DIRECTORY descriptor.
 		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level 3 standard IMAGE_RESOURCE_DIRECTORY header.
 		std::vector<PERESLVL3DATA> vecResData; //Array of level 3 resource entries.
 	};
-	export using PERESLANG = PERESLVL3;
+	using PERESLANG = PERESLVL3;
 
 	//Level 2/Name resources — Includes Lang resourses.
-	export struct PERESLVL2DATA {
+	struct PERESLVL2DATA {
 		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level 2 (Name) standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
 		std::wstring                   wstrResName;    //Level 2 (Name) resource name.
 		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level 2 (Name) standard IMAGE_RESOURCE_DATA_ENTRY struct.
 		std::vector<std::byte>         vecRawResData;  //Level 2 (Name) resource raw data.
 		PERESLVL3                      stResLvL3;      //Level 3 (Lang) resource struct.
 	};
-	export using PERESNAMEDATA = PERESLVL2DATA;
+	using PERESNAMEDATA = PERESLVL2DATA;
 
-	export struct PERESLVL2 {
+	struct PERESLVL2 {
 		DWORD                      dwOffset;   //File's raw offset of this level 2 IMAGE_RESOURCE_DIRECTORY descriptor.
 		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level 2 standard IMAGE_RESOURCE_DIRECTORY header.
 		std::vector<PERESLVL2DATA> vecResData; //Array of level 2 resource entries.
 	};
-	export using PERESNAME = PERESLVL2;
+	using PERESNAME = PERESLVL2;
 
 	//Level 1/Type resources — Includes Name Resources.
-	export struct PERESROOTDATA {
+	struct PERESROOTDATA {
 		IMAGE_RESOURCE_DIRECTORY_ENTRY stResDirEntry;  //Level root (Type) standard IMAGE_RESOURCE_DIRECTORY_ENTRY struct.
 		std::wstring                   wstrResName;	   //Level root (Type) resource name.
 		IMAGE_RESOURCE_DATA_ENTRY      stResDataEntry; //Level root (Type) standard IMAGE_RESOURCE_DATA_ENTRY struct.
 		std::vector<std::byte>         vecRawResData;  //Level root (Type) resource raw data.
 		PERESLVL2                      stResLvL2;      //Level 2 (Name) resource struct.
 	};
-	export using PERESTYPEDATA = PERESROOTDATA;
+	using PERESTYPEDATA = PERESROOTDATA;
 
-	export struct PERESROOT {
+	struct PERESROOT {
 		DWORD                      dwOffset;   //File's raw offset of this level root IMAGE_RESOURCE_DIRECTORY descriptor.
 		IMAGE_RESOURCE_DIRECTORY   stResDir;   //Level root standard IMAGE_RESOURCE_DIRECTORY header.
 		std::vector<PERESROOTDATA> vecResData; //Array of level root resource entries.
 	};
-	export using PERESTYPE = PERESROOT;
+	using PERESTYPE = PERESROOT;
 
 	//Flattened resources.
-	export struct PERESFLAT {
+	struct PERESFLAT {
 		std::span<const std::byte> spnData { };    //Resource data.
 		std::wstring_view          wsvTypeStr { }; //Resource Type name.
 		std::wstring_view          wsvNameStr { }; //Resource Name name (resource itself name).
@@ -302,8 +301,8 @@ namespace libpe
 		WORD                       wNameID { };    //Resource Name ID (resource itself ID).
 		WORD                       wLangID { };    //Resource Lang ID.
 	};
-	export using PERESFLAT_VEC = std::vector<PERESFLAT>;
-	export inline const std::unordered_map<WORD, std::wstring_view> MapResID {
+	using PERESFLAT_VEC = std::vector<PERESFLAT>;
+	const std::unordered_map<WORD, std::wstring_view> MapResID {
 		{ static_cast<WORD>(1), L"RT_CURSOR" },
 		{ static_cast<WORD>(2), L"RT_BITMAP" },
 		{ static_cast<WORD>(3), L"RT_ICON" },
@@ -332,29 +331,29 @@ namespace libpe
 	/*********************************Resources End*****************************************/
 
 	//Exception table.
-	export struct PEEXCEPTION {
+	struct PEEXCEPTION {
 		DWORD                         dwOffset;           //File's raw offset of this exception's descriptor.
 		_IMAGE_RUNTIME_FUNCTION_ENTRY stRuntimeFuncEntry; //Standard _IMAGE_RUNTIME_FUNCTION_ENTRY header.
 	};
-	export using PEEXCEPTION_VEC = std::vector<PEEXCEPTION>;
+	using PEEXCEPTION_VEC = std::vector<PEEXCEPTION>;
 
 	//Security table.
-	export struct PEWIN_CERTIFICATE { //Full replica of the WIN_CERTIFICATE struct from the <WinTrust.h>.
+	struct PEWIN_CERTIFICATE { //Full replica of the WIN_CERTIFICATE struct from the <WinTrust.h>.
 		DWORD dwLength;
 		WORD  wRevision;
 		WORD  wCertificateType;
 		BYTE  bCertificate[1];
 	};
-	export struct PESECURITY {
+	struct PESECURITY {
 		DWORD             dwOffset;  //File's raw offset of this security descriptor.
 		PEWIN_CERTIFICATE stWinSert; //Standard WIN_CERTIFICATE struct.
 	};
-	export using PESECURITY_VEC = std::vector<PESECURITY>;
-	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertRevision { //WIN_CERTIFICATE::wRevision.
+	using PESECURITY_VEC = std::vector<PESECURITY>;
+	const std::unordered_map<WORD, std::wstring_view> MapWinCertRevision { //WIN_CERTIFICATE::wRevision.
 		{ static_cast<WORD>(0x0100), L"WIN_CERT_REVISION_1_0" },
 		{ static_cast<WORD>(0x0200), L"WIN_CERT_REVISION_2_0" }
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapWinCertType { //WIN_CERTIFICATE::wCertificateType.
+	const std::unordered_map<WORD, std::wstring_view> MapWinCertType { //WIN_CERTIFICATE::wCertificateType.
 		{ static_cast<WORD>(0x0001), L"WIN_CERT_TYPE_X509" },
 		{ static_cast<WORD>(0x0002), L"WIN_CERT_TYPE_PKCS_SIGNED_DATA" },
 		{ static_cast<WORD>(0x0003), L"WIN_CERT_TYPE_RESERVED_1" },
@@ -362,12 +361,12 @@ namespace libpe
 	};
 
 	//Relocation table.
-	export struct PERELOCDATA {
+	struct PERELOCDATA {
 		DWORD dwOffset;     //File's raw offset of this Relocation data descriptor.
 		WORD  wRelocType;   //Relocation type.
 		WORD  wRelocOffset; //Relocation offset (Offset the relocation must be applied to.)
 	};
-	export inline const std::unordered_map<WORD, std::wstring_view> MapRelocType { //PERELOCDATA::wRelocType.
+	const std::unordered_map<WORD, std::wstring_view> MapRelocType { //PERELOCDATA::wRelocType.
 		{ static_cast<WORD>(0), L"IMAGE_REL_BASED_ABSOLUTE" },
 		{ static_cast<WORD>(1), L"IMAGE_REL_BASED_HIGH" },
 		{ static_cast<WORD>(2), L"IMAGE_REL_BASED_LOW" },
@@ -380,16 +379,16 @@ namespace libpe
 		{ static_cast<WORD>(9), L"IMAGE_REL_BASED_MACHINE_SPECIFIC_9" },
 		{ static_cast<WORD>(10), L"IMAGE_REL_BASED_DIR64" }
 	};
-	export struct PERELOC {
+	struct PERELOC {
 		DWORD                    dwOffset;     //File's raw offset of this Relocation descriptor.
 		IMAGE_BASE_RELOCATION    stBaseReloc;  //Standard IMAGE_BASE_RELOCATION header.
 		std::vector<PERELOCDATA> vecRelocData; //Array of the Relocation data struct.
 	};
-	export using PERELOC_VEC = std::vector<PERELOC>;
+	using PERELOC_VEC = std::vector<PERELOC>;
 
 
 	//Debug table.
-	export struct PEDEBUGDBGHDR {
+	struct PEDEBUGDBGHDR {
 		//dwHdr[6] is an array of the first six DWORDs of IMAGE_DEBUG_DIRECTORY::PointerToRawData data (Debug info header).
 		//Their meaning varies depending on dwHdr[0] (Signature) value.
 		//If dwHdr[0] == 0x53445352 (Ascii "RSDS") it's PDB 7.0 file:
@@ -399,13 +398,13 @@ namespace libpe
 		DWORD       dwHdr[6];
 		std::string strPDBName; //PDB file name/path.
 	};
-	export struct PEDEBUG {
+	struct PEDEBUG {
 		DWORD                 dwOffset;       //File's raw offset of this Debug descriptor.
 		IMAGE_DEBUG_DIRECTORY stDebugDir;     //Standard IMAGE_DEBUG_DIRECTORY header.
 		PEDEBUGDBGHDR         stDebugHdrInfo; //Debug info header.
 	};
-	export using PEDEBUG_VEC = std::vector<PEDEBUG>;
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapDbgType { //IMAGE_DEBUG_DIRECTORY::Type.
+	using PEDEBUG_VEC = std::vector<PEDEBUG>;
+	const std::unordered_map<DWORD, std::wstring_view> MapDbgType { //IMAGE_DEBUG_DIRECTORY::Type.
 		{ 0UL, L"IMAGE_DEBUG_TYPE_UNKNOWN" },
 		{ 1UL, L"IMAGE_DEBUG_TYPE_COFF" },
 		{ 2UL, L"IMAGE_DEBUG_TYPE_CODEVIEW" },
@@ -426,7 +425,7 @@ namespace libpe
 	};
 
 	//TLS table.
-	export struct PETLS {
+	struct PETLS {
 		DWORD              dwOffset;          //File's raw offset of the TLS header descriptor.
 		union UNPETLS {
 			IMAGE_TLS_DIRECTORY32 stTLSDir32; //x86 standard TLS header.
@@ -434,7 +433,7 @@ namespace libpe
 		} unTLS;
 		std::vector<DWORD> vecTLSCallbacks;   //Array of the TLS callbacks.
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapTLSCharact { //IMAGE_TLS_DIRECTORY::Characteristics.
+	const std::unordered_map<DWORD, std::wstring_view> MapTLSCharact { //IMAGE_TLS_DIRECTORY::Characteristics.
 		{ 0x00100000UL, L"IMAGE_SCN_ALIGN_1BYTES" },
 		{ 0x00200000UL, L"IMAGE_SCN_ALIGN_2BYTES" },
 		{ 0x00300000UL, L"IMAGE_SCN_ALIGN_4BYTES" },
@@ -453,14 +452,14 @@ namespace libpe
 	};
 
 	//LoadConfigDirectory.
-	export struct PELOADCONFIG {
+	struct PELOADCONFIG {
 		DWORD dwOffset;                            //File's raw offset of the LCD descriptor.
 		union UNPELOADCONFIG {
 			IMAGE_LOAD_CONFIG_DIRECTORY32 stLCD32; //x86 LCD descriptor.
 			IMAGE_LOAD_CONFIG_DIRECTORY64 stLCD64; //x64 LCD descriptor.
 		} unLCD;
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapLCDGuardFlags { //IMAGE_LOAD_CONFIG_DIRECTORY::GuardFlags.
+	const std::unordered_map<DWORD, std::wstring_view> MapLCDGuardFlags { //IMAGE_LOAD_CONFIG_DIRECTORY::GuardFlags.
 		{ 0x00000100UL, L"IMAGE_GUARD_CF_INSTRUMENTED (Module performs control flow integrity checks using system-supplied support)" },
 		{ 0x00000200UL, L"IMAGE_GUARD_CFW_INSTRUMENTED (Module performs control flow and write integrity checks)" },
 		{ 0x00000400UL, L"IMAGE_GUARD_CF_FUNCTION_TABLE_PRESENT (Module contains valid control flow target metadata)" },
@@ -478,21 +477,21 @@ namespace libpe
 	};
 
 	//Bound import table.
-	export struct PEBOUNDFORWARDER {
+	struct PEBOUNDFORWARDER {
 		DWORD                     dwOffset;              //File's raw offset of this Bound Forwarder descriptor.
 		IMAGE_BOUND_FORWARDER_REF stBoundForwarder;      //Standard IMAGE_BOUND_FORWARDER_REF struct.
 		std::string               strBoundForwarderName; //Bound forwarder name.
 	};
-	export struct PEBOUNDIMPORT {
+	struct PEBOUNDIMPORT {
 		DWORD                         dwOffset;          //File's raw offset of this Bound Import descriptor.
 		IMAGE_BOUND_IMPORT_DESCRIPTOR stBoundImpDesc;    //Standard IMAGE_BOUND_IMPORT_DESCRIPTOR struct.
 		std::string                   strBoundName;      //Bound Import name.
 		std::vector<PEBOUNDFORWARDER> vecBoundForwarder; //Array of the Bound Forwarder structs.
 	};
-	export using PEBOUNDIMPORT_VEC = std::vector<PEBOUNDIMPORT>;
+	using PEBOUNDIMPORT_VEC = std::vector<PEBOUNDIMPORT>;
 
 	//Delay import table.
-	export struct PEDELAYIMPORTFUNC {
+	struct PEDELAYIMPORTFUNC {
 		union UNPEDELAYIMPORTTHUNK {
 			struct x32 {
 				IMAGE_THUNK_DATA32 stImportAddressTable;      //x86 Import Address Table struct.
@@ -510,20 +509,20 @@ namespace libpe
 		IMAGE_IMPORT_BY_NAME stImpByName; //Standard IMAGE_IMPORT_BY_NAME struct.
 		std::string          strFuncName; //Function name.
 	};
-	export struct PEDELAYIMPORT {
+	struct PEDELAYIMPORT {
 		DWORD                          dwOffset;        //File's raw offset of this Delay Import descriptor.
 		IMAGE_DELAYLOAD_DESCRIPTOR     stDelayImpDesc;  //Standard IMAGE_DELAYLOAD_DESCRIPTOR struct.
 		std::string                    strModuleName;   //Import module name.
 		std::vector<PEDELAYIMPORTFUNC> vecDelayImpFunc; //Array of the Delay Import module functions.
 	};
-	export using PEDELAYIMPORT_VEC = std::vector<PEDELAYIMPORT>;
+	using PEDELAYIMPORT_VEC = std::vector<PEDELAYIMPORT>;
 
 	//COM descriptor table.
-	export struct PECOMDESCRIPTOR {
+	struct PECOMDESCRIPTOR {
 		DWORD              dwOffset; //File's raw offset of the IMAGE_COR20_HEADER descriptor.
 		IMAGE_COR20_HEADER stCorHdr; //Standard IMAGE_COR20_HEADER struct.
 	};
-	export inline const std::unordered_map<DWORD, std::wstring_view> MapCOR20Flags { //IMAGE_COR20_HEADER::Flags.
+	const std::unordered_map<DWORD, std::wstring_view> MapCOR20Flags { //IMAGE_COR20_HEADER::Flags.
 		{ 1UL, L"COMIMAGE_FLAGS_ILONLY" },
 		{ 2UL, L"COMIMAGE_FLAGS_32BITREQUIRED" },
 		{ 4UL, L"COMIMAGE_FLAGS_IL_LIBRARY" },
@@ -533,25 +532,23 @@ namespace libpe
 		{ 131072UL, L"COMIMAGE_FLAGS_32BITPREFERRED" }
 	};
 
-	export enum class EFileType : std::uint8_t {
+	enum class EFileType : std::uint8_t {
 		UNKNOWN = 0, PE32, PE64, PEROM
 	};
 
 	//Return codes.
-	export constexpr auto PEOK = 0x0;
-	export constexpr auto ERR_FILE_OPEN = 0x01;
-	export constexpr auto ERR_FILE_SIZESMALL = 0x02;
-	export constexpr auto ERR_FILE_MAPPING = 0x03;
-	export constexpr auto ERR_FILE_NODOSHDR = 0x04;
+	constexpr auto PEOK = 0x0;
+	constexpr auto ERR_FILE_OPEN = 0x01;
+	constexpr auto ERR_FILE_SIZESMALL = 0x02;
+	constexpr auto ERR_FILE_MAPPING = 0x03;
+	constexpr auto ERR_FILE_NODOSHDR = 0x04;
 
 	//Internal helper method to check overflow of addition.
-	[[nodiscard]] constexpr auto IsSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond) -> bool
-	{
+	[[nodiscard]] constexpr auto IsSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond) -> bool {
 		return (dwFirst + dwSecond) < dwFirst;
 	}
 
-	export class Clibpe final
-	{
+	class Clibpe final {
 	public:
 		Clibpe() = default;
 		Clibpe(const wchar_t* pwszFile);
@@ -2044,7 +2041,7 @@ namespace libpe
 
 	//Helper methods.
 
-	export [[nodiscard]] inline constexpr auto GetFileType(const PENTHDR& stNTHdr) -> EFileType
+	[[nodiscard]] constexpr auto GetFileType(const PENTHDR& stNTHdr) -> EFileType
 	{
 		const auto& refNTHdr = stNTHdr.unHdr.stNTHdr32;
 		if (refNTHdr.Signature != IMAGE_NT_SIGNATURE)
@@ -2063,7 +2060,7 @@ namespace libpe
 		}
 	}
 
-	export [[nodiscard]] inline constexpr auto GetImageBase(const PENTHDR& stNTHdr) -> ULONGLONG
+	[[nodiscard]] constexpr auto GetImageBase(const PENTHDR& stNTHdr) -> ULONGLONG
 	{
 		switch (GetFileType(stNTHdr)) {
 		case EFileType::PE32:
@@ -2075,7 +2072,7 @@ namespace libpe
 		}
 	}
 
-	export [[nodiscard]] inline constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr) -> DWORD
+	[[nodiscard]] constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr) -> DWORD
 	{
 		for (const auto& stSec : vecSecHdr) {
 			if (const auto pSecHdr = &stSec.stSecHdr; (ullRVA >= pSecHdr->VirtualAddress) //Is RVA within this section?
@@ -2087,7 +2084,7 @@ namespace libpe
 		return { };
 	}
 
-	export [[nodiscard]] inline constexpr auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC
+	[[nodiscard]] constexpr auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC
 	{
 		std::size_t sTotalRes { 0 }; //How many resources total?
 		for (const auto& iterRoot : stResRoot.vecResData) { //To reserve space in vector, count total amount of resources.
