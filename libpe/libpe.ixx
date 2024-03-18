@@ -1,12 +1,13 @@
 module;
-/**********************************************************************
-* Copyright © 2018-2023, Jovibor: https://github.com/jovibor/         *
-* Library for parsing PE32 (x86) and PE32+ (x64) binaries.            *
-* Official git repository: https://github.com/jovibor/libpe           *
-* This software is available under the "MIT License".                 *
-**********************************************************************/
+/*****************************************************************
+* Copyright © 2018-present Jovibor https://github.com/jovibor/   *
+* Library for parsing PE32 (x86) and PE32+ (x64) binaries.       *
+* Official git repository: https://github.com/jovibor/libpe      *
+* This software is available under the "MIT License".            *
+*****************************************************************/
 #include <Windows.h>
 #include <cassert>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <span>
@@ -16,11 +17,17 @@ module;
 #include <vector>
 export module libpe;
 
-export namespace libpe
-{
+namespace libpe::ut { //Utility.
+	//Check overflow of addition.
+	[[nodiscard]] constexpr bool IsSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond) {
+		return (dwFirst + dwSecond) < dwFirst;
+	}
+}
+
+export namespace libpe {
 	constexpr auto LIBPE_VERSION_MAJOR = 2;
 	constexpr auto LIBPE_VERSION_MINOR = 0;
-	constexpr auto LIBPE_VERSION_PATCH = 0;
+	constexpr auto LIBPE_VERSION_PATCH = 1;
 
 	//Rich.
 	struct PERICHHDR {
@@ -543,9 +550,119 @@ export namespace libpe
 	constexpr auto ERR_FILE_MAPPING = 0x03;
 	constexpr auto ERR_FILE_NODOSHDR = 0x04;
 
-	//Internal helper method to check overflow of addition.
-	[[nodiscard]] constexpr auto IsSumOverflow(DWORD_PTR dwFirst, DWORD_PTR dwSecond) -> bool {
-		return (dwFirst + dwSecond) < dwFirst;
+	//Helper methods.
+
+	[[nodiscard]] constexpr auto GetFileType(const PENTHDR& stNTHdr) -> EFileType
+	{
+		const auto& refNTHdr = stNTHdr.unHdr.stNTHdr32;
+		if (refNTHdr.Signature != IMAGE_NT_SIGNATURE)
+			return EFileType::UNKNOWN;
+
+		const auto& refOptHdr = refNTHdr.OptionalHeader;
+		switch (refOptHdr.Magic) {
+		case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
+			return EFileType::PE32;
+		case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
+			return EFileType::PE64;
+		case IMAGE_ROM_OPTIONAL_HDR_MAGIC:
+			return EFileType::PEROM;
+		default:
+			return EFileType::UNKNOWN;
+		}
+	}
+
+	[[nodiscard]] constexpr auto GetImageBase(const PENTHDR& stNTHdr) -> ULONGLONG
+	{
+		switch (GetFileType(stNTHdr)) {
+		case EFileType::PE32:
+			return stNTHdr.unHdr.stNTHdr32.OptionalHeader.ImageBase;
+		case EFileType::PE64:
+			return stNTHdr.unHdr.stNTHdr64.OptionalHeader.ImageBase;
+		default:
+			return { };
+		}
+	}
+
+	[[nodiscard]] constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr) -> DWORD
+	{
+		for (const auto& stSec : vecSecHdr) {
+			if (const auto pSecHdr = &stSec.stSecHdr; (ullRVA >= pSecHdr->VirtualAddress) //Is RVA within this section?
+				&& (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize))) {
+				return static_cast<DWORD>(ullRVA) - pSecHdr->VirtualAddress + pSecHdr->PointerToRawData;
+			}
+		}
+
+		return { };
+	}
+
+	[[nodiscard]] constexpr auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC
+	{
+		std::size_t sTotalRes { 0 }; //How many resources total?
+		for (const auto& iterRoot : stResRoot.vecResData) { //To reserve space in vector, count total amount of resources.
+			if (iterRoot.stResDirEntry.DataIsDirectory) { //Level Root.
+				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
+					if (iterLvL2.stResDirEntry.DataIsDirectory) { //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY.
+						sTotalRes += iterLvL2.stResLvL3.vecResData.size(); //Level 3.
+					}
+					else {
+						++sTotalRes;
+					}
+				}
+			}
+			else {
+				++sTotalRes;
+			}
+		}
+
+		std::vector<PERESFLAT> vecData;
+		vecData.reserve(sTotalRes);
+		for (const auto& iterRoot : stResRoot.vecResData) {
+			PERESFLAT stRes { };
+			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY.
+			if (pResDirEntryRoot->NameIsString) {
+				stRes.wsvTypeStr = iterRoot.wstrResName;
+			}
+			else {
+				stRes.wTypeID = pResDirEntryRoot->Id;
+			}
+
+			if (pResDirEntryRoot->DataIsDirectory) {
+				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
+					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY.
+					if (pResDirEntry2->NameIsString) {
+						stRes.wsvNameStr = iterLvL2.wstrResName;
+					}
+					else {
+						stRes.wNameID = pResDirEntry2->Id;
+					}
+
+					if (pResDirEntry2->DataIsDirectory) {
+						for (const auto& iterLvL3 : iterLvL2.stResLvL3.vecResData) {
+							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY.
+							if (pResDirEntry3->NameIsString) {
+								stRes.wsvLangStr = iterLvL3.wstrResName;
+							}
+							else {
+								stRes.wLangID = pResDirEntry3->Id;
+							}
+
+							stRes.spnData = iterLvL3.vecRawResData;
+							vecData.emplace_back(stRes);
+						}
+					}
+					else {
+						stRes.spnData = iterLvL2.vecRawResData;
+						vecData.emplace_back(stRes);
+					}
+				}
+			}
+			else {
+				stRes.spnData = iterRoot.vecRawResData;
+				vecData.emplace_back(stRes);
+			}
+		}
+
+		return vecData;
 	}
 
 	class Clibpe final {
@@ -556,7 +673,7 @@ export namespace libpe
 		Clibpe(Clibpe&&) = delete;
 		~Clibpe();
 		auto OpenFile(const wchar_t* pwszFile) -> int;
-		auto OpenFile(std::span<const std::byte> spnFile) -> int;
+		auto OpenFile(std::span<const std::byte> spnData) -> int;
 		void CloseFile();
 		[[nodiscard]] auto GetDOSHeader()const->std::optional<IMAGE_DOS_HEADER>;
 		[[nodiscard]] auto GetRichHeader()const->std::optional<PERICHHDR_VEC>;
@@ -596,13 +713,13 @@ export namespace libpe
 		std::span<const std::byte> m_spnData { }; //File data.
 		PIMAGE_NT_HEADERS32 m_pNTHeader32 { };    //NT header for x86.
 		PIMAGE_NT_HEADERS64 m_pNTHeader64 { };    //NT header for x64.
-		EFileType m_enPEType { }; //PE type: x64 or x86.
-		HANDLE m_hFile { };       //Opened file handle.
-		HANDLE m_hFileMap { };    //File-mapping handle.
-		LPVOID m_pFileView { };   //File mapping-view handle.
-		bool m_fOpened { };       //Is file successfully opened (by any OpenFile method)?
-		bool m_fFileHandle { };   //Was file handle opened (by OpenFile(const wchar_t* pwszFile))?
-		bool m_fHasNTHdr { };     //Does file have at least NT header.
+		EFileType m_ePEType { }; //PE type: x64 or x86.
+		HANDLE m_hFile { };      //Opened file handle.
+		HANDLE m_hFileMap { };   //File-mapping handle.
+		LPVOID m_pFileView { };  //File mapping-view handle.
+		bool m_fOpened { };      //Is file successfully opened (by any OpenFile method)?
+		bool m_fFileHandle { };  //Was file handle opened (by OpenFile(const wchar_t* pwszFile))?
+		bool m_fHasNTHdr { };    //Does file have at least NT header.
 	};
 
 	Clibpe::Clibpe(const wchar_t* pwszFile)
@@ -653,17 +770,17 @@ export namespace libpe
 		return OpenFile({ static_cast<std::byte*>(m_pFileView), static_cast<std::size_t>(stLI.QuadPart) });
 	}
 
-	auto Clibpe::OpenFile(std::span<const std::byte> spnFile)->int
+	auto Clibpe::OpenFile(std::span<const std::byte> spnData)->int
 	{
-		assert(!spnFile.empty());
+		assert(!spnData.empty());
 		if (m_fOpened) {
 			CloseFile();
 		}
 
-		if (spnFile.size() < sizeof(IMAGE_DOS_HEADER))
+		if (spnData.size() < sizeof(IMAGE_DOS_HEADER))
 			return ERR_FILE_SIZESMALL;
 
-		m_spnData = spnFile;
+		m_spnData = spnData;
 
 		if (!ParseDOSHeader()) {
 			CloseFile();
@@ -688,7 +805,7 @@ export namespace libpe
 		m_pFileView = nullptr;
 		m_pNTHeader32 = nullptr;
 		m_pNTHeader64 = nullptr;
-		m_enPEType = { };
+		m_ePEType = { };
 		m_spnData = { };
 		m_fHasNTHdr = false;
 		m_fFileHandle = false;
@@ -758,7 +875,7 @@ export namespace libpe
 			return std::nullopt;
 
 		PENTHDR stNTHdr;
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			stNTHdr.unHdr.stNTHdr32 = *m_pNTHeader32;
 			stNTHdr.dwOffset = PtrToOffset(m_pNTHeader32);
@@ -783,7 +900,7 @@ export namespace libpe
 		PIMAGE_DATA_DIRECTORY pDataDir;
 		DWORD dwRVAAndSizes;
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			pDataDir = reinterpret_cast<PIMAGE_DATA_DIRECTORY>(m_pNTHeader32->OptionalHeader.DataDirectory);
 			dwRVAAndSizes = m_pNTHeader32->OptionalHeader.NumberOfRvaAndSizes;
@@ -820,7 +937,7 @@ export namespace libpe
 		DWORD dwSymbolTable;
 		DWORD dwNumberOfSymbols;
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
 			wNumSections = m_pNTHeader32->FileHeader.NumberOfSections;
@@ -954,14 +1071,9 @@ export namespace libpe
 
 			return std::make_optional<PEEXPORT>(PtrToOffset(pExportDir), *pExportDir, std::move(strModuleName), std::move(vecFuncs));
 		}
-		catch (const std::bad_alloc&) {
+		catch (const std::exception& e) {
 			vecFuncs.clear();
-			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Export table.\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
-		}
-		catch (...) {
-			MessageBoxW(nullptr, L"Unknown exception raised while trying to get Export table.\r\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
+			std::cerr << "Exception in GetExport(): " << e.what();
 		}
 
 		return std::nullopt;
@@ -985,7 +1097,7 @@ export namespace libpe
 			constexpr auto iMaxFuncs = 5000;
 			int iModulesCount = 0;
 
-			if (m_enPEType == EFileType::PE32) {
+			if (m_ePEType == EFileType::PE32) {
 				while (pImpDesc->Name != 0) {
 					auto pThunk32 = reinterpret_cast<PIMAGE_THUNK_DATA32>(static_cast<DWORD_PTR>(pImpDesc->OriginalFirstThunk));
 					if (pThunk32 == nullptr) {
@@ -1041,7 +1153,7 @@ export namespace libpe
 						break;
 				}
 			}
-			else if (m_enPEType == EFileType::PE64) {
+			else if (m_ePEType == EFileType::PE64) {
 				while (pImpDesc->Name != 0) {
 					auto pThunk64 = reinterpret_cast<PIMAGE_THUNK_DATA64>(static_cast<DWORD_PTR>(pImpDesc->OriginalFirstThunk));
 					if (pThunk64 == nullptr) {
@@ -1099,14 +1211,9 @@ export namespace libpe
 
 			return vecImport.empty() ? std::nullopt : std::optional<PEIMPORT_VEC>(std::move(vecImport));
 		}
-		catch (const std::bad_alloc&) {
+		catch (const std::exception& e) {
 			vecImport.clear();
-			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Import table.\r\n"
-				L"Too many import entries!\nFile seems to be corrupted.", L"Error", MB_ICONERROR);
-		}
-		catch (...) {
-			MessageBoxW(nullptr, L"Unknown exception raised while trying to get Import table.\r\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
+			std::cerr << "Exception in GetImport(): " << e.what();
 		}
 
 		return std::nullopt;
@@ -1140,7 +1247,7 @@ export namespace libpe
 				PERESLVL2 stResLvL2 { };
 
 				if (pResDirEntryRoot->NameIsString) { //Name of Resource Type (ICON, BITMAP, MENU, etc...).
-					if (IsSumOverflow(reinterpret_cast<DWORD_PTR>(pResDirRoot), static_cast<DWORD_PTR>(pResDirEntryRoot->NameOffset)))
+					if (ut::IsSumOverflow(reinterpret_cast<DWORD_PTR>(pResDirRoot), static_cast<DWORD_PTR>(pResDirEntryRoot->NameOffset)))
 						break;
 
 					if (const auto pResDirStr = reinterpret_cast<PIMAGE_RESOURCE_DIR_STRING_U>(reinterpret_cast<DWORD_PTR>(pResDirRoot)
@@ -1174,7 +1281,7 @@ export namespace libpe
 							PERESLVL3 stResLvL3 { };
 
 							if (pResDirEntryLvL2->NameIsString) { //Name of resource itself if not presented by ID ("AFX_MY_SUPER_DIALOG"...).
-								if (IsSumOverflow(reinterpret_cast<DWORD_PTR>(pResDirRoot), static_cast<DWORD_PTR>(pResDirEntryLvL2->NameOffset)))
+								if (ut::IsSumOverflow(reinterpret_cast<DWORD_PTR>(pResDirRoot), static_cast<DWORD_PTR>(pResDirEntryLvL2->NameOffset)))
 									break;
 
 								if (const auto pResDirStr2 = reinterpret_cast<PIMAGE_RESOURCE_DIR_STRING_U>(reinterpret_cast<DWORD_PTR>(pResDirRoot)
@@ -1206,7 +1313,7 @@ export namespace libpe
 										std::vector<std::byte> vecRawResDataLvL3;
 
 										if (pResDirEntryLvL3->NameIsString) {
-											if (IsSumOverflow(reinterpret_cast<DWORD_PTR>(pResDirRoot), static_cast<DWORD_PTR>(pResDirEntryLvL3->NameOffset)))
+											if (ut::IsSumOverflow(reinterpret_cast<DWORD_PTR>(pResDirRoot), static_cast<DWORD_PTR>(pResDirEntryLvL3->NameOffset)))
 												break;
 
 											if (const auto pResDirStr3 = reinterpret_cast<PIMAGE_RESOURCE_DIR_STRING_U>(reinterpret_cast<DWORD_PTR>(pResDirRoot)
@@ -1281,14 +1388,9 @@ export namespace libpe
 
 			return std::make_optional<PERESROOT>(PtrToOffset(pResDirRoot), *pResDirRoot, std::move(vecResDataRoot));
 		}
-		catch (const std::bad_alloc&) {
+		catch (const std::exception& e) {
 			vecResDataRoot.clear();
-			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Resource table.\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
-		}
-		catch (...) {
-			MessageBoxW(nullptr, L"Unknown exception raised while trying to get Resource table.\r\n\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
+			std::cerr << "Exception in GetResources(): " << e.what();
 		}
 
 		return std::nullopt;
@@ -1333,11 +1435,11 @@ export namespace libpe
 			return std::nullopt;
 
 		//Checks for bogus file offsets that can cause DWORD_PTR overflow.
-		if (IsSumOverflow(static_cast<DWORD_PTR>(dwSecurityDirOffset), GetBaseAddr()))
+		if (ut::IsSumOverflow(static_cast<DWORD_PTR>(dwSecurityDirOffset), GetBaseAddr()))
 			return std::nullopt;
 
 		auto dwSecurityDirStartVA = GetBaseAddr() + static_cast<DWORD_PTR>(dwSecurityDirOffset);
-		if (IsSumOverflow(dwSecurityDirStartVA, static_cast<DWORD_PTR>(dwSecurityDirSize)))
+		if (ut::IsSumOverflow(dwSecurityDirStartVA, static_cast<DWORD_PTR>(dwSecurityDirSize)))
 			return std::nullopt;
 
 		const auto dwSecurityDirEndVA = dwSecurityDirStartVA + static_cast<DWORD_PTR>(dwSecurityDirSize);
@@ -1414,7 +1516,7 @@ export namespace libpe
 				vecRelocs.emplace_back(PtrToOffset(pBaseRelocDesc), *pBaseRelocDesc, std::move(vecRelocData));
 
 				//Too big (bogus) SizeOfBlock may cause DWORD_PTR overflow. Checking to prevent.
-				if (IsSumOverflow(reinterpret_cast<DWORD_PTR>(pBaseRelocDesc), static_cast<DWORD_PTR>(pBaseRelocDesc->SizeOfBlock)))
+				if (ut::IsSumOverflow(reinterpret_cast<DWORD_PTR>(pBaseRelocDesc), static_cast<DWORD_PTR>(pBaseRelocDesc->SizeOfBlock)))
 					break;
 
 				pBaseRelocDesc = reinterpret_cast<PIMAGE_BASE_RELOCATION>(reinterpret_cast<DWORD_PTR>(pBaseRelocDesc)
@@ -1425,14 +1527,9 @@ export namespace libpe
 
 			return vecRelocs.empty() ? std::nullopt : std::optional<PERELOC_VEC>(std::move(vecRelocs));
 		}
-		catch (const std::bad_alloc&) {
+		catch (const std::exception& e) {
 			vecRelocs.clear();
-			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Relocation table.\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
-		}
-		catch (...) {
-			MessageBoxW(nullptr, L"Unknown exception raised while trying to get Relocation table.\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
+			std::cerr << "Exception in GetRelocations(): " << e.what();
 		}
 
 		return std::nullopt;
@@ -1467,7 +1564,7 @@ export namespace libpe
 
 		const auto dwDebugEntries = dwDebugDirSize / static_cast<DWORD>(sizeof(IMAGE_DEBUG_DIRECTORY));
 
-		if (!dwDebugEntries || IsSumOverflow(reinterpret_cast<DWORD_PTR>(pDebugDir), static_cast<DWORD_PTR>(dwDebugDirSize)) ||
+		if (!dwDebugEntries || ut::IsSumOverflow(reinterpret_cast<DWORD_PTR>(pDebugDir), static_cast<DWORD_PTR>(dwDebugDirSize)) ||
 			!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pDebugDir) + static_cast<DWORD_PTR>(dwDebugDirSize)))
 			return std::nullopt;
 
@@ -1507,10 +1604,9 @@ export namespace libpe
 
 			return vecDebug.empty() ? std::nullopt : std::optional<PEDEBUG_VEC>(std::move(vecDebug));
 		}
-		catch (const std::bad_alloc&) {
+		catch (const std::exception& e) {
 			vecDebug.clear();
-			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get Debug info.\r\n"
-				L"File seems to be corrupted.", L"Error", MB_ICONERROR);
+			std::cerr << "Exception in GetDebug(): " << e.what();
 		}
 
 		return std::nullopt;
@@ -1532,7 +1628,7 @@ export namespace libpe
 			PETLS::UNPETLS varTLSDir;
 			PDWORD pdwTLSPtr;
 
-			if (m_enPEType == EFileType::PE32) {
+			if (m_ePEType == EFileType::PE32) {
 				const auto pTLSDir32 = static_cast<PIMAGE_TLS_DIRECTORY32>(RVAToPtr(dwTLSDirRVA));
 				if (pTLSDir32 == nullptr)
 					return std::nullopt;
@@ -1541,7 +1637,7 @@ export namespace libpe
 				pdwTLSPtr = reinterpret_cast<PDWORD>(pTLSDir32);
 				ullAddressOfCallBacks = pTLSDir32->AddressOfCallBacks;
 			}
-			else if (m_enPEType == EFileType::PE64) {
+			else if (m_ePEType == EFileType::PE64) {
 				const auto pTLSDir64 = static_cast<PIMAGE_TLS_DIRECTORY64>(RVAToPtr(dwTLSDirRVA));
 				if (pTLSDir64 == nullptr)
 					return std::nullopt;
@@ -1565,14 +1661,9 @@ export namespace libpe
 
 			return std::make_optional<PETLS>(PtrToOffset(pdwTLSPtr), varTLSDir, std::move(vecTLSCallbacks));
 		}
-		catch (const std::bad_alloc&) {
+		catch (const std::exception& e) {
 			vecTLSCallbacks.clear();
-			MessageBoxW(nullptr, L"E_OUTOFMEMORY error while trying to get TLS table.\r\n"
-				L"File seems to be corrupted.", L"Error", MB_ICONERROR);
-		}
-		catch (...) {
-			MessageBoxW(nullptr, L"Unknown exception raised while trying to get TLS table.\r\nFile seems to be corrupted.",
-				L"Error", MB_ICONERROR);
+			std::cerr << "Exception in GetTLS(): " << e.what();
 		}
 
 		return std::nullopt;
@@ -1584,7 +1675,7 @@ export namespace libpe
 		if (!m_fOpened)
 			return std::nullopt;
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 		{
 			const auto pLCD32 = static_cast<PIMAGE_LOAD_CONFIG_DIRECTORY32>(RVAToPtr(GetDirEntryRVA(IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG)));
@@ -1678,7 +1769,7 @@ export namespace libpe
 
 		PEDELAYIMPORT_VEC vecDelayImp;
 
-		if (m_enPEType == EFileType::PE32) {
+		if (m_ePEType == EFileType::PE32) {
 			while (pDelayImpDescr->DllNameRVA != 0) {
 				auto pThunk32Name = reinterpret_cast<PIMAGE_THUNK_DATA32>(static_cast<DWORD_PTR>(pDelayImpDescr->ImportNameTableRVA));
 				if (pThunk32Name == nullptr) {
@@ -1741,7 +1832,7 @@ export namespace libpe
 				}
 			}
 		}
-		else if (m_enPEType == EFileType::PE64) {
+		else if (m_ePEType == EFileType::PE64) {
 			while (pDelayImpDescr->DllNameRVA != 0) {
 				auto pThunk64Name = reinterpret_cast<PIMAGE_THUNK_DATA64>(static_cast<DWORD_PTR>(pDelayImpDescr->ImportNameTableRVA));
 
@@ -1845,7 +1936,7 @@ export namespace libpe
 		if (!m_fHasNTHdr)
 			return { };
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].VirtualAddress;
 		case EFileType::PE64:
@@ -1860,7 +1951,7 @@ export namespace libpe
 		if (!m_fHasNTHdr)
 			return { };
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			return m_pNTHeader32->OptionalHeader.DataDirectory[dwEntry].Size;
 		case EFileType::PE64:
@@ -1873,7 +1964,7 @@ export namespace libpe
 
 	auto Clibpe::GetImageBase()const->ULONGLONG
 	{
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			return m_pNTHeader32->OptionalHeader.ImageBase;
 		case EFileType::PE64:
@@ -1891,7 +1982,7 @@ export namespace libpe
 		PIMAGE_SECTION_HEADER pSecHdr;
 		WORD wNumberOfSections;
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
 			wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
@@ -1922,7 +2013,7 @@ export namespace libpe
 		PIMAGE_SECTION_HEADER pSecHdr;
 		WORD wNumberOfSections;
 
-		switch (m_enPEType) {
+		switch (m_ePEType) {
 		case EFileType::PE32:
 			pSecHdr = IMAGE_FIRST_SECTION(m_pNTHeader32);
 			wNumberOfSections = m_pNTHeader32->FileHeader.NumberOfSections;
@@ -2022,11 +2113,11 @@ export namespace libpe
 
 		switch (pNTHeader->OptionalHeader.Magic) {
 		case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
-			m_enPEType = EFileType::PE32;
+			m_ePEType = EFileType::PE32;
 			m_pNTHeader32 = pNTHeader;
 			break;
 		case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
-			m_enPEType = EFileType::PE64;
+			m_ePEType = EFileType::PE64;
 			m_pNTHeader64 = reinterpret_cast<PIMAGE_NT_HEADERS64>(pNTHeader);
 			break;
 			//case IMAGE_ROM_OPTIONAL_HDR_MAGIC: //Not implemented.
@@ -2037,120 +2128,5 @@ export namespace libpe
 		m_fHasNTHdr = true;
 
 		return true;
-	}
-
-	//Helper methods.
-
-	[[nodiscard]] constexpr auto GetFileType(const PENTHDR& stNTHdr) -> EFileType
-	{
-		const auto& refNTHdr = stNTHdr.unHdr.stNTHdr32;
-		if (refNTHdr.Signature != IMAGE_NT_SIGNATURE)
-			return EFileType::UNKNOWN;
-
-		const auto& refOptHdr = refNTHdr.OptionalHeader;
-		switch (refOptHdr.Magic) {
-		case IMAGE_NT_OPTIONAL_HDR32_MAGIC:
-			return EFileType::PE32;
-		case IMAGE_NT_OPTIONAL_HDR64_MAGIC:
-			return EFileType::PE64;
-		case IMAGE_ROM_OPTIONAL_HDR_MAGIC:
-			return EFileType::PEROM;
-		default:
-			return EFileType::UNKNOWN;
-		}
-	}
-
-	[[nodiscard]] constexpr auto GetImageBase(const PENTHDR& stNTHdr) -> ULONGLONG
-	{
-		switch (GetFileType(stNTHdr)) {
-		case EFileType::PE32:
-			return stNTHdr.unHdr.stNTHdr32.OptionalHeader.ImageBase;
-		case EFileType::PE64:
-			return stNTHdr.unHdr.stNTHdr64.OptionalHeader.ImageBase;
-		default:
-			return { };
-		}
-	}
-
-	[[nodiscard]] constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr) -> DWORD
-	{
-		for (const auto& stSec : vecSecHdr) {
-			if (const auto pSecHdr = &stSec.stSecHdr; (ullRVA >= pSecHdr->VirtualAddress) //Is RVA within this section?
-				&& (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize))) {
-				return static_cast<DWORD>(ullRVA) - pSecHdr->VirtualAddress + pSecHdr->PointerToRawData;
-			}
-		}
-
-		return { };
-	}
-
-	[[nodiscard]] constexpr auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC
-	{
-		std::size_t sTotalRes { 0 }; //How many resources total?
-		for (const auto& iterRoot : stResRoot.vecResData) { //To reserve space in vector, count total amount of resources.
-			if (iterRoot.stResDirEntry.DataIsDirectory) { //Level Root.
-				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
-					if (iterLvL2.stResDirEntry.DataIsDirectory) { //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY.
-						sTotalRes += iterLvL2.stResLvL3.vecResData.size(); //Level 3.
-					}
-					else {
-						++sTotalRes;
-					}
-				}
-			}
-			else {
-				++sTotalRes;
-			}
-		}
-
-		std::vector<PERESFLAT> vecData;
-		vecData.reserve(sTotalRes);
-		for (const auto& iterRoot : stResRoot.vecResData) {
-			PERESFLAT stRes { };
-			const auto pResDirEntryRoot = &iterRoot.stResDirEntry; //Level Root IMAGE_RESOURCE_DIRECTORY_ENTRY.
-			if (pResDirEntryRoot->NameIsString) {
-				stRes.wsvTypeStr = iterRoot.wstrResName;
-			}
-			else {
-				stRes.wTypeID = pResDirEntryRoot->Id;
-			}
-
-			if (pResDirEntryRoot->DataIsDirectory) {
-				for (const auto& iterLvL2 : iterRoot.stResLvL2.vecResData) {
-					const auto pResDirEntry2 = &iterLvL2.stResDirEntry; //Level 2 IMAGE_RESOURCE_DIRECTORY_ENTRY.
-					if (pResDirEntry2->NameIsString) {
-						stRes.wsvNameStr = iterLvL2.wstrResName;
-					}
-					else {
-						stRes.wNameID = pResDirEntry2->Id;
-					}
-
-					if (pResDirEntry2->DataIsDirectory) {
-						for (const auto& iterLvL3 : iterLvL2.stResLvL3.vecResData) {
-							const auto pResDirEntry3 = &iterLvL3.stResDirEntry; //Level 3 IMAGE_RESOURCE_DIRECTORY_ENTRY.
-							if (pResDirEntry3->NameIsString) {
-								stRes.wsvLangStr = iterLvL3.wstrResName;
-							}
-							else {
-								stRes.wLangID = pResDirEntry3->Id;
-							}
-
-							stRes.spnData = iterLvL3.vecRawResData;
-							vecData.emplace_back(stRes);
-						}
-					}
-					else {
-						stRes.spnData = iterLvL2.vecRawResData;
-						vecData.emplace_back(stRes);
-					}
-				}
-			}
-			else {
-				stRes.spnData = iterRoot.vecRawResData;
-				vecData.emplace_back(stRes);
-			}
-		}
-
-		return vecData;
 	}
 }

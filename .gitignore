@@ -2,6 +2,9 @@
 ## Eclipse
 #################
 
+*stacktrace.*
+*.zip
+*.rar
 *.exe
 *.pydevproject
 .project
@@ -45,11 +48,12 @@ local.properties
 *.user
 *.sln.docstates
 *.opendb
+*solution_suppressions.cfg
 
 # Build results
 
-[Dd]ebug/
-[Rr]elease/
+[Dd]ebug*/
+[Rr]elease*/
 x64/
 build/
 [Bb]in/
@@ -223,5 +227,3 @@ pip-log.txt
 .mr.developer.cfg
 *.db
 *.db
-##################
-!libpe/verinfo/*
