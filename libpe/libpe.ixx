@@ -27,7 +27,7 @@ namespace libpe::ut { //Utility.
 export namespace libpe {
 	constexpr auto LIBPE_VERSION_MAJOR = 2;
 	constexpr auto LIBPE_VERSION_MINOR = 0;
-	constexpr auto LIBPE_VERSION_PATCH = 1;
+	constexpr auto LIBPE_VERSION_PATCH = 0;
 
 	//Rich.
 	struct PERICHHDR {
@@ -300,13 +300,13 @@ export namespace libpe {
 
 	//Flattened resources.
 	struct PERESFLAT {
-		std::span<const std::byte> spnData { };    //Resource data.
-		std::wstring_view          wsvTypeStr { }; //Resource Type name.
-		std::wstring_view          wsvNameStr { }; //Resource Name name (resource itself name).
-		std::wstring_view          wsvLangStr { }; //Resource Lang name.
-		WORD                       wTypeID { };    //Resource Type ID (RT_CURSOR, RT_BITMAP, etc...).
-		WORD                       wNameID { };    //Resource Name ID (resource itself ID).
-		WORD                       wLangID { };    //Resource Lang ID.
+		std::span<const std::byte> spnData;     //Resource data.
+		std::wstring_view          wsvTypeStr;  //Resource Type name.
+		std::wstring_view          wsvNameStr;  //Resource Name name (resource itself name).
+		std::wstring_view          wsvLangStr;  //Resource Lang name.
+		WORD                       wTypeID { }; //Resource Type ID (RT_CURSOR, RT_BITMAP, etc...).
+		WORD                       wNameID { }; //Resource Name ID (resource itself ID).
+		WORD                       wLangID { }; //Resource Lang ID.
 	};
 	using PERESFLAT_VEC = std::vector<PERESFLAT>;
 	const std::unordered_map<WORD, std::wstring_view> MapResID {
@@ -710,9 +710,9 @@ export namespace libpe {
 		bool ParseDOSHeader();
 		bool ParseNTFileOptHeader();
 	private:
-		std::span<const std::byte> m_spnData { }; //File data.
-		PIMAGE_NT_HEADERS32 m_pNTHeader32 { };    //NT header for x86.
-		PIMAGE_NT_HEADERS64 m_pNTHeader64 { };    //NT header for x64.
+		std::span<const std::byte> m_spnData;  //File data.
+		PIMAGE_NT_HEADERS32 m_pNTHeader32 { }; //NT header for x86.
+		PIMAGE_NT_HEADERS64 m_pNTHeader64 { }; //NT header for x64.
 		EFileType m_ePEType { }; //PE type: x64 or x86.
 		HANDLE m_hFile { };      //Opened file handle.
 		HANDLE m_hFileMap { };   //File-mapping handle.
