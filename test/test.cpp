@@ -5,8 +5,7 @@
 import libpe;
 using namespace libpe;
 
-int wmain(int argc, wchar_t* argv[])
-{
+int wmain(int argc, wchar_t* argv[]) {
 	std::wstring_view wsvFile { L"C:\\Windows\\notepad.exe" }; //Default file.
 	if (argc > 1) {
 		wsvFile = argv[1];

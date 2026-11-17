@@ -557,8 +557,7 @@ export namespace libpe {
 
 	//Helper methods.
 
-	[[nodiscard]] constexpr auto GetFileType(const PENTHDR& stNTHdr) -> EFileType
-	{
+	[[nodiscard]] constexpr auto GetFileType(const PENTHDR& stNTHdr) -> EFileType {
 		const auto& refNTHdr = stNTHdr.unHdr.stNTHdr32;
 		if (refNTHdr.Signature != IMAGE_NT_SIGNATURE)
 			return EFileType::UNKNOWN;
@@ -576,8 +575,7 @@ export namespace libpe {
 		}
 	}
 
-	[[nodiscard]] constexpr auto GetImageBase(const PENTHDR& stNTHdr) -> ULONGLONG
-	{
+	[[nodiscard]] constexpr auto GetImageBase(const PENTHDR& stNTHdr) -> ULONGLONG {
 		switch (GetFileType(stNTHdr)) {
 		case EFileType::PE32:
 			return stNTHdr.unHdr.stNTHdr32.OptionalHeader.ImageBase;
@@ -588,8 +586,7 @@ export namespace libpe {
 		}
 	}
 
-	[[nodiscard]] constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr) -> DWORD
-	{
+	[[nodiscard]] constexpr auto GetOffsetFromRVA(ULONGLONG ullRVA, const PESECHDR_VEC& vecSecHdr) -> DWORD {
 		for (const auto& stSec : vecSecHdr) {
 			if (const auto pSecHdr = &stSec.stSecHdr; (ullRVA >= pSecHdr->VirtualAddress) //Is RVA within this section?
 				&& (ullRVA < (pSecHdr->VirtualAddress + pSecHdr->Misc.VirtualSize))) {
@@ -600,8 +597,7 @@ export namespace libpe {
 		return { };
 	}
 
-	[[nodiscard]] constexpr auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC
-	{
+	[[nodiscard]] constexpr auto FlatResources(const PERESROOT& stResRoot) -> PERESFLAT_VEC {
 		std::size_t sTotalRes { 0 }; //How many resources total?
 		for (const auto& iterRoot : stResRoot.vecResData) { //To reserve space in vector, count total amount of resources.
 			if (iterRoot.stResDirEntry.DataIsDirectory) { //Level Root.
@@ -728,18 +724,15 @@ export namespace libpe {
 		bool m_fHasNTHdr { };    //Does file have at least NT header.
 	};
 
-	Clibpe::Clibpe(const wchar_t* pwszFile)
-	{
+	Clibpe::Clibpe(const wchar_t* pwszFile) {
 		OpenFile(pwszFile);
 	}
 
-	Clibpe::~Clibpe()
-	{
+	Clibpe::~Clibpe() {
 		CloseFile();
 	}
 
-	auto Clibpe::OpenFile(const wchar_t* pwszFile)->int
-	{
+	auto Clibpe::OpenFile(const wchar_t* pwszFile)->int {
 		assert(pwszFile != nullptr);
 		if (m_fFileHandle) {
 			CloseFile();
@@ -776,8 +769,7 @@ export namespace libpe {
 		return OpenFile({ static_cast<std::byte*>(m_pFileView), static_cast<std::size_t>(stLI.QuadPart) });
 	}
 
-	auto Clibpe::OpenFile(std::span<const std::byte> spnData)->int
-	{
+	auto Clibpe::OpenFile(std::span<const std::byte> spnData)->int {
 		assert(!spnData.empty());
 		if (m_fOpened) {
 			CloseFile();
@@ -799,8 +791,7 @@ export namespace libpe {
 		return PEOK;
 	}
 
-	void Clibpe::CloseFile()
-	{
+	void Clibpe::CloseFile() {
 		if (m_fFileHandle) {
 			::UnmapViewOfFile(m_pFileView);
 			::CloseHandle(m_hFileMap);
@@ -818,8 +809,7 @@ export namespace libpe {
 		m_fOpened = false;
 	}
 
-	auto Clibpe::GetDOSHeader()const->std::optional<IMAGE_DOS_HEADER>
-	{
+	auto Clibpe::GetDOSHeader()const->std::optional<IMAGE_DOS_HEADER> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -827,8 +817,7 @@ export namespace libpe {
 		return *GetDosPtr();
 	}
 
-	auto Clibpe::GetRichHeader()const->std::optional<PERICHHDR_VEC>
-	{
+	auto Clibpe::GetRichHeader()const->std::optional<PERICHHDR_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -874,8 +863,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetNTHeader()const->std::optional<PENTHDR>
-	{
+	auto Clibpe::GetNTHeader()const->std::optional<PENTHDR> {
 		assert(m_fOpened);
 		if (!m_fOpened || !m_fHasNTHdr)
 			return std::nullopt;
@@ -897,8 +885,7 @@ export namespace libpe {
 		return stNTHdr;
 	}
 
-	auto Clibpe::GetDataDirs()const->std::optional<PEDATADIR_VEC>
-	{
+	auto Clibpe::GetDataDirs()const->std::optional<PEDATADIR_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened || !m_fHasNTHdr)
 			return std::nullopt;
@@ -932,8 +919,7 @@ export namespace libpe {
 		return vecDataDirs.empty() ? std::nullopt : std::optional<PEDATADIR_VEC>(std::move(vecDataDirs));
 	}
 
-	auto Clibpe::GetSecHeaders()const->std::optional<PESECHDR_VEC>
-	{
+	auto Clibpe::GetSecHeaders()const->std::optional<PESECHDR_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened || !m_fHasNTHdr)
 			return std::nullopt;
@@ -1002,8 +988,7 @@ export namespace libpe {
 		return vecSecHeaders.empty() ? std::nullopt : std::optional<PESECHDR_VEC>(std::move(vecSecHeaders));
 	}
 
-	auto Clibpe::GetExport()const->std::optional<PEEXPORT>
-	{
+	auto Clibpe::GetExport()const->std::optional<PEEXPORT> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1086,8 +1071,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetImport()const->std::optional<PEIMPORT_VEC>
-	{
+	auto Clibpe::GetImport()const->std::optional<PEIMPORT_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1226,8 +1210,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetResources()const->std::optional<PERESROOT>
-	{
+	auto Clibpe::GetResources()const->std::optional<PERESROOT> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1406,8 +1389,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetExceptions()const->std::optional<PEEXCEPTION_VEC>
-	{
+	auto Clibpe::GetExceptions()const->std::optional<PEEXCEPTION_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1433,8 +1415,7 @@ export namespace libpe {
 		return vecException.empty() ? std::nullopt : std::optional<PEEXCEPTION_VEC>(std::move(vecException));
 	}
 
-	auto Clibpe::GetSecurity()const->std::optional<PESECURITY_VEC>
-	{
+	auto Clibpe::GetSecurity()const->std::optional<PESECURITY_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1477,8 +1458,7 @@ export namespace libpe {
 		return vecSecurity.empty() ? std::nullopt : std::optional<PESECURITY_VEC>(std::move(vecSecurity));
 	}
 
-	auto Clibpe::GetRelocations()const->std::optional<PERELOC_VEC>
-	{
+	auto Clibpe::GetRelocations()const->std::optional<PERELOC_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1545,8 +1525,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetDebug()const->std::optional<PEDEBUG_VEC>
-	{
+	auto Clibpe::GetDebug()const->std::optional<PEDEBUG_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1622,8 +1601,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetTLS()const->std::optional<PETLS>
-	{
+	auto Clibpe::GetTLS()const->std::optional<PETLS> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1656,8 +1634,9 @@ export namespace libpe {
 				pdwTLSPtr = reinterpret_cast<PDWORD>(pTLSDir64);
 				ullAddressOfCallBacks = pTLSDir64->AddressOfCallBacks;
 			}
-			else
+			else {
 				return std::nullopt;
+			}
 
 			if (auto pTLSCallbacks = static_cast<PDWORD>(RVAToPtr(ullAddressOfCallBacks - GetImageBase())); pTLSCallbacks != nullptr) {
 				while (*pTLSCallbacks) {
@@ -1679,8 +1658,7 @@ export namespace libpe {
 		return std::nullopt;
 	}
 
-	auto Clibpe::GetLoadConfig()const->std::optional<PELOADCONFIG>
-	{
+	auto Clibpe::GetLoadConfig()const->std::optional<PELOADCONFIG> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1707,8 +1685,7 @@ export namespace libpe {
 		}
 	}
 
-	auto Clibpe::GetBoundImport()const->std::optional<PEBOUNDIMPORT_VEC>
-	{
+	auto Clibpe::GetBoundImport()const->std::optional<PEBOUNDIMPORT_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1761,8 +1738,7 @@ export namespace libpe {
 		return vecBoundImp.empty() ? std::nullopt : std::optional<PEBOUNDIMPORT_VEC>(std::move(vecBoundImp));
 	}
 
-	auto Clibpe::GetDelayImport()const->std::optional<PEDELAYIMPORT_VEC>
-	{
+	auto Clibpe::GetDelayImport()const->std::optional<PEDELAYIMPORT_VEC> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1904,8 +1880,7 @@ export namespace libpe {
 		return vecDelayImp.empty() ? std::nullopt : std::optional<PEDELAYIMPORT_VEC>(std::move(vecDelayImp));
 	}
 
-	auto Clibpe::GetCOMDescriptor()const->std::optional<PECOMDESCRIPTOR>
-	{
+	auto Clibpe::GetCOMDescriptor()const->std::optional<PECOMDESCRIPTOR> {
 		assert(m_fOpened);
 		if (!m_fOpened)
 			return std::nullopt;
@@ -1920,23 +1895,19 @@ export namespace libpe {
 
 	//Private methods.
 
-	auto Clibpe::GetFileSize()const->ULONGLONG
-	{
+	auto Clibpe::GetFileSize()const->ULONGLONG {
 		return m_spnData.size();
 	}
 
-	auto Clibpe::GetBaseAddr()const->DWORD_PTR
-	{
+	auto Clibpe::GetBaseAddr()const->DWORD_PTR {
 		return reinterpret_cast<DWORD_PTR>(m_spnData.data());
 	}
 
-	auto Clibpe::GetDosPtr()const->const IMAGE_DOS_HEADER*
-	{
+	auto Clibpe::GetDosPtr()const->const IMAGE_DOS_HEADER* {
 		return reinterpret_cast<const IMAGE_DOS_HEADER*>(m_spnData.data());
 	}
 
-	auto Clibpe::GetDirEntryRVA(DWORD dwEntry)const->DWORD
-	{
+	auto Clibpe::GetDirEntryRVA(DWORD dwEntry)const->DWORD {
 		if (!m_fHasNTHdr)
 			return { };
 
@@ -1950,8 +1921,7 @@ export namespace libpe {
 		}
 	}
 
-	auto Clibpe::GetDirEntrySize(DWORD dwEntry)const->DWORD
-	{
+	auto Clibpe::GetDirEntrySize(DWORD dwEntry)const->DWORD {
 		if (!m_fHasNTHdr)
 			return { };
 
@@ -1966,8 +1936,7 @@ export namespace libpe {
 
 	}
 
-	auto Clibpe::GetImageBase()const->ULONGLONG
-	{
+	auto Clibpe::GetImageBase()const->ULONGLONG {
 		switch (m_ePEType) {
 		case EFileType::PE32:
 			return m_pNTHeader32->OptionalHeader.ImageBase;
@@ -1978,8 +1947,7 @@ export namespace libpe {
 		}
 	}
 
-	auto Clibpe::GetSecHdrFromShortName(LPCSTR lpszName)const->PIMAGE_SECTION_HEADER
-	{
+	auto Clibpe::GetSecHdrFromShortName(LPCSTR lpszName)const->PIMAGE_SECTION_HEADER {
 		if (!m_fHasNTHdr)
 			return nullptr;
 
@@ -2010,8 +1978,7 @@ export namespace libpe {
 		return nullptr;
 	}
 
-	auto Clibpe::GetSecHdrFromRVA(ULONGLONG ullRVA)const->PIMAGE_SECTION_HEADER
-	{
+	auto Clibpe::GetSecHdrFromRVA(ULONGLONG ullRVA)const->PIMAGE_SECTION_HEADER {
 		if (!m_fHasNTHdr)
 			return nullptr;
 
@@ -2044,8 +2011,7 @@ export namespace libpe {
 		return nullptr;
 	}
 
-	auto Clibpe::GetSecIdxFromRVA(ULONGLONG ullRVA)const->std::optional<DWORD>
-	{
+	auto Clibpe::GetSecIdxFromRVA(ULONGLONG ullRVA)const->std::optional<DWORD> {
 		if (!m_fHasNTHdr)
 			return std::nullopt;
 
@@ -2080,8 +2046,7 @@ export namespace libpe {
 	}
 
 	template<typename T>
-	auto Clibpe::GetTData(ULONGLONG ullOffset)const->T
-	{
+	auto Clibpe::GetTData(ULONGLONG ullOffset)const->T {
 		if (ullOffset > (GetFileSize() - sizeof(T))) //Check for file size exceeding.
 			return { };
 
@@ -2089,8 +2054,7 @@ export namespace libpe {
 	}
 
 	template<typename T>
-	auto Clibpe::IsPtrSafe(const T tAddr, bool fCanReferenceBoundary)const->bool
-	{
+	auto Clibpe::IsPtrSafe(const T tAddr, bool fCanReferenceBoundary)const->bool {
 		/**************************************************************************************************
 		* This func checks given pointer for nullptr and, more important, whether it fits allowed bounds. *
 		* In PE headers there are plenty of places where wrong (bogus) values for pointers might reside,  *
@@ -2114,16 +2078,14 @@ export namespace libpe {
 			(fCanReferenceBoundary ? dwAddr <= ullMaxAddr : dwAddr < ullMaxAddr);
 	}
 
-	auto Clibpe::PtrToOffset(LPCVOID lp)const->DWORD
-	{
+	auto Clibpe::PtrToOffset(LPCVOID lp)const->DWORD {
 		if (lp == nullptr)
 			return 0;
 
 		return static_cast<DWORD>(reinterpret_cast<DWORD_PTR>(lp) - GetBaseAddr());
 	}
 
-	auto Clibpe::RVAToPtr(ULONGLONG ullRVA)const->LPVOID
-	{
+	auto Clibpe::RVAToPtr(ULONGLONG ullRVA)const->LPVOID {
 		const auto pSecHdr = GetSecHdrFromRVA(ullRVA);
 		if (pSecHdr == nullptr)
 			return nullptr;
@@ -2134,15 +2096,13 @@ export namespace libpe {
 		return IsPtrSafe(ptr, true) ? ptr : nullptr;
 	}
 
-	bool Clibpe::ParseDOSHeader()
-	{
+	bool Clibpe::ParseDOSHeader() {
 		//If a file has at least MSDOS header signature then we can assume
 		//that this is a minimally correct PE file, and process further.
 		return GetDosPtr()->e_magic == IMAGE_DOS_SIGNATURE;
 	}
 
-	bool Clibpe::ParseNTFileOptHeader()
-	{
+	bool Clibpe::ParseNTFileOptHeader() {
 		const auto pNTHeader = reinterpret_cast<PIMAGE_NT_HEADERS32>(GetBaseAddr()
 			+ static_cast<DWORD_PTR>(GetDosPtr()->e_lfanew));
 		if (!IsPtrSafe(reinterpret_cast<DWORD_PTR>(pNTHeader) + sizeof(IMAGE_NT_HEADERS32)))
